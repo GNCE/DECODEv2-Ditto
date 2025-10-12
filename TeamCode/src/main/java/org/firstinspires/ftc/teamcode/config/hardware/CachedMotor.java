@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.config.hardware;
 
-import com.arcrobotics.ftclib.util.MathUtils;
+import com.seattlesolvers.solverslib.util.MathUtils;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;

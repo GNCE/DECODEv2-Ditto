@@ -1,6 +1,6 @@
 package org.firstinspires.ftc.teamcode.config.core;
 
-import com.arcrobotics.ftclib.command.Robot;
+import com.seattlesolvers.solverslib.command.Robot;
 
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;

@@ -1,20 +1,24 @@
 package org.firstinspires.ftc.teamcode.config.subsystems;
 
-import com.arcrobotics.ftclib.command.Command;
-import com.arcrobotics.ftclib.command.InstantCommand;
-import com.arcrobotics.ftclib.command.StartEndCommand;
-import com.arcrobotics.ftclib.command.WaitCommand;
-import com.arcrobotics.ftclib.command.WaitUntilCommand;
-import com.arcrobotics.ftclib.controller.PIDController;
+import com.seattlesolvers.solverslib.command.Command;
+import com.seattlesolvers.solverslib.command.CommandBase;
+import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.seattlesolvers.solverslib.command.StartEndCommand;
+import com.seattlesolvers.solverslib.command.Subsystem;
+import com.seattlesolvers.solverslib.command.WaitCommand;
+import com.seattlesolvers.solverslib.command.WaitUntilCommand;
+import com.seattlesolvers.solverslib.controller.PIDController;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
+import org.firstinspires.ftc.teamcode.config.core.commandbase.DeferredCommand;
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BooleanSupplier;
 
 public class Spindex extends SubsysCore {
@@ -69,6 +73,7 @@ public class Spindex extends SubsysCore {
     }
 
     public Command goToSlot(Artifact tar){
+
         if(st[idx] == tar) return new InstantCommand();
         int cw = (idx+1)%3, ccw = (idx+2)%3;
         if(st[cw] == tar || st[ccw] == tar){
@@ -76,6 +81,6 @@ public class Spindex extends SubsysCore {
             else idx = ccw;
             return new WaitUntilCommand(this::reachedTarget);
         }
-        throw new IllegalAccessError("The Spindexer storage does not have requested Artifact. Use contains() to check before calling the command.");
+        throw new IllegalAccessError("The Spindexer storage does not have the requested Artifact. Use contains() to check before calling the command.");
     }
 }
