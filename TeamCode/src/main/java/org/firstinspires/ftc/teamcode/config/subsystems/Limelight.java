@@ -14,15 +14,15 @@ import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 public class Limelight extends SubsysCore {
     Limelight3A ll;
     Follower f;
-
-    private final Pose goal;
+    LLResult result;
 
     public Limelight(Follower ff, boolean isRed){
         this.f = ff;
         ll = h.get(Limelight3A.class, "Limelight");
         ll.setPollRateHz(50);
-        goal = isRed ? new Pose(132.5, 138): new Pose(11.5, 138);
     }
+
+    public boolean isAprilTagDetected(){ return result!=null && result.isValid(); }
 
     @Override
     public void periodic() {
@@ -44,6 +44,9 @@ public class Limelight extends SubsysCore {
             t.addData("Target X", result.getTx());
             t.addData("Target Area", result.getTa());
             t.addData("Botpose", botpose.toString());
+        } else {
+            t.addLine("AprilTag Not Detected");
+
         }
 
         t.addData("Limelight Connected?", ll.isConnected());
