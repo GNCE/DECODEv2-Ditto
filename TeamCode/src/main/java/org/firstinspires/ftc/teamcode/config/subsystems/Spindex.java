@@ -12,6 +12,10 @@ import com.seattlesolvers.solverslib.controller.PIDController;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.seattlesolvers.solverslib.controller.PIDFController;
+import com.seattlesolvers.solverslib.hardware.AbsoluteAnalogEncoder;
+import com.seattlesolvers.solverslib.hardware.motors.CRServoEx;
+import com.seattlesolvers.solverslib.hardware.motors.Motor;
 
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
@@ -25,20 +29,24 @@ import java.util.stream.Collectors;
 @Configurable
 public class Spindex extends SubsysCore {
     CRServo sp1, sp2;
+
     AnalogInput spos;
     double ca;
     public static int idx;
     public static Artifact[] st = new Artifact[3];
     PIDController spid;
     public static double kp = 0.0025, ki = 0.0005, kd = 0; // TODO: Edit
-    public static double el = 2; //error limit or deadzone range, e.g 5 would have 10 degrees of variace
+    public static double MIN_POSITION_TOLERANCE = 2; //error limit or deadzone range, e.g 5 would have 10 degrees of variace
     public static double ZERO_OFFSET = 107;
     public static double GEAR_RATIO = (double) 2;
+    public static double MIN_POWER = 0.05;
 
     public Spindex(){
         sp1 = h.get(CRServo.class, "spin1");
         sp2 = h.get(CRServo.class, "spin2");
+
         spos = h.get(AnalogInput.class, "spos");
+
         sp1.setDirection(DcMotorSimple.Direction.FORWARD);
         sp2.setDirection(DcMotorSimple.Direction.REVERSE);
         spid = new PIDController(kp, ki, kd);
@@ -61,8 +69,11 @@ public class Spindex extends SubsysCore {
         if(err > 180) err = err-360;
         else if(err < -180) err = err+360;
 
-        double pwr = spid.calculate(0, -err);
-        if (Math.abs(err) > el) {
+        double pwr = spid.calculate(err, 0);
+        if(pwr < MIN_POWER && pwr > 0) pwr = MIN_POWER;
+        else if(pwr > -MIN_POWER && pwr < 0) pwr = -MIN_POWER;
+
+        if (Math.abs(err) > MIN_POSITION_TOLERANCE) {
             sp1.setPower(pwr);
             sp2.setPower(pwr);
         } else {
@@ -70,13 +81,13 @@ public class Spindex extends SubsysCore {
             sp2.setPower(0);
         }
 
-
         t.addData("Storage", Arrays.stream(st).map(Artifact::name).collect(Collectors.joining(", ")));
         t.addData("Current Index", idx);
         t.addData("Selected Artifact", st[idx].name());
         t.addData("SpindexerError", err);
         t.addData("SpindexerPosition", cur);
         t.addData("SpindexerPwr", pwr);
+        t.addLine("pwr:"+pwr);
     }
 
     public boolean reachedTarget(){
