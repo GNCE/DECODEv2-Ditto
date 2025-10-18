@@ -1,25 +1,20 @@
 package org.firstinspires.ftc.teamcode.config.core;
 
-import com.pedropathing.follower.FollowerConstants;
-import com.pedropathing.ftc.drivetrains.Mecanum;
-import com.pedropathing.ftc.localization.localizers.PinpointLocalizer;
-import com.pedropathing.geometry.Pose;
-import com.seattlesolvers.solverslib.command.Robot;
-
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.bylazar.utils.LoopTimer;
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.seattlesolvers.solverslib.command.button.GamepadButton;
+import com.seattlesolvers.solverslib.command.Robot;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.gamepad.ToggleButtonReader;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.config.core.util.Alliance;
+import org.firstinspires.ftc.teamcode.config.commands.IntakeUntilFullCommand;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.config.subsystems.Lift;
@@ -31,7 +26,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import java.util.List;
 
-public class MyRobot extends Robot {
+public class IntakeRobot extends Robot {
     HardwareMap h;
     JoinedTelemetry t;
     Follower f;
@@ -49,29 +44,29 @@ public class MyRobot extends Robot {
 
     public static boolean isRed = true;
     ToggleButtonReader allianceSelectionButton;
+    ToggleButtonReader intakeButton;
+    IntakeUntilFullCommand intakeUntilFullCommand;
 
-    public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, double initialTurretAngle){
+    public IntakeRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2){
         this.h = h;
         this.t = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), t);
         hubs = this.h.getAll(LynxModule.class);
         for(LynxModule hub: hubs){
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
         }
-        this.f = Constants.createFollower(this.h);
         this.g1 = new GamepadEx(g1);
         this.g2 = new GamepadEx(g2);
 
         SubsysCore.setGlobalParameters(this.h, this.t);
         this.intake = new Intake();
-        this.ll = new Limelight(this.f, true);
-        this.turret = new Turret(this.f, this.ll, initialTurretAngle, true);
-        this.shooter = new Shooter();
         this.door = new Door();
-        this.lift = new Lift();
         this.spindex = new Spindex();
         this.allianceSelectionButton = new ToggleButtonReader(this.g1, GamepadKeys.Button.CIRCLE);
+        this.intakeButton = new ToggleButtonReader(this.g1, GamepadKeys.Button.SQUARE);
 
-        register(intake, ll, turret, shooter, door, lift, spindex);
+        register(intake, door, spindex);
+
+        intakeUntilFullCommand = new IntakeUntilFullCommand(intake, door, spindex);
 
         this.lt = new LoopTimer();
     }
@@ -79,10 +74,11 @@ public class MyRobot extends Robot {
     public void allianceSelection(){
         t.addData("Current Alliance", isRed?"RED": "BLUE");
         isRed = !allianceSelectionButton.getState();
+
     }
 
     public void stop(){
-        autoEndPose = f.getPose();
+
     }
 
     public void resetCache(){
@@ -95,9 +91,14 @@ public class MyRobot extends Robot {
         lt.start();
         resetCache();
     }
+    public void runIntakeTeleop(){
+        if(intakeButton.stateJustChanged()){
+            if(intakeButton.getState()) intakeUntilFullCommand.schedule();
+            else intakeUntilFullCommand.cancel();
+        }
+    }
     public void endPeriodic(){
         this.run();
-        f.update();
         lt.end();
         t.addData("Loop Time (ms)", lt.getMs());
         t.addData("Loop Frequency (Hz)", lt.getHz());

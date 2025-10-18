@@ -6,7 +6,12 @@ public abstract class CustomOpMode extends OpMode {
     MyRobot r;
 
     public void init(){
+        r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, 0);
+    }
 
+    @Override
+    public void init_loop() {
+        r.allianceSelection();
     }
 
     @Override

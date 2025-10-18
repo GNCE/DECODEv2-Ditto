@@ -1,4 +1,6 @@
 package org.firstinspires.ftc.teamcode.config.subsystems;
 
-public class Lift {
+import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
+
+public class Lift extends SubsysCore {
 }

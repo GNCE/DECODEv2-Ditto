@@ -77,7 +77,6 @@ public class Spindex extends SubsysCore {
     }
 
     public Command goToSlot(Artifact tar){
-
         if(st[idx] == tar) return new InstantCommand();
         int cw = (idx+1)%3, ccw = (idx+2)%3;
         if(st[cw] == tar || st[ccw] == tar){
