@@ -25,7 +25,7 @@ public class IntakeCommand extends SequentialCommandGroup {
         addCommands(
                 new ParallelCommandGroup(
                         new DeferredCommand(() -> door.setOpenCommand(false), Collections.singletonList(door)),
-                        new DeferredCommand(() -> spindex.goToSlot(Artifact.NONE), Collections.singletonList(spindex))
+                        spindex.goToSlot(Artifact.NONE)
                 ),
                 new InstantCommand(() -> intake.setPower(Intake.IntakeMotorPowerConfig.INTAKE)),
                 new WaitUntilCommand(() -> intake.getCurrentArtifact() != Artifact.NONE),
@@ -37,6 +37,6 @@ public class IntakeCommand extends SequentialCommandGroup {
     @Override
     public void initialize() {
         super.initialize();
-        if(!spindex.contains(Artifact.NONE)) cancel();
+        if(spindex.isFull()) cancel();
     }
 }

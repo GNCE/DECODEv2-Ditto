@@ -18,7 +18,7 @@ import java.util.Collections;
 public class IntakeUntilFullCommand extends RepeatCommand {
 
     public IntakeUntilFullCommand(Intake intake, Door door, Spindex spindex) {
-        super(new IntakeCommand(intake, door, spindex), () -> !spindex.contains(Artifact.NONE));
+        super(new IntakeCommand(intake, door, spindex), spindex::isFull);
         addRequirements(intake, door, spindex);
     }
 }

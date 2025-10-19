@@ -15,6 +15,7 @@ import com.seattlesolvers.solverslib.gamepad.ToggleButtonReader;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.config.commands.IntakeUntilFullCommand;
+import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.config.subsystems.Lift;
@@ -24,7 +25,9 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Spindex;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class IntakeRobot extends Robot {
     HardwareMap h;
@@ -47,6 +50,8 @@ public class IntakeRobot extends Robot {
     ToggleButtonReader intakeButton;
     IntakeUntilFullCommand intakeUntilFullCommand;
 
+    int slotSelect = 0;
+
     public IntakeRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2){
         this.h = h;
         this.t = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), t);
@@ -61,7 +66,7 @@ public class IntakeRobot extends Robot {
         this.intake = new Intake();
         this.door = new Door();
         this.spindex = new Spindex();
-        this.allianceSelectionButton = new ToggleButtonReader(this.g1, GamepadKeys.Button.CIRCLE);
+        this.allianceSelectionButton = new ToggleButtonReader(this.g1, GamepadKeys.Button.DPAD_UP);
         this.intakeButton = new ToggleButtonReader(this.g1, GamepadKeys.Button.SQUARE);
 
         register(intake, door, spindex);
@@ -72,9 +77,22 @@ public class IntakeRobot extends Robot {
     }
 
     public void allianceSelection(){
-        t.addData("Current Alliance", isRed?"RED": "BLUE");
         isRed = !allianceSelectionButton.getState();
+        t.addData("Current Alliance", isRed?"RED": "BLUE");
+    }
 
+
+    public void preloadSelection(){
+        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) slotSelect = Math.max(0, slotSelect-1);
+        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)) slotSelect = Math.min(2, slotSelect+1);
+
+        if(g1.wasJustPressed(GamepadKeys.Button.CIRCLE)) spindex.overrideItem(slotSelect, Artifact.NONE);
+        if(g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) spindex.overrideItem(slotSelect, Artifact.PURPLE);
+        if(g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) spindex.overrideItem(slotSelect, Artifact.GREEN);
+
+        t.addData("Storage", Arrays.stream(Spindex.st).map(Artifact::name).collect(Collectors.joining(", ")));
+        t.addData("Current Index", slotSelect);
+        t.addData("Selected Artifact", Spindex.st[slotSelect].name());
     }
 
     public void stop(){

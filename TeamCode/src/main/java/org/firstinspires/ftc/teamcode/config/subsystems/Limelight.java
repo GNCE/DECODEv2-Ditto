@@ -20,6 +20,7 @@ public class Limelight extends SubsysCore {
         this.f = ff;
         ll = h.get(Limelight3A.class, "Limelight");
         ll.setPollRateHz(50);
+        ll.pipelineSwitch(isRed ? 1 : 2);
     }
 
     public boolean isAprilTagDetected(){ return result!=null && result.isValid(); }
@@ -46,7 +47,6 @@ public class Limelight extends SubsysCore {
             t.addData("Botpose", botpose.toString());
         } else {
             t.addLine("AprilTag Not Detected");
-
         }
 
         t.addData("Limelight Connected?", ll.isConnected());

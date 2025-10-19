@@ -1,9 +1,12 @@
 package org.firstinspires.ftc.teamcode.config.subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.qualcomm.robotcore.hardware.Servo;
 import com.seattlesolvers.solverslib.command.Command;
 import com.seattlesolvers.solverslib.command.CommandBase;
+import com.seattlesolvers.solverslib.command.DeferredCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.StartEndCommand;
 import com.seattlesolvers.solverslib.command.Subsystem;
 import com.seattlesolvers.solverslib.command.WaitCommand;
@@ -17,40 +20,39 @@ import com.seattlesolvers.solverslib.hardware.AbsoluteAnalogEncoder;
 import com.seattlesolvers.solverslib.hardware.motors.CRServoEx;
 import com.seattlesolvers.solverslib.hardware.motors.Motor;
 
+import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.stream.Collectors;
 
 @Configurable
 public class Spindex extends SubsysCore {
-    CRServo sp1, sp2;
+    Servo sp1;
 
     AnalogInput spos;
-    double ca;
     public static int idx;
     public static Artifact[] st = new Artifact[3];
-    PIDController spid;
-    public static double kp = 0.0025, ki = 0.0005, kd = 0; // TODO: Edit
-    public static double MIN_POSITION_TOLERANCE = 2; //error limit or deadzone range, e.g 5 would have 10 degrees of variace
-    public static double ZERO_OFFSET = 107;
+    public static double MIN_POSITION_TOLERANCE = 2;
+    public static double ZERO_OFFSET = 10;
     public static double GEAR_RATIO = (double) 2;
-    public static double MIN_POWER = 0.05;
 
     public Spindex(){
-        sp1 = h.get(CRServo.class, "spin1");
-        sp2 = h.get(CRServo.class, "spin2");
-
+        sp1 = h.get(Servo.class, "spin1");
         spos = h.get(AnalogInput.class, "spos");
+        sp1.setDirection(Servo.Direction.FORWARD);
+        if(Arrays.stream(st).allMatch(Objects::isNull)) emptyStorage();
+    }
 
-        sp1.setDirection(DcMotorSimple.Direction.FORWARD);
-        sp2.setDirection(DcMotorSimple.Direction.REVERSE);
-        spid = new PIDController(kp, ki, kd);
-        emptyStorage();
+    public int getCloserIndexToEnd(){
+        if(Math.abs(idx) < Math.abs(idx-4)) return 0;
+        else return 4;
     }
 
     public void emptyStorage(){
@@ -60,42 +62,44 @@ public class Spindex extends SubsysCore {
 
     @Override
     public void periodic() {
-        spid.setPID(kp, ki, kd);
+        if(isFull()) idx = 2;
+        else if(isEmpty()) idx=getCloserIndexToEnd();
 
-        ca = spos.getVoltage()/3.3*360;
-        double cur = (ca*GEAR_RATIO)%360;
-        double tar = (idx*120+ZERO_OFFSET)%360;
-        double err =  tar-cur;
-        if(err > 180) err = err-360;
-        else if(err < -180) err = err+360;
-
-        double pwr = spid.calculate(err, 0);
-        if(pwr < MIN_POWER && pwr > 0) pwr = MIN_POWER;
-        else if(pwr > -MIN_POWER && pwr < 0) pwr = -MIN_POWER;
-
-        if (Math.abs(err) > MIN_POSITION_TOLERANCE) {
-            sp1.setPower(pwr);
-            sp2.setPower(pwr);
-        } else {
-            sp1.setPower(0);
-            sp2.setPower(0);
-        }
-
+        sp1.setPosition(getTargetServoPosition());
         t.addData("Storage", Arrays.stream(st).map(Artifact::name).collect(Collectors.joining(", ")));
         t.addData("Current Index", idx);
         t.addData("Selected Artifact", st[idx].name());
-        t.addData("SpindexerError", err);
-        t.addData("SpindexerPosition", cur);
-        t.addData("SpindexerPwr", pwr);
-        t.addLine("pwr:"+pwr);
+    }
+
+    public double getTarget(){
+        return idx*120+ZERO_OFFSET;
+    }
+    public double getCurrent(){
+        return spos.getVoltage()/3.3*360*GEAR_RATIO;
+    }
+    public double getTargetServoPosition(){
+        return getTarget()/(355*GEAR_RATIO);
     }
 
     public boolean reachedTarget(){
-        return Math.abs(idx*120 - ca) < 8;
+        return Math.abs(getTarget() - getCurrent()) < MIN_POSITION_TOLERANCE;
+    }
+
+
+    public boolean isFull(){
+        return !contains(Artifact.NONE);
+    }
+
+    public boolean isEmpty(){
+        return Arrays.stream(st).allMatch(art -> art == Artifact.NONE);
     }
 
     public boolean contains(Artifact tar){
         return Arrays.asList(st).contains(tar);
+    }
+
+    public void overrideItem(int slot, Artifact art){
+        st[slot] = art;
     }
 
     public void insertItem(Artifact art){
@@ -106,14 +110,37 @@ public class Spindex extends SubsysCore {
         st[idx] = Artifact.NONE;
     }
 
-    public Command goToSlot(Artifact tar){
-        if(st[idx] == tar) return new InstantCommand();
-        int cw = (idx+1)%3, ccw = (idx+2)%3;
-        if(st[cw] == tar || st[ccw] == tar){
-            if(st[cw]==tar) idx = cw;
-            else idx = ccw;
-            return new WaitUntilCommand(this::reachedTarget);
+    private void setIdx(int newIdx){ idx = newIdx; }
+
+    public Command goToSlot(int idx){
+        return new SequentialCommandGroup(
+                new InstantCommand(() -> setIdx(idx), this),
+                new WaitUntilCommand(this::reachedTarget)
+        );
+    }
+
+    public int getClosestIndex(Artifact target) {
+        int bestIndex = idx;
+        int bestDistance = Integer.MAX_VALUE;
+
+        for (int i = 0; i < 5; i++) {
+            Artifact slotArtifact = st[i % 3];
+            if (slotArtifact == target) {
+                int distance = Math.abs(i - idx);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestIndex = i;
+                }
+            }
         }
-        throw new IllegalAccessError("The Spindexer storage does not have the requested Artifact. Use contains() to check before calling the command.");
+
+        return bestIndex;
+    }
+
+    public Command goToSlot(Artifact tar){
+        return new DeferredCommand(
+                () -> goToSlot(getClosestIndex(tar)),
+                Collections.singletonList(this)
+        );
     }
 }
