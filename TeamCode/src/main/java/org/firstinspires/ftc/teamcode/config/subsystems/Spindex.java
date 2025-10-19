@@ -63,7 +63,7 @@ public class Spindex extends SubsysCore {
     @Override
     public void periodic() {
         if(isFull()) idx = 2;
-        else if(isEmpty()) idx=getCloserIndexToEnd();
+        //else if(isEmpty()) idx=getCloserIndexToEnd();
 
         sp1.setPosition(getTargetServoPosition());
         t.addData("Storage", Arrays.stream(st).map(Artifact::name).collect(Collectors.joining(", ")));
