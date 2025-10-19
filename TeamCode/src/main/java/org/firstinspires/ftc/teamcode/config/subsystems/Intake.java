@@ -13,15 +13,15 @@ import com.seattlesolvers.solverslib.command.WaitCommand;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
 import org.firstinspires.ftc.teamcode.config.hardware.CachedMotor;
-
+@Configurable
 public class Intake extends SubsysCore {
     CachedMotor im;
     Servo piv;
     DigitalChannel pin0, pin1; // Purple, Green
     double pwr;
     public static double INTAKE_PIVOT_ZERO_OFFSET = 0;
-    public static double INTAKE_PIVOT_DOWN = 0;
-    public static double INTAKE_PIVOT_TRANSFER = 0.5;
+    public static double INTAKE_PIVOT_DOWN = 0.95;
+    public static double INTAKE_PIVOT_TRANSFER = 0.72;
     public static long TRANSFER_ACTUATION_TIME_MS = 500;
     boolean pivotUp = false;
 
