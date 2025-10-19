@@ -68,7 +68,7 @@ public class Spindex extends SubsysCore {
         sp1.setPosition(getTargetServoPosition());
         t.addData("Storage", Arrays.stream(st).map(Artifact::name).collect(Collectors.joining(", ")));
         t.addData("Current Index", idx);
-        t.addData("Selected Artifact", st[idx].name());
+        t.addData("Selected Artifact", st[idx%3].name());
     }
 
     public double getTarget(){
@@ -103,11 +103,11 @@ public class Spindex extends SubsysCore {
     }
 
     public void insertItem(Artifact art){
-        if(st[idx] != Artifact.NONE) throw new IllegalAccessError("An artifact cannot be inserted into an occupied slot.");
-        st[idx] = art;
+        if(st[idx%3] != Artifact.NONE) throw new IllegalAccessError("An artifact cannot be inserted into an occupied slot.");
+        st[idx%3] = art;
     }
     public void removeItem(){
-        st[idx] = Artifact.NONE;
+        st[idx%3] = Artifact.NONE;
     }
 
     private void setIdx(int newIdx){ idx = newIdx; }
