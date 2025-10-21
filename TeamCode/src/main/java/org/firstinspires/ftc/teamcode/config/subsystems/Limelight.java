@@ -1,20 +1,18 @@
 package org.firstinspires.ftc.teamcode.config.subsystems;
 
 import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.CoordinateSystem;
-import com.pedropathing.geometry.PedroCoordinates;
-import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLStatus;
 import com.qualcomm.hardware.limelightvision.Limelight3A;
 
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 
 public class Limelight extends SubsysCore {
     Limelight3A ll;
     Follower f;
-    LLResult result;
+    LLResult llResult;
+
+    double tx, ty, ta;
 
     public Limelight(Follower ff, boolean isRed){
         this.f = ff;
@@ -23,9 +21,19 @@ public class Limelight extends SubsysCore {
         ll.pipelineSwitch(isRed ? 1 : 2);
     }
 
+    public static double LIMELIGHT_HEIGHT = 16.5; // Inches
+    public static double APRILTAG_HEIGHT = 0;
+    public static double CAMERA_PITCH = 15; // degrees from vertical
 
+    public double getDistanceInches(){
+        return (APRILTAG_HEIGHT-LIMELIGHT_HEIGHT)/Math.tan(Math.toRadians(CAMERA_PITCH + ty));
+    }
 
-    public boolean isAprilTagDetected(){ return result!=null && result.isValid(); }
+    public boolean isDataValid(){
+        return llResult != null && llResult.isValid();
+    }
+
+    public boolean isAprilTagDetected(){ return llResult !=null && llResult.isValid(); }
 
     @Override
     public void periodic() {
@@ -34,19 +42,22 @@ public class Limelight extends SubsysCore {
         t.addData("LL State", "Temp: %.1fC, CPU: %.1f%%, FPS: %d", status.getTemp(), status.getCpu(),(int)status.getFps());
         t.addData("Pipeline", "Index: %d, Type: %s", status.getPipelineIndex(), status.getPipelineType());
 
-        LLResult result = ll.getLatestResult();
-        if (result != null && result.isValid()) {
+        llResult = ll.getLatestResult();
+        if (llResult != null && llResult.isValid()) {
             // Access general information
-            Pose3D botpose = result.getBotpose_MT2();
-            double captureLatency = result.getCaptureLatency();
-            double targetingLatency = result.getTargetingLatency();
-            double parseLatency = result.getParseLatency();
+            double captureLatency = llResult.getCaptureLatency();
+            double targetingLatency = llResult.getTargetingLatency();
+            double parseLatency = llResult.getParseLatency();
             t.addData("LL Latency", captureLatency + targetingLatency);
             t.addData("LL Parse Latency", parseLatency);
 
-            t.addData("Target X", result.getTx());
-            t.addData("Target Area", result.getTa());
-            t.addData("Botpose", botpose.toString());
+            tx = llResult.getTx();
+            ty = llResult.getTy();
+            ta = llResult.getTa();
+
+            t.addData("Target X", tx);
+            t.addData("Target Y", ty);
+            t.addData("Target Area", ta);
         } else {
             t.addLine("AprilTag Not Detected");
         }

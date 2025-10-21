@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.config.commands;
 
-import com.seattlesolvers.solverslib.command.DeferredCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
@@ -14,23 +13,21 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Shooter;
 import org.firstinspires.ftc.teamcode.config.subsystems.Spindex;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
-import java.util.Collections;
+public class TransferCommand extends SequentialCommandGroup {
 
-public class OuttakeCommand extends SequentialCommandGroup {
-
-    public OuttakeCommand(Artifact artifact, Spindex spindex, Door door, Shooter shooter, Turret turret, Intake intake){
+    public TransferCommand(Artifact artifact, Spindex spindex, Door door, Intake intake){
         addCommands(
-                new InstantCommand(shooter::turnOn),
+                intake.setPowerInstant(Intake.IntakeMotorPowerConfig.TRANSFER),
                 new ParallelCommandGroup(
                         door.setOpenCommand(false),
-                        spindex.goToSlot(artifact),
-                        new WaitUntilCommand(turret::reachedTarget),
-                        new WaitUntilCommand(shooter::readyToShoot)
+                        spindex.goToSlot(artifact)
                 ),
                 intake.setUpCommand(true),
+                new WaitCommand(2000),
                 intake.setUpCommand(false),
                 new InstantCommand(spindex::removeItem)
+
         );
-        addRequirements(spindex, door, shooter, intake);
+        addRequirements(spindex, door, intake);
     }
 }

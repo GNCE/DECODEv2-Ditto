@@ -15,7 +15,6 @@ import com.seattlesolvers.solverslib.gamepad.ToggleButtonReader;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.config.commands.IntakeUntilFullCommand;
-import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
 import org.firstinspires.ftc.teamcode.config.core.util.ToggleButton;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
@@ -25,13 +24,12 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Limelight;
 import org.firstinspires.ftc.teamcode.config.subsystems.Shooter;
 import org.firstinspires.ftc.teamcode.config.subsystems.Spindex;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
-import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class IntakeRobot extends Robot {
+public class IntakeOuttakeRobot extends Robot {
     HardwareMap h;
     JoinedTelemetry t;
     Follower f;
@@ -54,7 +52,7 @@ public class IntakeRobot extends Robot {
 
     int slotSelect = 0;
 
-    public IntakeRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2){
+    public IntakeOuttakeRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2){
         this.h = h;
         this.t = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), t);
         hubs = this.h.getAll(LynxModule.class);
@@ -72,7 +70,7 @@ public class IntakeRobot extends Robot {
         this.intakeButton = new ToggleButton(false);
 
         register(intake, door, spindex);
-        intake.setDefaultCommand(intake.setPowerCommand(Intake.IntakeMotorPowerConfig.STOP));
+
         intakeUntilFullCommand = new IntakeUntilFullCommand(intake, door, spindex);
 
         this.lt = new LoopTimer();
@@ -131,9 +129,6 @@ public class IntakeRobot extends Robot {
             if(intakeButton.getVal()) intakeUntilFullCommand.schedule();
             else intakeUntilFullCommand.cancel();
         }
-
-        if(g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) schedule(new TransferCommand(Artifact.PURPLE, spindex, door, intake));
-        else if(g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) schedule(new TransferCommand(Artifact.GREEN, spindex, door, intake));
 
         t.addData("Intake Active", intakeButton.getVal());
         t.addData("Intake Scheduled", intakeUntilFullCommand.isScheduled());

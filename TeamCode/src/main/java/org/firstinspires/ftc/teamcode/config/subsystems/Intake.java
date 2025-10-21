@@ -8,12 +8,14 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.seattlesolvers.solverslib.command.PerpetualCommand;
 import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
+import org.firstinspires.ftc.teamcode.config.core.util.ArtifactDataSmoother;
 import org.firstinspires.ftc.teamcode.config.hardware.CachedMotor;
 
 import kotlin.time.Instant;
@@ -23,6 +25,7 @@ public class Intake extends SubsysCore {
     CachedMotor im;
     Servo piv;
     DigitalChannel pin0, pin1; // Purple, Green
+    ArtifactDataSmoother smoother;
     double pwr;
     public static double INTAKE_PIVOT_ZERO_OFFSET = 0;
     public static double INTAKE_PIVOT_DOWN = 0.95;
@@ -48,7 +51,7 @@ public class Intake extends SubsysCore {
         pin1 = h.get(DigitalChannel.class, "digital1");
         pwr = 0;
 
-        this.setDefaultCommand(setPowerCommand(IntakeMotorPowerConfig.STOP));
+        smoother = new ArtifactDataSmoother(50);
     }
 
     public Command setPowerInstant(double newPower){
@@ -58,12 +61,13 @@ public class Intake extends SubsysCore {
         return new RunCommand(() -> pwr = newPower, this);
     }
     public Command runUntilArtifactSensed(){
-        return this.setPowerCommand(IntakeMotorPowerConfig.INTAKE).raceWith(new WaitUntilCommand(() -> getCurrentArtifact() != Artifact.NONE));
+        return this.setPowerCommand(IntakeMotorPowerConfig.INTAKE).raceWith(new WaitUntilCommand(() -> smoother.getStableColor() != Artifact.NONE));
+    }
+    public Command resetSmootherCommand(){
+        return new InstantCommand(() -> smoother.reset());
     }
     public Artifact getCurrentArtifact(){
-        if(pin0.getState()) return Artifact.PURPLE;
-        else if(pin1.getState()) return Artifact.GREEN;
-        return Artifact.NONE;
+        return smoother.getStableColor();
     }
 
     public Command setUpCommand(boolean state){
@@ -84,6 +88,7 @@ public class Intake extends SubsysCore {
         piv.setPosition(INTAKE_PIVOT_ZERO_OFFSET + (pivotUp?INTAKE_PIVOT_TRANSFER:INTAKE_PIVOT_DOWN));
         t.addData("Intake Power", pwr);
         t.addData("Intake Current", im.getCurrent());
-        t.addData("Intake Artifact", getCurrentArtifact().name());
+        smoother.addReading(pin0.getState(), pin1.getState());
+        t.addData("Intake Artifact", smoother.getStableColor());
     }
 }

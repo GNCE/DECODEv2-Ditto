@@ -40,7 +40,7 @@ public class Spindex extends SubsysCore {
     public static int idx;
     public static Artifact[] st = new Artifact[3];
     public static double MIN_POSITION_TOLERANCE = 10;
-    public static double ZERO_OFFSET = 20;
+    public static double ZERO_OFFSET = 19;
     public static double ENCODER_OFFSET = -15.5;
     public static double GEAR_RATIO = (double) 2;
 
@@ -81,7 +81,7 @@ public class Spindex extends SubsysCore {
         return spos.getVoltage()/3.3*360*GEAR_RATIO+ENCODER_OFFSET;
     }
     public double getTargetServoPosition(){
-        return getTarget()/(355*GEAR_RATIO);
+        return getTarget()/(350*GEAR_RATIO);
     }
 
     public boolean reachedTarget(){

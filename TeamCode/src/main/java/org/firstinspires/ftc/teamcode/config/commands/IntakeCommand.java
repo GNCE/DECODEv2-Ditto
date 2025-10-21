@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.config.commands;
 
+import com.seattlesolvers.solverslib.command.Command;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
@@ -24,9 +25,11 @@ public class IntakeCommand extends SequentialCommandGroup {
                         spindex.goToSlot(Artifact.NONE),
                         intake.setPowerInstant(Intake.IntakeMotorPowerConfig.STOP)
                 ),
+                intake.resetSmootherCommand(),
                 intake.runUntilArtifactSensed(),
                 intake.setPowerInstant(Intake.IntakeMotorPowerConfig.STOP),
-                new InstantCommand(() -> spindex.insertItem(intake.getCurrentArtifact()))
+                new InstantCommand(() -> spindex.insertItem(intake.getCurrentArtifact())),
+                intake.resetSmootherCommand()
         );
         addRequirements(intake, door, spindex);
     }
