@@ -23,6 +23,7 @@ import com.seattlesolvers.solverslib.hardware.motors.Motor;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
+import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -30,6 +31,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.BooleanSupplier;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Configurable
@@ -122,13 +124,13 @@ public class Spindex extends SubsysCore {
         );
     }
 
-    public int getClosestIndex(Artifact target) {
+    public int getClosestIndex(ArtifactMatch match){
         int bestIndex = idx;
         int bestDistance = Integer.MAX_VALUE;
 
         for (int i = 0; i < 5; i++) {
             Artifact slotArtifact = st[i % 3];
-            if (slotArtifact == target) {
+            if (match.getPredicate().test(slotArtifact)) {
                 int distance = Math.abs(i - idx);
                 if (distance < bestDistance) {
                     bestDistance = distance;
@@ -139,10 +141,9 @@ public class Spindex extends SubsysCore {
 
         return bestIndex;
     }
-
-    public Command goToSlot(Artifact tar){
+    public Command goToSlot(ArtifactMatch match){
         return new DeferredCommand(
-                () -> goToSlot(getClosestIndex(tar)),
+                () -> goToSlot(getClosestIndex(match)),
                 Collections.singletonList(this)
         );
     }

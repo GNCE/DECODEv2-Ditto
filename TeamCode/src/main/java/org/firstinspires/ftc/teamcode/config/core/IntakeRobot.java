@@ -17,6 +17,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.config.commands.IntakeUntilFullCommand;
 import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
+import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.core.util.ToggleButton;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
@@ -132,8 +133,8 @@ public class IntakeRobot extends Robot {
             else intakeUntilFullCommand.cancel();
         }
 
-        if(g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) schedule(new TransferCommand(Artifact.PURPLE, spindex, door, intake));
-        else if(g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) schedule(new TransferCommand(Artifact.GREEN, spindex, door, intake));
+        if(g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) schedule(new TransferCommand(ArtifactMatch.PURPLE, spindex, door, intake));
+        else if(g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) schedule(new TransferCommand(ArtifactMatch.GREEN, spindex, door, intake));
 
         t.addData("Intake Active", intakeButton.getVal());
         t.addData("Intake Scheduled", intakeUntilFullCommand.isScheduled());

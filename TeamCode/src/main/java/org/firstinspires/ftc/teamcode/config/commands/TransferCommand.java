@@ -7,6 +7,7 @@ import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
+import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.config.subsystems.Shooter;
@@ -15,7 +16,7 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 public class TransferCommand extends SequentialCommandGroup {
 
-    public TransferCommand(Artifact artifact, Spindex spindex, Door door, Intake intake){
+    public TransferCommand(ArtifactMatch artifact, Spindex spindex, Door door, Intake intake){
         addCommands(
                 intake.setPowerInstant(Intake.IntakeMotorPowerConfig.TRANSFER),
                 new ParallelCommandGroup(
@@ -26,7 +27,6 @@ public class TransferCommand extends SequentialCommandGroup {
                 new WaitCommand(0),
                 intake.setUpCommand(false),
                 new InstantCommand(spindex::removeItem)
-
         );
         addRequirements(spindex, door, intake);
     }

@@ -6,6 +6,7 @@ import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
+import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.config.subsystems.Spindex;
@@ -22,7 +23,7 @@ public class IntakeCommand extends SequentialCommandGroup {
         addCommands(
                 new ParallelCommandGroup(
                         door.setOpenCommand(false),
-                        spindex.goToSlot(Artifact.NONE),
+                        spindex.goToSlot(ArtifactMatch.NONE),
                         intake.setPowerInstant(Intake.IntakeMotorPowerConfig.STOP)
                 ),
                 intake.resetSmootherCommand(),
