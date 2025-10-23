@@ -23,7 +23,7 @@ public class TransferCommand extends SequentialCommandGroup {
                         spindex.goToSlot(artifact)
                 ),
                 intake.setUpCommand(true),
-                new WaitCommand(2000),
+                new WaitCommand(0),
                 intake.setUpCommand(false),
                 new InstantCommand(spindex::removeItem)
 
