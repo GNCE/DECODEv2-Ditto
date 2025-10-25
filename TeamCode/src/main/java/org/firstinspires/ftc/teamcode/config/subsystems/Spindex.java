@@ -6,6 +6,7 @@ import com.seattlesolvers.solverslib.command.Command;
 import com.seattlesolvers.solverslib.command.CommandBase;
 import com.seattlesolvers.solverslib.command.DeferredCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.StartEndCommand;
 import com.seattlesolvers.solverslib.command.Subsystem;
@@ -51,6 +52,7 @@ public class Spindex extends SubsysCore {
         spos = h.get(AnalogInput.class, "spos");
         sp1.setDirection(Servo.Direction.FORWARD);
         if(Arrays.stream(st).allMatch(Objects::isNull)) emptyStorage();
+        setDefaultCommand(new RunCommand(this::goToDefaultState, this));
     }
 
     public int getCloserIndexToEnd(){
@@ -63,13 +65,17 @@ public class Spindex extends SubsysCore {
         idx=0;
     }
 
-    @Override
-    public void periodic() {
+    public void goToDefaultState(){
         if(isFull()) idx = 2;
         else if(isEmpty()) idx=getCloserIndexToEnd();
+    }
 
+    @Override
+    public void periodic() {
         sp1.setPosition(getTargetServoPosition());
         t.addData("Storage", Arrays.stream(st).map(Artifact::name).collect(Collectors.joining(", ")));
+        t.addData("Closest Green", getClosestIndex(ArtifactMatch.GREEN));
+        t.addData("Closest Purp.", getClosestIndex(ArtifactMatch.PURPLE));
         t.addData("Current Index", idx);
         t.addData("Selected Artifact", st[idx%3].name());
         t.addData("target", getTarget());
@@ -119,7 +125,7 @@ public class Spindex extends SubsysCore {
 
     public Command goToSlot(int idx){
         return new SequentialCommandGroup(
-                new InstantCommand(() -> setIdx(idx), this),
+                new InstantCommand(() -> setIdx(idx)),
                 new WaitUntilCommand(this::reachedTarget)
         );
     }
@@ -142,9 +148,6 @@ public class Spindex extends SubsysCore {
         return bestIndex;
     }
     public Command goToSlot(ArtifactMatch match){
-        return new DeferredCommand(
-                () -> goToSlot(getClosestIndex(match)),
-                Collections.singletonList(this)
-        );
+        return new DeferredCommand(() -> this.goToSlot(getClosestIndex(match)), Collections.singletonList(this));
     }
 }

@@ -53,9 +53,6 @@ public class TestRobot extends Robot {
     ToggleButtonReader allianceSelectionButton;
     ToggleButton intakeButton;
     IntakeUntilFullCommand intakeUntilFullCommand;
-    TransferCommand transferPurple, transferGreen;
-    TransferAllCommand transferAllCommand;
-    CommandScheduler scheduler = CommandScheduler.getInstance();
 
 
     int slotSelect = 0;
@@ -77,12 +74,7 @@ public class TestRobot extends Robot {
         this.allianceSelectionButton = new ToggleButtonReader(this.g1, GamepadKeys.Button.DPAD_UP);
         this.intakeButton = new ToggleButton(false);
 
-        register(intake, door, spindex);
-        intake.setDefaultCommand(intake.setPowerCommand(Intake.IntakeMotorPowerConfig.STOP));
         intakeUntilFullCommand = new IntakeUntilFullCommand(intake, door, spindex);
-        transferPurple = new TransferCommand(ArtifactMatch.PURPLE, spindex, door, intake);
-        transferGreen = new TransferCommand(ArtifactMatch.GREEN, spindex, door, intake);
-        transferAllCommand = new TransferAllCommand(intake,spindex,door);
 
 
         this.lt = new LoopTimer();
@@ -142,13 +134,23 @@ public class TestRobot extends Robot {
             else intakeUntilFullCommand.cancel();
         }
 
-        if (!scheduler.isScheduled(transferPurple)&& !scheduler.isScheduled(transferGreen) && !scheduler.isScheduled(transferAllCommand)) {
-            if (g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) schedule(transferPurple);
-            else if (g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) schedule(transferGreen);
-            if (g1.wasJustPressed(GamepadKeys.Button.TRIANGLE)) schedule(transferAllCommand);
+        if (g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)
+                && spindex.contains(Artifact.PURPLE)) {
+            // build a fresh purple transfer command
+            schedule(new TransferCommand(ArtifactMatch.PURPLE, spindex, door, intake));
+
+        } else if (g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)
+                && spindex.contains(Artifact.GREEN)) {
+            // build a fresh green transfer command
+            schedule(new TransferCommand(ArtifactMatch.GREEN, spindex, door, intake));
         }
 
-        t.addData("Can Transfer", (!scheduler.isScheduled(transferPurple)&& !scheduler.isScheduled(transferGreen) && !scheduler.isScheduled(transferAllCommand)));
+        if (g1.wasJustPressed(GamepadKeys.Button.TRIANGLE)
+                && !spindex.isEmpty()) {
+            // build a fresh transfer‑all command
+            schedule(new TransferAllCommand(intake, spindex, door));
+        }
+
         t.addData("Intake Active", intakeButton.getVal());
         t.addData("Intake Scheduled", intakeUntilFullCommand.isScheduled());
         t.addData("IntakeCommand finished?", intakeUntilFullCommand.isFinished());
