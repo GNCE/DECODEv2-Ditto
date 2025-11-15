@@ -53,6 +53,9 @@ public class TestRobot extends Robot {
     ToggleButtonReader allianceSelectionButton;
     ToggleButton intakeButton;
     IntakeUntilFullCommand intakeUntilFullCommand;
+    TransferCommand transferPurple, transferGreen;
+    TransferAllCommand transferAllCommand;
+    CommandScheduler scheduler = CommandScheduler.getInstance();
 
 
     int slotSelect = 0;
@@ -68,6 +71,7 @@ public class TestRobot extends Robot {
         this.g2 = new GamepadEx(g2);
 
         SubsysCore.setGlobalParameters(this.h, this.t);
+        this.f = new Follower()
         this.intake = new Intake();
         this.door = new Door();
         this.spindex = new Spindex();
