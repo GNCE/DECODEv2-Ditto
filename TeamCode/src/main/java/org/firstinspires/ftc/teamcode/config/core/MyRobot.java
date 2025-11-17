@@ -1,8 +1,5 @@
 package org.firstinspires.ftc.teamcode.config.core;
 
-import com.pedropathing.follower.FollowerConstants;
-import com.pedropathing.ftc.drivetrains.Mecanum;
-import com.pedropathing.ftc.localization.localizers.PinpointLocalizer;
 import com.pedropathing.geometry.Pose;
 import com.seattlesolvers.solverslib.command.Robot;
 
@@ -19,9 +16,14 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.gamepad.ToggleButtonReader;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.config.core.util.Alliance;
+import org.firstinspires.ftc.teamcode.config.commands.IntakeUntilFullCommand;
+import org.firstinspires.ftc.teamcode.config.commands.TransferAllCommand;
+import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
 import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
+import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.core.util.Motif;
+import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
+import org.firstinspires.ftc.teamcode.config.core.util.ToggleButton;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.config.subsystems.Lift;
@@ -38,26 +40,31 @@ import java.util.stream.Collectors;
 public class MyRobot extends Robot {
     HardwareMap h;
     JoinedTelemetry t;
-    Follower f;
+    public Follower f;
     List<LynxModule> hubs;
     LoopTimer lt;
-    Intake intake;
-    Turret turret;
-    Spindex spindex;
-    Door door;
-    Lift lift;
-    Limelight ll;
-    Shooter shooter;
-    GamepadEx g1, g2;
+    public Intake intake;
+    public Turret turret;
+    public Spindex spindex;
+    public Door door;
+    public Lift lift;
+    public Limelight ll;
+    public Shooter shooter;
+    public GamepadEx g1, g2;
     public static Pose autoEndPose;
     public static Motif currentMotif;
+    public static int endTurretWrapCount;
+    OpModeType opModeType;
 
     public static boolean isRed = true;
     ToggleButtonReader allianceSelectionButton;
+    ToggleButton intakeButton;
+    IntakeUntilFullCommand intakeUntilFullCommand;
+
 
     int slotSelect = 0;
 
-    public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, double initialTurretAngle){
+    public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2){
         this.h = h;
         this.t = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), t);
         hubs = this.h.getAll(LynxModule.class);
@@ -71,21 +78,34 @@ public class MyRobot extends Robot {
         SubsysCore.setGlobalParameters(this.h, this.t);
         this.intake = new Intake();
         this.ll = new Limelight(this.f, true);
-        this.turret = new Turret(this.f, this.ll, initialTurretAngle, true);
+
+        this.turret = new Turret(this.f, this.ll, endTurretWrapCount, true);
         this.shooter = new Shooter();
         this.door = new Door();
         this.lift = new Lift();
         this.spindex = new Spindex();
         this.allianceSelectionButton = new ToggleButtonReader(this.g1, GamepadKeys.Button.DPAD_UP);
 
-        register(intake, ll, turret, shooter, door, lift, spindex);
-
         this.lt = new LoopTimer();
     }
 
+    public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, OpModeType opModeType){
+        this(h, t, g1, g2);
+        this.opModeType = opModeType;
+        this.intakeButton = new ToggleButton(false);
+        this.intakeUntilFullCommand = new IntakeUntilFullCommand(intake, door, spindex);
+        this.f.setStartingPose(autoEndPose == null ? new Pose(0, 0, 0) : autoEndPose);
+    }
+
+    public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, OpModeType opModeType, Pose startingPose){
+        this(h, t, g1, g2);
+        this.opModeType = opModeType;
+        this.f.setStartingPose(startingPose);
+    }
+
     public void allianceSelection(){
-        t.addData("Current Alliance", isRed?"RED": "BLUE");
         isRed = !allianceSelectionButton.getState();
+        t.addData("Current Alliance", isRed?"RED": "BLUE");
     }
 
     public void preloadSelection(){
@@ -101,8 +121,26 @@ public class MyRobot extends Robot {
         t.addData("Selected Artifact", Spindex.st[slotSelect].name());
     }
 
+    public void startInitLoop(){
+        lt.start();
+        resetCache();
+        allianceSelection();
+        preloadSelection();
+        allianceSelectionButton.readValue();
+        g1.readButtons();
+        g2.readButtons();
+    }
+
+    public void endInitLoop(){
+        lt.end();
+        t.addData("Loop Time (ms)", lt.getMs());
+        t.addData("Loop Frequency (Hz)", lt.getHz());
+        t.update();
+    }
+
     public void stop(){
         autoEndPose = f.getPose();
+        endTurretWrapCount = turret.getWrapCount();
     }
 
     public void resetCache(){
@@ -115,9 +153,32 @@ public class MyRobot extends Robot {
         lt.start();
         resetCache();
     }
+    public void runIntakeTeleop(){
+        if(intakeUntilFullCommand.isFinished()) intakeButton.setVal(false);
+        if(intakeButton.input(g1.getButton(GamepadKeys.Button.SQUARE))){
+            if(intakeButton.getVal()) intakeUntilFullCommand.schedule();
+            else intakeUntilFullCommand.cancel();
+        }
+
+        if (g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)
+                && spindex.contains(Artifact.PURPLE))
+            schedule(new TransferCommand(ArtifactMatch.PURPLE, spindex, door, intake));
+        if (g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)
+                && spindex.contains(Artifact.GREEN))
+            schedule(new TransferCommand(ArtifactMatch.GREEN, spindex, door, intake));
+        if (g1.wasJustPressed(GamepadKeys.Button.TRIANGLE) && !spindex.isEmpty())
+            schedule(new TransferAllCommand(intake, spindex, door));
+
+        t.addData("Intake Active", intakeButton.getVal());
+        t.addData("Intake Scheduled", intakeUntilFullCommand.isScheduled());
+        t.addData("IntakeCommand finished?", intakeUntilFullCommand.isFinished());
+        t.addData("Spindex full?", spindex.isFull());
+    }
     public void endPeriodic(){
         this.run();
         f.update();
+        g1.readButtons();
+        g2.readButtons();
         lt.end();
         t.addData("Loop Time (ms)", lt.getMs());
         t.addData("Loop Frequency (Hz)", lt.getHz());

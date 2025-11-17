@@ -74,16 +74,21 @@ public class Spindex extends SubsysCore {
     public void periodic() {
         sp1.setPosition(getTargetServoPosition());
         t.addData("Storage", Arrays.stream(st).map(Artifact::name).collect(Collectors.joining(", ")));
-        t.addData("Closest Green", getClosestIndex(ArtifactMatch.GREEN));
-        t.addData("Closest Purp.", getClosestIndex(ArtifactMatch.PURPLE));
         t.addData("Current Index", idx);
         t.addData("Selected Artifact", st[idx%3].name());
         t.addData("target", getTarget());
         t.addData("current", getCurrent());
+        t.addData("Spindex Safety Mode", safetyMode);
     }
 
     public double getTarget(){
-        return idx*120+ZERO_OFFSET;
+        double target;
+        if(!safetyMode) target = idx*120;
+        else {
+            if(idx > 0) target = (idx-0.5)*120;
+            else target = (idx+0.5)*120;
+        }
+        return target + ZERO_OFFSET;
     }
     public double getCurrent(){
         return spos.getVoltage()/3.3*360*GEAR_RATIO+ENCODER_OFFSET;
@@ -128,6 +133,11 @@ public class Spindex extends SubsysCore {
                 new InstantCommand(() -> setIdx(idx)),
                 new WaitUntilCommand(this::reachedTarget)
         );
+    }
+
+    private boolean safetyMode = false;
+    public void setSafetyMode(boolean mode){
+        safetyMode = mode;
     }
 
     public int getClosestIndex(ArtifactMatch match){

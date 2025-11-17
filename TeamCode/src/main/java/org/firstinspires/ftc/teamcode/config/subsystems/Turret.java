@@ -19,12 +19,15 @@ public class Turret extends SubsysCore {
     Limelight ll;
     PIDController pid;
     public static double kp = 0.5, ki = 0.00001, kd = 0.05;
+    public static double REACHED_TARGET_THRESHOLD = 0.5;
 
     double turretDeg; // 0 is the position where the shooter is facing the back. This is NOT the actual turret angle.
     final double GEAR_RATIO = (double) 180 /50 * 20 / 90;
 
     double previousServoAngle;
     double previousPower;
+    int wrapCount;
+    double err;
     private final Pose goal;
 
     public double servoToTurretDegrees(double deg){
@@ -34,13 +37,13 @@ public class Turret extends SubsysCore {
         return deg*GEAR_RATIO;
     }
 
-    public Turret(Follower follower, Limelight ll, double initialTurretDeg,  boolean isRed){ // %TODO: isRed should not be here. It should be able to change during initialization
+    public Turret(Follower follower, Limelight ll, int initialWrap,  boolean isRed){ // %TODO: isRed should not be here. It should be able to change during initialization
         this.ll = ll;
         e1 = new AbsoluteAnalogEncoder(h, "te1", 3.3, AngleUnit.DEGREES);
         s1 = h.get(CRServo.class, "ts1");
         s2 = h.get(CRServo.class, "ts2");
 
-        turretDeg = initialTurretDeg - servoToTurretDegrees(e1.getCurrentPosition());
+        wrapCount = initialWrap;
         previousServoAngle = e1.getCurrentPosition();
         previousPower = 0;
         f = follower;
@@ -50,7 +53,7 @@ public class Turret extends SubsysCore {
 
 
     double getCurrentTurretAngle(){
-        return turretDeg + servoToTurretDegrees(e1.getCurrentPosition());
+        return servoToTurretDegrees(wrapCount*360+e1.getCurrentPosition());
     }
 
     double turretTargetDegFromPinpoint(){
@@ -59,16 +62,16 @@ public class Turret extends SubsysCore {
         return turretTarget;
     }
 
+
     @Override
     public void periodic() {
 
         double currentServoAngle = e1.getCurrentPosition();
-        if(previousPower > 0 && previousServoAngle > 240 && currentServoAngle < 120) turretDeg += servoToTurretDegrees(360);
-        else if(previousPower < 0 && previousServoAngle < 120 && currentServoAngle > 240) turretDeg -= servoToTurretDegrees(360);
+        if(previousPower > 0 && previousServoAngle > 240 && currentServoAngle < 120) wrapCount++;
+        else if(previousPower < 0 && previousServoAngle < 120 && currentServoAngle > 240) wrapCount--;
 
         pid.setPID(kp, ki, kd);
 
-        double err;
         if(ll.isAprilTagDetected()){
             err = 0; // TODO: Do this
         } else {
@@ -79,8 +82,12 @@ public class Turret extends SubsysCore {
         s1.setPower(pwr);
         s2.setPower(pwr);
 
-        previousServoAngle = e1.getCurrentPosition();
+        previousServoAngle = currentServoAngle;
     }
 
-    public boolean reachedTarget(){ return true; }
+    public boolean reachedTarget(){ return Math.abs(err) < REACHED_TARGET_THRESHOLD; }
+
+    public int getWrapCount() {
+        return wrapCount;
+    }
 }
