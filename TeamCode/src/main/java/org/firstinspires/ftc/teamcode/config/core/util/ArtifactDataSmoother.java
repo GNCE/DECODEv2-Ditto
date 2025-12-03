@@ -56,9 +56,9 @@ public class ArtifactDataSmoother {
     }
 
     private Artifact computeStableColor() {
-        if (greenCount > purpleCount && greenCount >= window.size() / 2)
+        if (greenCount > purpleCount && greenCount >= window.size() / 4)
             return Artifact.GREEN;
-        if (purpleCount > greenCount && purpleCount >= window.size() / 2)
+        if (purpleCount > greenCount && purpleCount >= window.size() / 4)
             return Artifact.PURPLE;
         return Artifact.NONE;
     }

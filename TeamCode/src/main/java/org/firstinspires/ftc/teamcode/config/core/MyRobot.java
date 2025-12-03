@@ -15,7 +15,7 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.gamepad.ToggleButtonReader;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.config.commands.IntakeUntilFullCommand;
+import org.firstinspires.ftc.teamcode.config.commands.IntakeUntilFullSafeCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeAllCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
 import org.firstinspires.ftc.teamcode.config.commands.TransferAllCommand;
@@ -63,7 +63,7 @@ public class MyRobot extends Robot {
     public static double TURRET_OFFSET_M = 0.08288647; // 82.88647 mm
     ToggleButtonReader allianceSelectionButton;
     ToggleButton intakeButton;
-    IntakeUntilFullCommand intakeUntilFullCommand;
+    IntakeUntilFullSafeCommand intakeUntilFullSafeCommand;
     List<SubsystemConfig> subsysList;
     boolean [] enabledSubsys = new boolean[SubsystemConfig.values().length];
     int slotSelect = 0;
@@ -117,7 +117,7 @@ public class MyRobot extends Robot {
         if(this.opModeType == OpModeType.TELEOP){
             if(hasSubsystems(Arrays.asList(SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SPINDEX))){
                 this.intakeButton = new ToggleButton(false);
-                this.intakeUntilFullCommand = new IntakeUntilFullCommand(intake, door, spindex);
+                this.intakeUntilFullSafeCommand = new IntakeUntilFullSafeCommand(intake, door, spindex);
             }
         }
 
@@ -211,15 +211,15 @@ public class MyRobot extends Robot {
         }
     }
     public void runIntakeTeleop(){
-        if(intakeUntilFullCommand.isFinished()) intakeButton.setVal(false);
+        if(intakeUntilFullSafeCommand.isFinished()) intakeButton.setVal(false);
         if(intakeButton.input(g1.getButton(GamepadKeys.Button.SQUARE))){
-            if(intakeButton.getVal()) intakeUntilFullCommand.schedule();
-            else intakeUntilFullCommand.cancel();
+            if(intakeButton.getVal()) intakeUntilFullSafeCommand.schedule();
+            else intakeUntilFullSafeCommand.cancel();
         }
 
         t.addData("Intake Active", intakeButton.getVal());
-        t.addData("Intake Scheduled", intakeUntilFullCommand.isScheduled());
-        t.addData("IntakeCommand finished?", intakeUntilFullCommand.isFinished());
+        t.addData("Intake Scheduled", intakeUntilFullSafeCommand.isScheduled());
+        t.addData("IntakeCommand finished?", intakeUntilFullSafeCommand.isFinished());
         t.addData("Spindex full?", spindex.isFull());
     }
     public void runTransferTeleop(){
