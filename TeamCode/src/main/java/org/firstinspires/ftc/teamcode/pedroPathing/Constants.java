@@ -33,7 +33,7 @@ public class Constants {
             .useBrakeModeInTeleOp(true);
 
     public static PinpointConstants localizerConstants = new PinpointConstants() // NOTE: These values are accurate as of 11/15/2025 except for directions
-            .forwardPodY(78.5)
+            .forwardPodY(74.5)
             .strafePodX(-45.76302)
             .distanceUnit(DistanceUnit.MM)
             .hardwareMapName("pp")
