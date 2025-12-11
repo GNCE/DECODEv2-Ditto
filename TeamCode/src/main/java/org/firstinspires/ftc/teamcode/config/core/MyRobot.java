@@ -59,7 +59,7 @@ public class MyRobot extends Robot {
     Pose goalPose;
     OpModeType opModeType;
 
-    public static boolean isRed;
+    public static Boolean isRed = null;
     public static double TURRET_OFFSET_M = 0.08288647; // 82.88647 mm
     ToggleButtonReader allianceSelectionButton;
     ToggleButton intakeButton;
@@ -121,7 +121,7 @@ public class MyRobot extends Robot {
             }
         }
 
-        this.allianceSelectionButton = new ToggleButtonReader(this.g1, GamepadKeys.Button.DPAD_UP);
+        if(isRed == null) isRed = false;
         this.lt = new LoopTimer();
     }
 
@@ -138,7 +138,7 @@ public class MyRobot extends Robot {
     }
 
     public void allianceSelection(){
-        isRed = !allianceSelectionButton.getState();
+        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) isRed = !isRed;
         t.addData("Current Alliance", isRed?"RED": "BLUE");
     }
 
@@ -171,7 +171,6 @@ public class MyRobot extends Robot {
         lt.start();
         resetCache();
         allianceSelection();
-        allianceSelectionButton.readValue();
         g1.readButtons();
         g2.readButtons();
         if(!isRed) goalPose = blueGoalPose;

@@ -3,7 +3,9 @@ package org.firstinspires.ftc.teamcode.config.subsystems;
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+import com.seattlesolvers.solverslib.controller.PIDFController;
 import com.seattlesolvers.solverslib.hardware.motors.Motor;
+import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.seattlesolvers.solverslib.hardware.motors.MotorGroup;
 import com.seattlesolvers.solverslib.util.InterpLUT;
 
@@ -30,6 +32,7 @@ public class Shooter extends SubsysCore {
     // Hardware
     // ===========================
     private final MotorGroup flywheel;
+    private final Motor.Encoder encoder;
     private final Servo hood;
 
     // ===========================
@@ -44,17 +47,16 @@ public class Shooter extends SubsysCore {
     // Max allowed velocity (safety clamp)
     // 6000 rpm motor -> 6000/60 * 28 = 2800 ticks/sec.
     // We add +100 as a small headroom margin.
-    public static double MAX_VELOCITY = 2930;
 
     // How close (in ticks/sec) must we be to call readyToShoot()
-    public static double VELOCITY_READY_THRESHOLD = 80.0;
+    public static double VELOCITY_READY_THRESHOLD = 70.0;
 
 
     // PID gains (live-tunable)
-    public static double kp = 0;
+    public static double kp = 0.0006;
     public static double ki = 0.0;
     public static double kd = 0;
-    public static double kV = 1.15;
+    public static double kV = 0.0003912;
 
     // Last commanded target velocity (ticks/sec)
     private double currentTargetVelocity = 0.0;
@@ -70,11 +72,11 @@ public class Shooter extends SubsysCore {
     public static double LAUNCHER_HEIGHT_M = 0.26839625; // 268.39625 mm
 
     // Hood angle range (deg FROM VERTICAL: 0° up, 90° horizontal)
-    public static double MIN_HOOD_ANGLE_DEG = 38.5; // was 28
+    public static double MIN_HOOD_ANGLE_DEG = 36; // was 28
     public static double MAX_HOOD_ANGLE_DEG = 55.0;
 
     // Servo positions at angle limits
-    public static double HOOD_MAX_SERVO_POS = 0.007;
+    public static double HOOD_MAX_SERVO_POS = 0.42; // servo tester on the right, hood lowest. higher pos = lower
     public static double HOOD_GEAR_RATIO =  (double)300/44;
     public static double HOOD_SERVO_RANGE = 355.0;
 
@@ -92,15 +94,16 @@ public class Shooter extends SubsysCore {
     // ===========================
 
     private final double[] distances = {
-            48.5, 91.4, 139.6
+            49.7, 69.5
     };
     private final double[] velocities = {
-            0.65, 0.8, 1
+            1900, 2100,
     };
 
     private final double[] hoodAngles = {
-            38, 48, 48
+            36, 38,
     };
+    PIDFController pidfController;
 
     private final InterpLUT velocityLut = new InterpLUT();
     private final InterpLUT hoodAngleLut = new InterpLUT();
@@ -116,11 +119,13 @@ public class Shooter extends SubsysCore {
     public boolean active = true;
 
     public Shooter() {
-        Motor m1 = new Motor(h, "shooter1", Motor.GoBILDA.BARE), m2 = new Motor(h, "shooter2", Motor.GoBILDA.BARE);
-        m2.setInverted(true);
+        Motor m1 = new MotorEx(h, "shooter1", Motor.GoBILDA.BARE), m2 = new MotorEx(h, "shooter2", Motor.GoBILDA.BARE);
+        m1.setInverted(true);
         flywheel = new MotorGroup(m1, m2);
-        flywheel.setRunMode(Motor.RunMode.VelocityControl);
+        flywheel.setRunMode(Motor.RunMode.RawPower);
         flywheel.setZeroPowerBehavior(Motor.ZeroPowerBehavior.FLOAT);
+        encoder = m1.encoder;
+        encoder.setDirection(Motor.Direction.FORWARD); // apparently does not do anything
 
         hood = h.get(Servo.class, "hood");
 
@@ -131,6 +136,7 @@ public class Shooter extends SubsysCore {
         }
         velocityLut.createLUT();
         hoodAngleLut.createLUT();
+        pidfController = new PIDFController(kp, ki, kd, kV);
     }
 
     // ===========================
@@ -146,7 +152,7 @@ public class Shooter extends SubsysCore {
     }
 
     public double getTargetVelocity(){
-        return -currentTargetVelocity*MAX_VELOCITY;
+        return currentTargetVelocity;
     }
 
 
@@ -194,19 +200,19 @@ public class Shooter extends SubsysCore {
     }
 
     public double getVelocity(){
-        return -flywheel.getVelocity();
+        return Math.abs(encoder.getCorrectedVelocity());
     }
     public void setHoodAngle(double angle){
         currentTargetHoodAngle = angle;
     }
 
     public static boolean autoTarget = true;
+    public static double NOMINAL_VOLTAGE = 13.5;
 
     @Override
     public void periodic() {
         // Allow PID tuning
-        flywheel.setVeloCoefficients(kp, ki, kd);
-        flywheel.setFeedforwardCoefficients(0, kV);
+        pidfController.setPIDF(kp, ki, kd, kV);
 
         if (active) {
             if(autoTarget){
@@ -229,7 +235,7 @@ public class Shooter extends SubsysCore {
 
 
         // Command flywheel directly in ticks/sec
-        flywheel.set(-currentTargetVelocity);
+        flywheel.set(MathUtils.clamp(pidfController.calculate(getVelocity(), getTargetVelocity()), -1, 1));
 
         // Command hood servo
         double servoPos = hoodAngleToServoPos(currentTargetHoodAngle);
