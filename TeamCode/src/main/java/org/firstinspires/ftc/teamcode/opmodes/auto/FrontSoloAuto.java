@@ -15,6 +15,7 @@ import org.firstinspires.ftc.teamcode.config.commands.OuttakeAllCommand;
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.util.Alliance;
+import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
 import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
 import org.firstinspires.ftc.teamcode.config.paths.AutoPaths;
@@ -50,7 +51,7 @@ public class FrontSoloAuto extends MyCommandOpMode {
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_FRONT_TO_SHOOT_FRONT)),
                                         new SequentialCommandGroup(
                                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.MOTIF)),
-                                                new WaitCommand(500),
+                                                new WaitCommand(450),
                                                 new InstantCommand(() -> r.ll.setMode(Limelight.Mode.MOTIF_DETECTION)),
                                                 new WaitUntilCommand(() -> MyRobot.currentMotif != null),
                                                 new ParallelCommandGroup(
@@ -61,30 +62,38 @@ public class FrontSoloAuto extends MyCommandOpMode {
                                 ),
                                 r.shootMotifSafe(),
                                 new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_FRONT_TO_FRONT_SPIKE_START)),
-                                new WaitCommand(400),
+                                new WaitCommand(700),
                                 new ParallelCommandGroup(
                                         new SequentialCommandGroup(
-                                                new InstantCommand(() -> r.f.setMaxPower(0.4)),
+                                                new InstantCommand(() -> r.f.setMaxPower(0.3)),
                                                 new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_SPIKE_START_TO_FRONT_SPIKE_END)),
                                                 new InstantCommand(() -> r.f.setMaxPower(1))
                                         ),
-                                        new ParallelRaceGroup(r.intakeAll(), new WaitCommand(5000))
+                                        new SequentialCommandGroup(
+                                                r.intakeForcedWithTimeout(1200, Artifact.PURPLE),
+                                                r.intakeForcedWithTimeout(700, Artifact.PURPLE),
+                                                r.intakeForcedWithTimeout(700, Artifact.GREEN)
+                                        )
                                 ),
                                 new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_SPIKE_END_TO_SHOOT_FRONT)),
                                 r.shootMotifSafe(),
                                 r.goTo(autoPaths.getPose(AutoPaths.PoseId.MID_SPIKE_START)),
-                                new WaitCommand(400),
+                                new WaitCommand(1000),
                                 new ParallelCommandGroup(
                                         new SequentialCommandGroup(
-                                                new InstantCommand(() -> r.f.setMaxPower(0.4)),
+                                                new InstantCommand(() -> r.f.setMaxPower(0.3)),
                                                 new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_START_TO_MID_SPIKE_END)),
                                                 new InstantCommand(() -> r.f.setMaxPower(1))
                                         ),
-                                        new ParallelRaceGroup(r.intakeAll(), new WaitCommand(5000))
+                                        new SequentialCommandGroup(
+                                                r.intakeForcedWithTimeout(1200, Artifact.PURPLE),
+                                                r.intakeForcedWithTimeout(700, Artifact.GREEN),
+                                                r.intakeForcedWithTimeout(700, Artifact.PURPLE)
+                                        )
                                 ),
                                 new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_END_TO_SHOOT_FRONT)),
                                 r.shootMotifSafe()
-                        ).withTimeout(29000),
+                        ).withTimeout(29500),
                         r.goTo(autoPaths.getPose(AutoPaths.PoseId.FRONT_PARK))
                 )
         );

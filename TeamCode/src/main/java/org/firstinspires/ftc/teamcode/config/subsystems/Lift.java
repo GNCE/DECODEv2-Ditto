@@ -56,9 +56,8 @@ public class Lift extends SubsysCore {
     public void periodic() {
         switch (mode){
             case RTP:
-                l.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-                l.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 l.setTargetPosition(tar);
+                l.setMode(DcMotor.RunMode.RUN_TO_POSITION);
                 if(Math.abs(tar - l.getCurrentPosition()) < 100) l.setPower(0);
                 else l.setPower(1);
 

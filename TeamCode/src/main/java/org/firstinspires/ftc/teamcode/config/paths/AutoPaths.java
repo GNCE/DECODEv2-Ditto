@@ -26,7 +26,7 @@ public final class AutoPaths {
         FRONT_SPIKE_START (new Pose(42, 84, Math.toRadians(180))),
         FRONT_SPIKE_1 (new Pose(37, 84, Math.toRadians(180))),
         FRONT_SPIKE_2 (new Pose(31.8, 84, Math.toRadians(180))),
-        FRONT_SPIKE_END   (new Pose(17, 84, Math.toRadians(180))),
+        FRONT_SPIKE_END   (new Pose(17.2, 84, Math.toRadians(180))),
         FRONT_SPIKE_END_TO_GATE_CONTROL (new Pose(32.1068090787717, 80.55540720961282)),
 
         MID_SPIKE_START   (new Pose(42, 58, Math.toRadians(180))),

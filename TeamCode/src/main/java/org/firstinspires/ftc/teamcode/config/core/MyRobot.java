@@ -6,6 +6,8 @@ import com.seattlesolvers.solverslib.command.Command;
 import com.seattlesolvers.solverslib.command.ConditionalCommand;
 import com.seattlesolvers.solverslib.command.DeferredCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
+import com.seattlesolvers.solverslib.command.RepeatCommand;
 import com.seattlesolvers.solverslib.command.Robot;
 
 import com.bylazar.telemetry.JoinedTelemetry;
@@ -348,5 +350,20 @@ public class MyRobot extends Robot {
 
     public Command intakeAll(){
         return new IntakeUntilFullCommand(intake, door, spindex);
+    }
+
+    public Command intakeForcedWithTimeout(int timeout, Artifact artifact){
+        return new SequentialCommandGroup(
+                new ParallelCommandGroup(
+                        door.setOpenCommand(false),
+                        spindex.goToSlot(ArtifactMatch.NONE),
+                        intake.setPowerInstant(Intake.IntakeMotorPowerConfig.STOP)
+                ),
+                intake.resetSmootherCommand(),
+                intake.runWithTimeout(timeout),
+                intake.setPowerInstant(Intake.IntakeMotorPowerConfig.STOP),
+                new InstantCommand(() -> spindex.insertItem(intake.getCurrentArtifact() == Artifact.NONE ? artifact : intake.getCurrentArtifact())),
+                intake.resetSmootherCommand()
+        );
     }
 }

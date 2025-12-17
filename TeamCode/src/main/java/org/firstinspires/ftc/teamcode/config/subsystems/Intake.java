@@ -8,6 +8,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.seattlesolvers.solverslib.command.ParallelRaceGroup;
 import com.seattlesolvers.solverslib.command.PerpetualCommand;
 import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.WaitCommand;
@@ -63,6 +64,13 @@ public class Intake extends SubsysCore {
     }
     public Command runUntilArtifactSensed(){
         return this.setPowerCommand(IntakeMotorPowerConfig.INTAKE).raceWith(new WaitUntilCommand(() -> smoother.getStableColor() != Artifact.NONE));
+    }
+    public Command runWithTimeout(int timeout){
+        return new ParallelRaceGroup(
+                this.setPowerCommand(IntakeMotorPowerConfig.INTAKE),
+                new WaitUntilCommand(() -> smoother.getStableColor() != Artifact.NONE),
+                new WaitCommand(timeout)
+        );
     }
     public Command resetSmootherCommand(){
         return new InstantCommand(() -> smoother.reset());
