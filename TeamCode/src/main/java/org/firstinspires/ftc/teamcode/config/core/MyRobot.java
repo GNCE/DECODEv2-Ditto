@@ -1,6 +1,11 @@
 package org.firstinspires.ftc.teamcode.config.core;
 
+import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
+import com.seattlesolvers.solverslib.command.Command;
+import com.seattlesolvers.solverslib.command.ConditionalCommand;
+import com.seattlesolvers.solverslib.command.DeferredCommand;
+import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.Robot;
 
 import com.bylazar.telemetry.JoinedTelemetry;
@@ -10,11 +15,15 @@ import com.pedropathing.follower.Follower;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.seattlesolvers.solverslib.command.SelectCommand;
+import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
+import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 import com.seattlesolvers.solverslib.gamepad.ToggleButtonReader;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.teamcode.config.commands.IntakeUntilFullCommand;
 import org.firstinspires.ftc.teamcode.config.commands.IntakeUntilFullSafeCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeAllCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
@@ -26,6 +35,7 @@ import org.firstinspires.ftc.teamcode.config.core.util.Motif;
 import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
 import org.firstinspires.ftc.teamcode.config.core.util.ToggleButton;
+import org.firstinspires.ftc.teamcode.config.paths.AutoPaths;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.config.subsystems.Lift;
@@ -36,12 +46,13 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
 public class MyRobot extends Robot {
     HardwareMap h;
-    JoinedTelemetry t;
+    public JoinedTelemetry t;
     public Follower f;
     List<LynxModule> hubs;
     LoopTimer lt;
@@ -100,11 +111,12 @@ public class MyRobot extends Robot {
         if(hasSubsystem(SubsystemConfig.INTAKE)){
             this.intake = new Intake();
         }
+        if(hasSubsystem(SubsystemConfig.LL)){
+            this.ll = new Limelight();
+        }
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
             this.f = Constants.createFollower(this.h);
-            if(hasSubsystem(SubsystemConfig.LL)){
-                this.ll = new Limelight(this.f, true);
-            }
+
             if(hasSubsystem(SubsystemConfig.TURRET)) turret = new Turret(endTurretWrapCount);
         }
         if(hasSubsystem(SubsystemConfig.SHOOTER)) this.shooter = new Shooter();
@@ -122,8 +134,6 @@ public class MyRobot extends Robot {
         if(isRed == null) isRed = false;
         this.lt = new LoopTimer();
     }
-
-    // new Pose(54.69, 6.74, Math.toRadians(180))
     public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, List<SubsystemConfig> subsysList){
         this(h, t, g1, g2, subsysList, OpModeType.TELEOP);
     }
@@ -160,7 +170,7 @@ public class MyRobot extends Robot {
         else f.setTeleOpDrive(g1.getLeftY(), -g1.getLeftX(), -g1.getRightX(), true);
     }
 
-    private final Pose blueGoalPose = new Pose(11.5, 138);
+    private final Pose blueGoalPose = new Pose(3, 142);
 
     public void startInitLoop(){
         lt.start();
@@ -173,7 +183,6 @@ public class MyRobot extends Robot {
     }
 
     public void endInitLoop(){
-        if(opModeType == OpModeType.AUTO) this.run(); // TODO: Need to make sure that they are all paused, especially shooter.
         if(hasSubsystem(SubsystemConfig.FOLLOWER)) f.update();
         lt.end();
         t.addData("Loop Time (ms)", lt.getMs());
@@ -205,11 +214,13 @@ public class MyRobot extends Robot {
         }
     }
     public void runIntakeTeleop(){
-        if(intakeUntilFullSafeCommand.isFinished()) intakeButton.setVal(false);
+        if(!intakeUntilFullSafeCommand.isScheduled()) intakeButton.setVal(false);
         if(intakeButton.input(g1.getButton(GamepadKeys.Button.SQUARE))){
             if(intakeButton.getVal()) intakeUntilFullSafeCommand.schedule();
             else intakeUntilFullSafeCommand.cancel();
         }
+
+        if(g1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.9) schedule(intake.setPowerInstant(-1));
 
         t.addData("Intake Active", intakeButton.getVal());
         t.addData("Intake Scheduled", intakeUntilFullSafeCommand.isScheduled());
@@ -237,16 +248,33 @@ public class MyRobot extends Robot {
         if (g1.wasJustPressed(GamepadKeys.Button.TRIANGLE) && !spindex.isEmpty())
             schedule(new OuttakeAllCommand(intake, spindex, turret, shooter, door));
     }
+
+    public void liftTeleop(){
+        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) schedule(new InstantCommand(()->lift.setTargetPosition(Lift.LiftPositions.EXTENDED)));
+    }
+
     public void endPeriodic() {
         this.run();
         if (hasSubsystem(SubsystemConfig.FOLLOWER)) {
             f.update();
             t.addData("Current Pose", f.getPose());
             t.addData("Current Velocity", f.getVelocity());
+            t.addData("Follower Busy?" , f.isBusy());
+        }
+        if(hasSubsystems(List.of(SubsystemConfig.SHOOTER, SubsystemConfig.TURRET, SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SPINDEX))){
+            t.addLine();
+            t.addLine("SHOOTER DATA");
+            if(!shooter.readyToShoot()) t.addLine("Shooter Not Ready");
+            if(!turret.reachedTarget()) t.addLine("Turret Not Ready");
+            if(!door.isOpen()) t.addLine("Door Not Open");
+            if(!spindex.reachedTarget()) t.addLine("Spindex Not Ready");
+            t.addData("Shoot Ready?", shooter.readyToShoot() && turret.reachedTarget() && door.isOpen() && spindex.reachedTarget());
+            t.addLine();
         }
         g1.readButtons();
         g2.readButtons();
         lt.end();
+        t.addData("Current Motif", currentMotif == null ? "Not Detected" : currentMotif.name());
         t.addData("Loop Time (ms)", lt.getMs());
         t.addData("Loop Frequency (Hz)", lt.getHz());
         t.update();
@@ -258,10 +286,67 @@ public class MyRobot extends Robot {
 
     public void onStart(){
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
-            if(autoEndPose == null) autoEndPose = new Pose(54.69, 6.74, Math.toRadians(180));
+            if(autoEndPose == null) autoEndPose = new Pose(54, 6.74, Math.toRadians(180));
             this.f.setStartingPose(autoEndPose);
             this.f.update();
             if(opModeType == OpModeType.TELEOP) this.startDrive();
         }
+    }
+
+    /// Commands ///
+
+    public Command shoot(ArtifactMatch artifactMatch){
+        return new OuttakeCommand(artifactMatch, this.intake, this.spindex, this.turret, this.shooter, this.door);
+    }
+
+    public Command shootMotif(){
+        return new SelectCommand(
+                new HashMap<Object, Command>(){{
+                    put(Motif.GPP, new SequentialCommandGroup(
+                            shoot(ArtifactMatch.GREEN),
+                            shoot(ArtifactMatch.PURPLE),
+                            shoot(ArtifactMatch.PURPLE)
+                    ));
+                    put(Motif.PGP, new SequentialCommandGroup(
+                            shoot(ArtifactMatch.PURPLE),
+                            shoot(ArtifactMatch.GREEN),
+                            shoot(ArtifactMatch.PURPLE)
+                    ));
+                    put(Motif.PPG, new SequentialCommandGroup(
+                            shoot(ArtifactMatch.PURPLE),
+                            shoot(ArtifactMatch.PURPLE),
+                            shoot(ArtifactMatch.GREEN)
+                    ));
+                }},
+                () -> MyRobot.currentMotif
+        );
+    }
+
+    public Command shootAll(){
+        return new OuttakeAllCommand(intake, spindex, turret, shooter, door);
+    }
+
+    public Command shootMotifSafe(){
+            return new ConditionalCommand(
+                    shootMotif(),
+                    shootAll(),
+                    () -> spindex.canMotif()
+            );
+    }
+
+    public Command goTo(Pose tar){
+        return new SequentialCommandGroup(
+                new InstantCommand(() -> f.followPath(
+                        f.pathBuilder()
+                                .addPath(new BezierLine(f.getPose(), tar))
+                                .setLinearHeadingInterpolation(f.getHeading(), tar.getHeading())
+                                .build()
+                )),
+                new WaitUntilCommand(() -> !f.isBusy())
+        );
+    }
+
+    public Command intakeAll(){
+        return new IntakeUntilFullCommand(intake, door, spindex);
     }
 }

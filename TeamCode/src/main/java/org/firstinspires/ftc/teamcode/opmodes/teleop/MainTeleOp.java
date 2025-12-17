@@ -30,6 +30,7 @@ public class MainTeleOp extends MyCommandOpMode {
         r.driveControls();
         r.runIntakeTeleop();
         r.runShootTeleop();
+        r.liftTeleop();
         r.shooter.setVelocity(targetVel);
         r.shooter.setHoodAngle(hoodAngle);
     }

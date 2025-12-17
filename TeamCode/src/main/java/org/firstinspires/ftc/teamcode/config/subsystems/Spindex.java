@@ -42,9 +42,9 @@ public class Spindex extends SubsysCore {
     AnalogInput spos;
     public static int idx;
     public static Artifact[] st = new Artifact[3];
-    public static double MIN_POSITION_TOLERANCE = 10;
-    public static double ZERO_OFFSET = 90;
-    public static double ENCODER_OFFSET = -44;
+    public static double MIN_POSITION_TOLERANCE = 15;
+    public static double ZERO_OFFSET = 106;
+    public static double ENCODER_OFFSET = -52;
     public static double GEAR_RATIO = 1.8;
 
     public Spindex(){
@@ -113,6 +113,10 @@ public class Spindex extends SubsysCore {
     public boolean contains(Artifact tar){
         return Arrays.asList(st).contains(tar);
     }
+    public boolean canMotif(){
+        return (Arrays.stream(st).filter(a -> a == Artifact.PURPLE).count() == 2
+        && Arrays.stream(st).filter(a -> a == Artifact.GREEN).count() == 1);
+    }
 
     public void overrideItem(int slot, Artifact art){
         st[slot] = art;
@@ -126,7 +130,7 @@ public class Spindex extends SubsysCore {
         st[idx%3] = Artifact.NONE;
     }
 
-    private void setIdx(int newIdx){ idx = newIdx; }
+    public void setIdx(int newIdx){ idx = newIdx; }
 
     public Command goToSlot(int idx){
         return new SequentialCommandGroup(

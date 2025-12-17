@@ -5,6 +5,7 @@ import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
+import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 
 @Configurable
@@ -24,8 +25,9 @@ public class Lift extends SubsysCore {
 
     public Lift(){
         l = h.get(DcMotorEx.class, "liftMotor");
+        l.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         l.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        l.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        setMode(Mode.RTP);
         setTargetPosition(LiftPositions.RETRACTED);
     }
 
@@ -33,11 +35,40 @@ public class Lift extends SubsysCore {
         tar = liftPositions.ticks;
     }
 
+    public enum Mode {
+        MANUAL,
+        RTP
+    }
+
+    Mode mode;
+
+    public void setMode(Mode mode) {
+        this.mode = mode;
+    }
+
+    double pwr = 0;
+
+    public void setManualPower(double pwr){
+        this.pwr = pwr;
+    }
+
     @Override
     public void periodic() {
-        l.setTargetPosition(tar);
-        if(Math.abs(tar - l.getCurrentPosition()) < 100) l.setPower(0);
-        else l.setPower(1);
+        switch (mode){
+            case RTP:
+                l.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+                l.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+                l.setTargetPosition(tar);
+                if(Math.abs(tar - l.getCurrentPosition()) < 100) l.setPower(0);
+                else l.setPower(1);
+
+                t.addData("Lift Target Position", tar);
+                break;
+            case MANUAL:
+                l.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+                l.setPower(pwr);
+                break;
+        }
         t.addData("Lift Current Position", l.getCurrentPosition());
         t.addData("Lift Velocity", l.getVelocity());
         t.addData("Lift Current Amps", l.getCurrent(CurrentUnit.AMPS));

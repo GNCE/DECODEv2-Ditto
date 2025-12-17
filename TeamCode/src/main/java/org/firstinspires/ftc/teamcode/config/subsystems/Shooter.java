@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.config.subsystems;
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.Servo;
 import com.qualcomm.robotcore.util.Range;
+import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.controller.PIDFController;
 import com.seattlesolvers.solverslib.hardware.motors.Motor;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
@@ -49,7 +50,7 @@ public class Shooter extends SubsysCore {
     // We add +100 as a small headroom margin.
 
     // How close (in ticks/sec) must we be to call readyToShoot()
-    public static double VELOCITY_READY_THRESHOLD = 70.0;
+    public static double VELOCITY_READY_THRESHOLD = 60.0;
 
 
     // PID gains (live-tunable)
@@ -72,11 +73,11 @@ public class Shooter extends SubsysCore {
     public static double LAUNCHER_HEIGHT_M = 0.26839625; // 268.39625 mm
 
     // Hood angle range (deg FROM VERTICAL: 0° up, 90° horizontal)
-    public static double MIN_HOOD_ANGLE_DEG = 36; // was 28
+    public static double MIN_HOOD_ANGLE_DEG = 30; // was 28
     public static double MAX_HOOD_ANGLE_DEG = 55.0;
 
     // Servo positions at angle limits
-    public static double HOOD_MAX_SERVO_POS = 0.42; // servo tester on the right, hood lowest. higher pos = lower
+    public static double HOOD_MAX_SERVO_POS = 0.595; // servo tester on the right, hood lowest. higher pos = lower
     public static double HOOD_GEAR_RATIO =  (double)300/44;
     public static double HOOD_SERVO_RANGE = 355.0;
 
@@ -94,14 +95,14 @@ public class Shooter extends SubsysCore {
     // ===========================
 
     private final double[] distances = {
-            49.7, 69.5
+            42.5, 49.7, 69.5, 81, 98, 140, 150
     };
     private final double[] velocities = {
-            1900, 2100,
+            2140, 1980, 2140, 2300, 2600, 2760, 2840
     };
 
     private final double[] hoodAngles = {
-            36, 38,
+            30, 40, 40, 52, 52, 53, 55
     };
     PIDFController pidfController;
 
@@ -116,7 +117,7 @@ public class Shooter extends SubsysCore {
     private double currentDistanceM = 0.0;
 
     // Whether shooter is actively tracking / shooting
-    public boolean active = true;
+    boolean active = true;
 
     public Shooter() {
         Motor m1 = new MotorEx(h, "shooter1", Motor.GoBILDA.BARE), m2 = new MotorEx(h, "shooter2", Motor.GoBILDA.BARE);
@@ -137,6 +138,8 @@ public class Shooter extends SubsysCore {
         velocityLut.createLUT();
         hoodAngleLut.createLUT();
         pidfController = new PIDFController(kp, ki, kd, kV);
+
+        setDefaultCommand(new RunCommand(() -> active = false, this));
     }
 
     // ===========================
@@ -200,7 +203,7 @@ public class Shooter extends SubsysCore {
     }
 
     public double getVelocity(){
-        return Math.abs(encoder.getCorrectedVelocity());
+        return -encoder.getCorrectedVelocity();
     }
     public void setHoodAngle(double angle){
         currentTargetHoodAngle = angle;
@@ -222,10 +225,9 @@ public class Shooter extends SubsysCore {
                 double lutHoodAngle  = hoodAngleLut.get(dist);
 
                 // 2) Clamp velocity and enforce hood angle limits
-                currentTargetVelocity   = Range.clip(lutVelocity, 0.0, 1.0);
+                currentTargetVelocity   = Range.clip(lutVelocity, 0.0, 2800);
                 currentTargetHoodAngle = Range.clip(lutHoodAngle, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
             } else {
-
             }
         } else {
             // Inactive: idle behavior
@@ -235,13 +237,15 @@ public class Shooter extends SubsysCore {
 
 
         // Command flywheel directly in ticks/sec
-        flywheel.set(MathUtils.clamp(pidfController.calculate(getVelocity(), getTargetVelocity()), -1, 1));
+        double targetPower = MathUtils.clamp(pidfController.calculate(getVelocity(), getTargetVelocity()), -1, 1);
+        flywheel.set(targetPower);
 
         // Command hood servo
         double servoPos = hoodAngleToServoPos(currentTargetHoodAngle);
         hood.setPosition(servoPos);
 
         t.addData("Shooter Velocity Error", getTargetVelocity() - getVelocity());
+        t.addData("Shooter Target Power", targetPower);
         t.addData("Shooter Distance (M)", currentDistanceM);
         t.addData("Shooter Velocity", getVelocity());
         t.addData("Shooter Target Velocity", getTargetVelocity());

@@ -5,13 +5,10 @@ import androidx.core.math.MathUtils;
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.Servo;
 import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.AbsoluteAnalogEncoder;
-import com.seattlesolvers.solverslib.hardware.motors.CRServoEx;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
@@ -23,9 +20,10 @@ public class Turret extends SubsysCore {
     Follower f;
     Limelight ll;
     PIDController pid;
-    public static double kp = 0.005, ki = 0, kd = 0.00005, kF = 0.1;
-    public static double REACHED_TARGET_THRESHOLD = 2;
-    public static double ZERO_OFFSET = -12;
+    public static double kp = 0.006, ki = 0, kd = 0.00006, kF = 0.09;
+    Pose motifPose = new Pose(72, 150);
+    public static double REACHED_TARGET_THRESHOLD = 0.7;
+    public static double ZERO_OFFSET = -85;
 
     double turretDeg; // 0 is the position where the shooter is facing the back. This is NOT the actual turret angle.
     final double GEAR_RATIO = (double) 180 /50 * 20 / 90;
@@ -43,6 +41,17 @@ public class Turret extends SubsysCore {
         return deg*GEAR_RATIO;
     }
 
+    public enum Target {
+        MOTIF,
+        GOAL
+    }
+
+    Target target;
+
+    public void setTarget(Target target) {
+        this.target = target;
+    }
+
     public Turret(int initialWrap){ // %TODO: isRed should not be here. It should be able to change during initialization
         e1 = new AbsoluteAnalogEncoder(h, "te1", 3.3, AngleUnit.DEGREES);
         s1 = h.get(CRServo.class, "ts1");
@@ -54,6 +63,7 @@ public class Turret extends SubsysCore {
         previousServoAngle = e1.getCurrentPosition();
         previousPower = 0;
         pid = new PIDController(kp, ki, kd);
+        setTarget(Target.GOAL);
     }
 
 
@@ -61,8 +71,8 @@ public class Turret extends SubsysCore {
         return servoToTurretDegrees(wrapCount*360+currentServoAngle+ZERO_OFFSET);
     }
 
-    double turretTargetDegFromPinpoint(){
-        double turretTarget = Math.toDegrees(Math.atan2(goalPose.getY() - robotPose.getY(), goalPose.getX() - robotPose.getX()) - robotPose.getHeading() - Math.PI);
+    double calculateTargetPose(Pose cur, Pose tar){
+        double turretTarget = Math.toDegrees(Math.atan2(tar.getY() - cur.getY(), tar.getX() - cur.getX()) - cur.getHeading() - Math.PI);
         turretTarget = (turretTarget + 540)%360-180;
         return turretTarget;
     }
@@ -83,7 +93,17 @@ public class Turret extends SubsysCore {
 
         pid.setPID(kp, ki, kd);
 
-        targetTurret = turretTargetDegFromPinpoint();
+        Pose targetPose = null;
+        switch (target){
+            case GOAL:
+                targetPose = goalPose;
+                break;
+            case MOTIF:
+                targetPose = motifPose;
+                break;
+        }
+
+        targetTurret = calculateTargetPose(robotPose, targetPose);
 /*
         if(ll.isAprilTagDetected()){
             err = 0; // TODO: Do this
@@ -99,13 +119,13 @@ public class Turret extends SubsysCore {
         if(err > 0) calc += kF;
         else if(err < 0) calc -= kF;
         double pwr = MathUtils.clamp(calc, -1, 1);
+        if(Math.abs(err) < REACHED_TARGET_THRESHOLD) pwr = 0;
         s1.setPower(pwr);
         s2.setPower(pwr);
 
         t.addData("Turret Wrap Count", wrapCount);
         t.addData("Turret Current Power", pwr);
         t.addData("Turret Target Angle", targetTurret);
-        t.addData("Turret Target Pinpoint", turretTargetDegFromPinpoint());
         t.addData("Turret Current Angle", getCurrentTurretAngle());
         t.addData("Turret Servo Angle", currentServoAngle);
         previousServoAngle = currentServoAngle;

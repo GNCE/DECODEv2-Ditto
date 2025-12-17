@@ -28,9 +28,10 @@ public class Intake extends SubsysCore {
     ArtifactDataSmoother smoother;
     double pwr;
     public static double INTAKE_PIVOT_ZERO_OFFSET = 0;
-    public static double INTAKE_PIVOT_DOWN = 0.94;
-    public static double INTAKE_PIVOT_TRANSFER = 0.74;
-    public static long TRANSFER_ACTUATION_TIME_MS = 450;
+    public static double INTAKE_PIVOT_DOWN_BALL = 0.92;
+    public static double INTAKE_PIVOT_DOWN_EMPTY = 0.96;
+    public static double INTAKE_PIVOT_TRANSFER = 0.69;
+    public static long TRANSFER_ACTUATION_TIME_MS = 380;
     boolean pivotUp = false;
 
     public enum IntakeMotorPowerStates {
@@ -38,8 +39,8 @@ public class Intake extends SubsysCore {
     }
     public static class IntakeMotorPowerConfig {
         public static double INTAKE = 1;
-        public static double TRANSFER = 0.85;
-        public static double STOP = 0.5;
+        public static double TRANSFER = 0.8;
+        public static double STOP = 0;
         public static double REJECT = -0.85;
     }
 
@@ -85,7 +86,7 @@ public class Intake extends SubsysCore {
     @Override
     public void periodic() {
         im.setPower(pwr);
-        piv.setPosition(INTAKE_PIVOT_ZERO_OFFSET + (pivotUp?INTAKE_PIVOT_TRANSFER:INTAKE_PIVOT_DOWN));
+        piv.setPosition(INTAKE_PIVOT_ZERO_OFFSET + (pivotUp?INTAKE_PIVOT_TRANSFER: (pwr == IntakeMotorPowerConfig.STOP ? INTAKE_PIVOT_DOWN_BALL : INTAKE_PIVOT_DOWN_EMPTY)));
         t.addData("PivotUp", pivotUp);
         t.addData("Intake Power", pwr);
         t.addData("Intake Current", im.getCurrent());

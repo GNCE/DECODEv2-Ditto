@@ -15,13 +15,12 @@ public class ArtifactDataSmoother {
         greenCount = purpleCount = noneCount = 0;
     }
 
-    public void addReading(boolean isPurple, boolean isGreen) {
+    public void addReading(boolean isThere, boolean isGreen) {
+        boolean isPurple = isThere && !isGreen;
         Artifact current;
 
         // Handle conflicting signals
-        if (isGreen && isPurple) {
-            current = lastStable; // maintain previous stable color
-        } else if (isGreen) {
+        if (isGreen) {
             current = Artifact.GREEN;
         } else if (isPurple) {
             current = Artifact.PURPLE;
