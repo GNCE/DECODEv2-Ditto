@@ -45,43 +45,47 @@ public class FrontSoloAuto extends MyCommandOpMode {
         r.overrideAutoEndPose(autoPaths.getPose(AutoPaths.PoseId.START_FRONT));
         schedule(
                 new SequentialCommandGroup(
-                        new ParallelCommandGroup(
-                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_FRONT_TO_SHOOT_FRONT)),
-                                new SequentialCommandGroup(
-                                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.MOTIF)),
-                                        new WaitCommand(500),
-                                        new InstantCommand(() -> r.ll.setMode(Limelight.Mode.MOTIF_DETECTION)),
-                                        new WaitUntilCommand(() -> MyRobot.currentMotif != null),
-                                        new ParallelCommandGroup(
-                                                new InstantCommand(() -> r.ll.setMode(Limelight.Mode.LOCALIZATION)),
-                                                new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL))
+                        new SequentialCommandGroup(
+                                new ParallelCommandGroup(
+                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_FRONT_TO_SHOOT_FRONT)),
+                                        new SequentialCommandGroup(
+                                                new InstantCommand(() -> r.turret.setTarget(Turret.Target.MOTIF)),
+                                                new WaitCommand(500),
+                                                new InstantCommand(() -> r.ll.setMode(Limelight.Mode.MOTIF_DETECTION)),
+                                                new WaitUntilCommand(() -> MyRobot.currentMotif != null),
+                                                new ParallelCommandGroup(
+                                                        new InstantCommand(() -> r.ll.setMode(Limelight.Mode.LOCALIZATION)),
+                                                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL))
+                                                )
                                         )
-                                )
-                        ),
-                        r.shootMotifSafe(),
-                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_FRONT_TO_FRONT_SPIKE_START)),
-                        new ParallelCommandGroup(
-                                new SequentialCommandGroup(
-                                        new InstantCommand(() -> r.f.setMaxPower(0.3)),
-                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_SPIKE_START_TO_FRONT_SPIKE_END)),
-                                        new InstantCommand(() -> r.f.setMaxPower(1))
                                 ),
-                                new ParallelRaceGroup(r.intakeAll(), new WaitCommand(10000))
-                        ),
-                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_SPIKE_END_TO_SHOOT_FRONT)),
-                        r.shootMotifSafe().deadlineWith(new RunCommand(() -> r.t.addLine("NEW YAYSHOOT"))),
-                        r.goTo(autoPaths.getPose(AutoPaths.PoseId.MID_SPIKE_START)),
-                        new ParallelDeadlineGroup(
-                                new SequentialCommandGroup(
-                                        new InstantCommand(() -> r.f.setMaxPower(0.28)),
-                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_START_TO_MID_SPIKE_END)),
-                                        new InstantCommand(() -> r.f.setMaxPower(1)),
-                                        new WaitCommand(500),
-                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_SPIKE_END_TO_SHOOT_FRONT))
+                                r.shootMotifSafe(),
+                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_FRONT_TO_FRONT_SPIKE_START)),
+                                new WaitCommand(400),
+                                new ParallelCommandGroup(
+                                        new SequentialCommandGroup(
+                                                new InstantCommand(() -> r.f.setMaxPower(0.4)),
+                                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_SPIKE_START_TO_FRONT_SPIKE_END)),
+                                                new InstantCommand(() -> r.f.setMaxPower(1))
+                                        ),
+                                        new ParallelRaceGroup(r.intakeAll(), new WaitCommand(5000))
                                 ),
-                                r.intakeAll()
-                        ),
-                        r.shootMotifSafe()
+                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_SPIKE_END_TO_SHOOT_FRONT)),
+                                r.shootMotifSafe(),
+                                r.goTo(autoPaths.getPose(AutoPaths.PoseId.MID_SPIKE_START)),
+                                new WaitCommand(400),
+                                new ParallelCommandGroup(
+                                        new SequentialCommandGroup(
+                                                new InstantCommand(() -> r.f.setMaxPower(0.4)),
+                                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_START_TO_MID_SPIKE_END)),
+                                                new InstantCommand(() -> r.f.setMaxPower(1))
+                                        ),
+                                        new ParallelRaceGroup(r.intakeAll(), new WaitCommand(5000))
+                                ),
+                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_END_TO_SHOOT_FRONT)),
+                                r.shootMotifSafe()
+                        ).withTimeout(29000),
+                        r.goTo(autoPaths.getPose(AutoPaths.PoseId.FRONT_PARK))
                 )
         );
     }

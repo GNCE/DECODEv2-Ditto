@@ -16,7 +16,7 @@ import java.util.EnumMap;
 public final class AutoPaths {
     // ====== POSES (BLUE ONLY) ======
     public enum PoseId {
-        START_FRONT (new Pose(22.2, 129.7, Math.toRadians(-128))),
+        START_FRONT (new Pose(21.8, 129.7, Math.toRadians(-128))),
         START_BACK  (new Pose(54.69, 6.74, Math.toRadians(180))), // TODO
 
         SHOOT_FRONT (new Pose(40, 107, Math.toRadians(180))),
@@ -26,17 +26,21 @@ public final class AutoPaths {
         FRONT_SPIKE_START (new Pose(42, 84, Math.toRadians(180))),
         FRONT_SPIKE_1 (new Pose(37, 84, Math.toRadians(180))),
         FRONT_SPIKE_2 (new Pose(31.8, 84, Math.toRadians(180))),
-        FRONT_SPIKE_END   (new Pose(27, 84, Math.toRadians(180))),
+        FRONT_SPIKE_END   (new Pose(17, 84, Math.toRadians(180))),
         FRONT_SPIKE_END_TO_GATE_CONTROL (new Pose(32.1068090787717, 80.55540720961282)),
 
-        MID_SPIKE_START   (new Pose(42, 60, Math.toRadians(180))),
-        MID_SPIKE_1 (new Pose(37, 60, Math.toRadians(180))),
-        MID_SPIKE_2 (new Pose(31.8, 60, Math.toRadians(180))),
+        MID_SPIKE_START   (new Pose(42, 58, Math.toRadians(180))),
+        MID_SPIKE_1 (new Pose(37, 58, Math.toRadians(180))),
+        MID_SPIKE_2 (new Pose(31.8, 58, Math.toRadians(180))),
         GATE_TO_MID_START_CONTROL (new Pose(40, 74.5)),
-        MID_SPIKE_END     (new Pose(27, 60, Math.toRadians(180))),
+        MID_SPIKE_END     (new Pose(9, 58, Math.toRadians(180))),
+
+        MID_SPIKE_END_TO_FRONT_SHOOT_CONTROL (new Pose(45.75700934579439, 57.292389853137514)),
 
         FAR_SPIKE_START   (new Pose(47, 36, Math.toRadians(180))),
-        FAR_SPIKE_END     (new Pose(20, 36, Math.toRadians(180)));
+        FAR_SPIKE_END     (new Pose(20, 36, Math.toRadians(180))),
+
+        FRONT_PARK (new Pose(55, 117, Math.toRadians(0)));
 
         private final Pose blue;
 
@@ -141,10 +145,16 @@ public final class AutoPaths {
         // MID SPIKE
         put(PathId.SHOOT_FRONT_TO_MID_SPIKE_START,
                 PoseId.SHOOT_FRONT, PoseId.MID_SPIKE_START);
+
         put(PathId.MID_SPIKE_START_TO_MID_SPIKE_END,
                 PoseId.MID_SPIKE_START, PoseId.MID_SPIKE_END);
-        put(PathId.MID_SPIKE_END_TO_SHOOT_FRONT,
-                PoseId.MID_SPIKE_END, PoseId.SHOOT_FRONT);
+
+        paths.put(PathId.MID_SPIKE_END_TO_SHOOT_FRONT,
+                f.pathBuilder()
+                        .addPath(new BezierCurve(getPose(PoseId.MID_SPIKE_END), getPose(PoseId.MID_SPIKE_END_TO_FRONT_SHOOT_CONTROL), getPose(PoseId.SHOOT_FRONT)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.MID_SPIKE_END).getHeading(), getPose(PoseId.SHOOT_FRONT).getHeading())
+                        .build()
+        );
 
         // FAR SPIKE
         put(PathId.SHOOT_FRONT_TO_FAR_SPIKE_START,
