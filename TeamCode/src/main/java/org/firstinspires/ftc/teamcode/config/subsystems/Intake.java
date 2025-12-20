@@ -40,7 +40,7 @@ public class Intake extends SubsysCore {
     }
     public static class IntakeMotorPowerConfig {
         public static double INTAKE = 1;
-        public static double TRANSFER = 0.8;
+        public static double TRANSFER = 0.6;
         public static double STOP = 0;
         public static double REJECT = -0.85;
     }

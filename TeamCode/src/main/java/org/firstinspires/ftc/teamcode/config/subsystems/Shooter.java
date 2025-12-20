@@ -50,14 +50,14 @@ public class Shooter extends SubsysCore {
     // We add +100 as a small headroom margin.
 
     // How close (in ticks/sec) must we be to call readyToShoot()
-    public static double VELOCITY_READY_THRESHOLD = 60.0;
+    public static double VELOCITY_READY_THRESHOLD = 100.0;
 
 
     // PID gains (live-tunable)
     public static double kp = 0.0006;
     public static double ki = 0.0;
     public static double kd = 0;
-    public static double kV = 0.0003912;
+    public static double kV = 0.000358;
 
     // Last commanded target velocity (ticks/sec)
     private double currentTargetVelocity = 0.0;
@@ -95,14 +95,14 @@ public class Shooter extends SubsysCore {
     // ===========================
 
     private final double[] distances = {
-            37.78, 57.3, 85.6, 109.3
+            22.84, 37.28, 57.3, 62, 85.6, 109.3
     };
     private final double[] velocities = {
-            2000, 2240, 2500, 2600
+            2080, 2120, 2240, 2280, 2500, 2600
     };
 
     private final double[] hoodAngles = {
-            38, 50, 55, 51
+            30, 49, 50, 55, 55, 51
     };
     PIDFController pidfController;
 

@@ -4,10 +4,8 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.seattlesolvers.solverslib.command.Command;
 import com.seattlesolvers.solverslib.command.ConditionalCommand;
-import com.seattlesolvers.solverslib.command.DeferredCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
-import com.seattlesolvers.solverslib.command.RepeatCommand;
 import com.seattlesolvers.solverslib.command.Robot;
 
 import com.bylazar.telemetry.JoinedTelemetry;
@@ -37,7 +35,6 @@ import org.firstinspires.ftc.teamcode.config.core.util.Motif;
 import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
 import org.firstinspires.ftc.teamcode.config.core.util.ToggleButton;
-import org.firstinspires.ftc.teamcode.config.paths.AutoPaths;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.config.subsystems.Lift;
@@ -73,7 +70,7 @@ public class MyRobot extends Robot {
     OpModeType opModeType;
 
     public static Boolean isRed = null;
-    public static double TURRET_OFFSET_M = 0.08288647; // 82.88647 mm
+    public static double TURRET_OFFSET_INCHES = 3.26322835;
     ToggleButtonReader allianceSelectionButton;
     ToggleButton intakeButton;
     IntakeUntilFullSafeCommand intakeUntilFullSafeCommand;
@@ -172,7 +169,7 @@ public class MyRobot extends Robot {
         else f.setTeleOpDrive(g1.getLeftY(), -g1.getLeftX(), -g1.getRightX(), true);
     }
 
-    private final Pose blueGoalPose = new Pose(13, 131); // 141x141 x:1.5-142.5 y:0-141
+    private final Pose blueGoalPose = new Pose(16.534, 131.89); // 141x141 x:1.5-142.5 y:0-141
 
     public void startInitLoop(){
         lt.start();
@@ -208,8 +205,8 @@ public class MyRobot extends Robot {
         resetCache();
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
             Pose turretPose = new Pose(
-                    f.getPose().getX() + TURRET_OFFSET_M* Math.cos(f.getPose().getHeading()),
-                    f.getPose().getY() + TURRET_OFFSET_M* Math.sin(f.getPose().getHeading()),
+                    f.getPose().getX() + TURRET_OFFSET_INCHES * Math.cos(f.getPose().getHeading()),
+                    f.getPose().getY() + TURRET_OFFSET_INCHES * Math.sin(f.getPose().getHeading()),
                     f.getPose().getHeading());
             if(hasSubsystem(SubsystemConfig.SHOOTER)) shooter.input(turretPose, goalPose);
             if(hasSubsystem(SubsystemConfig.TURRET)) turret.input(turretPose, goalPose);
