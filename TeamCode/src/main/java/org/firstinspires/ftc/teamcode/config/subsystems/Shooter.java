@@ -57,7 +57,7 @@ public class Shooter extends SubsysCore {
     public static double kp = 0.0006;
     public static double ki = 0.0;
     public static double kd = 0;
-    public static double kV = 0.000358;
+    public static double kV = 0.000352;
 
     // Last commanded target velocity (ticks/sec)
     private double currentTargetVelocity = 0.0;

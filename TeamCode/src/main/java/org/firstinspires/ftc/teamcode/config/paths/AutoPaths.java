@@ -15,30 +15,33 @@ import java.util.EnumMap;
 
 public final class AutoPaths {
     // ====== POSES (BLUE ONLY) ======
+
+    // POSE FOR RED
+    // START_FRONT (new Pose(25.34814419, 134, Math.toRadians(-127.879678))),
     public enum PoseId {
-        START_FRONT (new Pose(28.081609, 132.511467, Math.toRadians(-127.879678))),
+        START_FRONT (new Pose(25.954606141522028, 134.19492656875835, Math.toRadians(-127.879678))),
         START_BACK  (new Pose(54.69, 6.74, Math.toRadians(180))), // TODO
 
-        SHOOT_FRONT (new Pose(40, 107, Math.toRadians(180))),
+        SHOOT_FRONT (new Pose(45.18024032042723, 93.62883845126836, Math.toRadians(180))),
         SHOOT_BACK  (new Pose(63.63684913217624, 24.224299065420563, Math.toRadians(180))),
         GATE   (new Pose(19.4, 72.7, Math.toRadians(180))), // TODO: CHECK
 
-        FRONT_SPIKE_START (new Pose(44, 84, Math.toRadians(180))),
-        FRONT_SPIKE_1 (new Pose(37, 84, Math.toRadians(180))),
-        FRONT_SPIKE_2 (new Pose(31.8, 84, Math.toRadians(180))),
-        FRONT_SPIKE_END   (new Pose(19.5, 84, Math.toRadians(180))),
+        FRONT_SPIKE_START (new Pose(44, 85, Math.toRadians(180))), // RED 82
+        FRONT_SPIKE_1 (new Pose(37, 85, Math.toRadians(180))),
+        FRONT_SPIKE_2 (new Pose(31.8, 85, Math.toRadians(180))),
+        FRONT_SPIKE_END   (new Pose(19.5, 85, Math.toRadians(180))),
         FRONT_SPIKE_END_TO_GATE_CONTROL (new Pose(32.1068090787717, 80.55540720961282)),
 
-        MID_SPIKE_START   (new Pose(42, 58, Math.toRadians(180))),
-        MID_SPIKE_1 (new Pose(37, 58, Math.toRadians(180))),
-        MID_SPIKE_2 (new Pose(31.8, 58, Math.toRadians(180))),
+        MID_SPIKE_START   (new Pose(42, 60, Math.toRadians(180))), // 58
+        MID_SPIKE_1 (new Pose(37, 60, Math.toRadians(180))),
+        MID_SPIKE_2 (new Pose(31.8, 60, Math.toRadians(180))),
         GATE_TO_MID_START_CONTROL (new Pose(40, 74.5)),
-        MID_SPIKE_END     (new Pose(9.5, 58, Math.toRadians(180))),
+        MID_SPIKE_END     (new Pose(9.5, 60, Math.toRadians(180))),
 
         MID_SPIKE_END_TO_FRONT_SHOOT_CONTROL (new Pose(45.75700934579439, 57.292389853137514)),
 
-        FAR_SPIKE_START   (new Pose(47, 36, Math.toRadians(180))),
-        FAR_SPIKE_END     (new Pose(20, 36, Math.toRadians(180))),
+        FAR_SPIKE_START   (new Pose(47, 34, Math.toRadians(180))),
+        FAR_SPIKE_END     (new Pose(20, 34, Math.toRadians(180))),
 
         HUMAN_PLAYER_ZONE_1(new Pose(14.034712950600802, 18.64886515353805, Math.toRadians(180))),
         HUMAN_PLAYER_ZONE_2(new Pose(14.034712950600802, 12.688918558077429, Math.toRadians(180))),

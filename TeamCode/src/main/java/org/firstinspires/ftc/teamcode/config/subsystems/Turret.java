@@ -26,14 +26,15 @@ public class Turret extends SubsysCore {
     public static double MAX_INTEGRAL = 0.8;
     public static MyPIDFController pidf;
     Pose motifPose = new Pose(72, 150);
-    public static double POSITION_TOLERANCE = 2;
-    public static double VELOCITY_TOLERANCE = 5;
-    public static double OPEN_F = 0.08;
+    public static double POSITION_TOLERANCE = 2.2;
+    public static double VELOCITY_TOLERANCE = 10;
+    public static double OPEN_F = 0.096;
     public static MyPIDFController.IntegrationBehavior TURRET_INTEGRATION_BEHAVIOR = MyPIDFController.IntegrationBehavior.CLEAR_AT_SP;
     public static double TURRET_INTEGRATION_DECAY = 0.8;
     public static double TURRET_LARGE_MAX_OUTPUT = 1.0;
+    public static double MANUAL_OFFSET = 0;
     public static double TURRET_SMALL_MAX_OUTPUT = 0.2;
-    public static double ZERO_OFFSET = -85;
+    public static double ZERO_OFFSET = -87.2;
 
     double turretDeg; // 0 is the position where the shooter is facing the back. This is NOT the actual turret angle.
     final double GEAR_RATIO = (double) 180 /50 * 20 / 90;
@@ -133,6 +134,7 @@ public class Turret extends SubsysCore {
 
  */
         targetTurret = MathUtils.clamp(targetTurret, -170, 170);
+        targetTurret += MANUAL_OFFSET;
         pidf.setSetPoint(targetTurret);
         err = targetTurret - getCurrentTurretAngle();
 

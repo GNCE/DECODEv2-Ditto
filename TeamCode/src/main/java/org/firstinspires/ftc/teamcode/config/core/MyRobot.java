@@ -221,6 +221,9 @@ public class MyRobot extends Robot {
 
         if(g1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.9) schedule(intake.setPowerInstant(-1));
 
+        if(g1.wasJustPressed(GamepadKeys.Button.CIRCLE)) intake.smoother.addReading(true, false);
+        else if(g1.wasJustPressed(GamepadKeys.Button.CROSS)) intake.smoother.addReading(true, true);
+
         t.addData("Intake Active", intakeButton.getVal());
         t.addData("Intake Scheduled", intakeUntilFullSafeCommand.isScheduled());
         t.addData("IntakeCommand finished?", intakeUntilFullSafeCommand.isFinished());
@@ -238,6 +241,11 @@ public class MyRobot extends Robot {
     }
 
     public void runShootTeleop(){
+        double lt = g2.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER);
+        double rt = g2.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER);
+
+        if(lt > 0.1 || rt > 0.1) Turret.MANUAL_OFFSET += (rt - lt)/2;
+
         if (g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)
                 && spindex.contains(Artifact.PURPLE))
             schedule(new OuttakeCommand(ArtifactMatch.PURPLE, intake, spindex, turret, shooter, door));
@@ -285,7 +293,7 @@ public class MyRobot extends Robot {
 
     public void onStart(){
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
-            if(autoEndPose == null) autoEndPose = new Pose(78.6929, 6.742126, Math.toRadians(180));
+            if(autoEndPose == null) autoEndPose = new Pose(76.9329, 6.742126, Math.toRadians(180));
             this.f.setStartingPose(autoEndPose);
             this.f.update();
             if(opModeType == OpModeType.TELEOP) this.startDrive();

@@ -94,7 +94,7 @@ public class FrontSoloAuto extends MyCommandOpMode {
                                 ),
                                 new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_END_TO_SHOOT_FRONT)),
                                 r.shootMotifSafe()
-                        ).withTimeout(29500),
+                        ).withTimeout(29000),
                         r.goTo(autoPaths.getPose(AutoPaths.PoseId.FRONT_PARK))
                 )
         );

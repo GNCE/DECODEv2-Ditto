@@ -26,7 +26,7 @@ public class Intake extends SubsysCore {
     CachedMotor im;
     Servo piv;
     DigitalChannel pin0, pin1; // Purple, Green
-    ArtifactDataSmoother smoother;
+    public ArtifactDataSmoother smoother;
     double pwr;
     public static double INTAKE_PIVOT_ZERO_OFFSET = 0;
     public static double INTAKE_PIVOT_DOWN_BALL = 0.92;
