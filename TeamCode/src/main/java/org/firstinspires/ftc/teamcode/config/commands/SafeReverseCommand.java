@@ -6,7 +6,6 @@ import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
-import org.firstinspires.ftc.teamcode.config.subsystems.Spindex;
 
 public class SafeReverseCommand extends SequentialCommandGroup {
     public SafeReverseCommand(Intake intake, Spindex spindex) {
