@@ -14,7 +14,7 @@ public class LiftManualControl extends MyCommandOpMode {
     @Override
     public void initialize() {
         r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.LIFT));
-        r.lift.setMode(Lift.Mode.MANUAL);
+        r.lift.setMode(Lift.Mode.RAW);
     }
 
     @Override

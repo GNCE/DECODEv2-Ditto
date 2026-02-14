@@ -13,16 +13,17 @@ import java.util.List;
 public class IntakeTest extends MyCommandOpMode {
     @Override
     public void initialize() {
-        r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.INTAKE, SubsystemConfig.SPINDEX, SubsystemConfig.DOOR));
+        r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.INTAKE));
     }
 
     @Override
     public void initialize_loop() {
-        r.preloadSelection();
+
     }
 
     @Override
     public void run() {
         r.runIntakeTeleop();
+        r.runTransferTeleop();
     }
 }

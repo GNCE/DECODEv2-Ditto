@@ -10,22 +10,21 @@ import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
+import org.firstinspires.ftc.teamcode.config.subsystems.Lift;
 import org.firstinspires.ftc.teamcode.config.subsystems.Shooter;
 import org.firstinspires.ftc.teamcode.config.subsystems.Storage;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
-public class OuttakeCommand extends SequentialCommandGroup {
-    public OuttakeCommand(Intake intake, Turret turret, Shooter shooter, Door door, Storage storage){
+public class LiftCommand extends SequentialCommandGroup {
+    public LiftCommand(Intake intake, Turret turret, Shooter shooter, Lift lift){
         addCommands(
                 new ParallelCommandGroup(
-                        door.setOpenCommand(true),
-                        new WaitUntilCommand(turret::reachedTarget),
-                        new WaitUntilCommand(shooter::readyToShoot)
+                        new InstantCommand(() -> intake.setMode(Intake.Mode.DISABLE)),
+                        // new InstantCommand(() -> turret.) TODO: Disable
+                        new InstantCommand(() -> shooter.setActive(false))
                 ),
-                new InstantCommand(() -> intake.setMode(Intake.Mode.TRANSFER)),
-                new WaitUntilCommand(() -> storage.getSize() == 0).withTimeout(1000),
-                new InstantCommand(() -> intake.setMode(Intake.Mode.INTAKE))
+                lift.EngageClutchCommand()
         );
-        addRequirements(door, shooter, intake, turret);
+        addRequirements(intake, turret, shooter, lift);
     }
 }

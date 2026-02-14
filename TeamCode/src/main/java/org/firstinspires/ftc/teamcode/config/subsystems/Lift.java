@@ -1,17 +1,35 @@
 package org.firstinspires.ftc.teamcode.config.subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.seattlesolvers.solverslib.command.Command;
+import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
+import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
+import com.seattlesolvers.solverslib.command.WaitCommand;
+import com.seattlesolvers.solverslib.command.WaitUntilCommand;
+import com.seattlesolvers.solverslib.controller.PIDFController;
+import com.seattlesolvers.solverslib.hardware.motors.Motor;
+import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
+import com.seattlesolvers.solverslib.hardware.motors.MotorGroup;
+import com.seattlesolvers.solverslib.hardware.servos.ServoEx;
+import com.seattlesolvers.solverslib.util.MathUtils;
 
-import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
-import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
+
+import kotlin.time.Instant;
 
 @Configurable
 public class Lift extends SubsysCore {
-    DcMotorEx l;
+    MotorGroup front, back;
+    ServoEx pto;
     public static int tar = 0;
+    public static double kp = 0, ki = 0, kd = 0, kf = 0;
+    public static int positionTolerance = 50;
+    public static double CLUTCH_PULLED = 0;
+    public static double CLUTCH_MESHED = 1;
+    public static double ENGAGING_POWER = 0.3;
+    public static long ENGAGING_DELAY = 1000;
+    PIDFController pidf;
 
 
     public enum LiftPositions {
@@ -24,11 +42,20 @@ public class Lift extends SubsysCore {
     }
 
     public Lift(){
-        l = h.get(DcMotorEx.class, "liftMotor");
-        l.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        l.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        setMode(Mode.RTP);
+        front = new MotorGroup(
+                new MotorEx(h, "fl"),
+                new MotorEx(h, "fr").setInverted(true)
+        );
+        back = new MotorGroup(
+                new MotorEx(h, "bl"),
+                new MotorEx(h, "br").setInverted(true)
+        );
+        pto = new ServoEx(h, "pto");
+        back.setRunMode(Motor.RunMode.RawPower);
+        setMode(Mode.INACTIVE);
         setTargetPosition(LiftPositions.RETRACTED);
+        pidf = new PIDFController(kp, ki, kd, kf);
+        pidf.setTolerance(positionTolerance);
     }
 
     public void setTargetPosition(LiftPositions liftPositions){
@@ -36,8 +63,9 @@ public class Lift extends SubsysCore {
     }
 
     public enum Mode {
-        MANUAL,
-        RTP
+        RAW,
+        PID,
+        INACTIVE
     }
 
     Mode mode;
@@ -51,30 +79,61 @@ public class Lift extends SubsysCore {
     public void setManualPower(double pwr){
         this.pwr = pwr;
     }
+    public int getCurrentPosition(){
+        return back.getCurrentPosition();
+    }
 
     @Override
     public void periodic() {
         switch (mode){
-            case RTP:
-                l.setTargetPosition(tar);
-                l.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-                if(Math.abs(tar - l.getCurrentPosition()) < 100) l.setPower(0);
-                else l.setPower(1);
-
+            case PID:
+                pidf.setPIDF(kp, ki, kd, 0);
+                pidf.setTolerance(positionTolerance);
+                pidf.setSetPoint(tar);
+                pwr = MathUtils.clamp(pidf.calculate(getCurrentPosition()) + kf, -1, 1);
+                back.set(pwr);
                 t.addData("Lift Target Position", tar);
                 break;
-            case MANUAL:
-                l.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-                l.setPower(pwr);
+            case RAW:
+                front.set(-pwr);
+                back.set(pwr);
                 break;
         }
-        t.addData("Lift Current Position", l.getCurrentPosition());
-        t.addData("Lift Velocity", l.getVelocity());
-        t.addData("Lift Current Amps", l.getCurrent(CurrentUnit.AMPS));
-        t.addData("Lift Busy", l.isBusy());
+        if(mode == Mode.INACTIVE) pto.set(CLUTCH_PULLED);
+        else pto.set(CLUTCH_MESHED);
+
+        t.addData("Lift Current Position", getCurrentPosition());
+        t.addData("Lift Power", pwr);
+        t.addData("Lift Position Error", tar - getCurrentPosition());
+        // t.addData("Lift Current Amps", back.getMotor().motor.);
+        t.addData("Lift Reached Target?", reachedTarget());
     }
 
     public boolean reachedTarget(){
-        return !l.isBusy();
+        return pidf.atSetPoint();
+    }
+
+    public void resetEncoder(){
+        back.resetEncoder();
+    }
+
+    public Command SetModeCommand(Mode newMode){
+        return new InstantCommand(() -> mode = newMode);
+    }
+
+    public Command EngageClutchCommand(){
+        return new SequentialCommandGroup(
+                new ParallelCommandGroup(
+                        this.SetModeCommand(Mode.RAW),
+                        new InstantCommand(() -> setManualPower(ENGAGING_POWER))
+                ),
+                new WaitCommand(ENGAGING_DELAY),
+                new ParallelCommandGroup(
+                        this.SetModeCommand(Mode.PID),
+                        new InstantCommand(this::resetEncoder),
+                        new InstantCommand(() -> setTargetPosition(LiftPositions.EXTENDED))
+                ),
+                new WaitUntilCommand(this::reachedTarget)
+        );
     }
 }
