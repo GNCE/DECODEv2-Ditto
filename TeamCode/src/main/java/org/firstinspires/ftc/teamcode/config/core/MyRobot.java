@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.config.core;
 
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.util.Timer;
 import com.seattlesolvers.solverslib.command.Command;
 import com.seattlesolvers.solverslib.command.ConditionalCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
@@ -34,8 +35,10 @@ import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
 import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.core.util.Motif;
 import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
+import org.firstinspires.ftc.teamcode.config.core.util.PoseEKF;
 import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
 import org.firstinspires.ftc.teamcode.config.core.util.ToggleButton;
+import org.firstinspires.ftc.teamcode.config.core.util.VisionMeasurement;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.config.subsystems.Lift;
@@ -62,6 +65,8 @@ public class MyRobot extends Robot {
     public Lift lift;
     public Limelight ll;
     public Shooter shooter;
+    public PoseEKF ekf;
+    Timer runtime;
     public GamepadEx g1, g2;
     public static Pose autoEndPose;
     public static Motif currentMotif;
@@ -70,7 +75,13 @@ public class MyRobot extends Robot {
     OpModeType opModeType;
 
     public static Boolean isRed = null;
-    public static double TURRET_OFFSET_INCHES = 3.26322835;
+    public static double TURRET_OFFSET_INCHES = -0.905511811;
+
+    public static double chassisLeft = 5.5196850394; // Inches
+    public static double chassisRight = 5.5196850394;
+    public static double chassisBack = 6.8661417323;
+    public static double chassisFront = 10.413385827;
+
     ToggleButtonReader allianceSelectionButton;
     ToggleButton intakeButton;
     List<SubsystemConfig> subsysList;
@@ -130,6 +141,7 @@ public class MyRobot extends Robot {
 
         if(isRed == null) isRed = false;
         this.lt = new LoopTimer();
+        this.runtime = new Timer();
     }
     public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, List<SubsystemConfig> subsysList){
         this(h, t, g1, g2, subsysList, OpModeType.TELEOP);
@@ -152,11 +164,13 @@ public class MyRobot extends Robot {
     public void startDrive(){
         f.startTeleopDrive();
         f.update();
+        runtime.resetTimer();
     }
 
     public void driveControls(){
         if(g1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)>0.8) f.setTeleOpDrive(g1.getLeftY()*0.3, -g1.getLeftX()*0.3, -g1.getRightX()*0.3, true);
         else f.setTeleOpDrive(g1.getLeftY(), -g1.getLeftX(), -g1.getRightX(), true);
+        if(g1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.8) cornerSquare();
     }
 
     private final Pose blueGoalPose = new Pose(16.534, 131.89); // 141x141 x:1.5-142.5 y:0-141
@@ -200,6 +214,33 @@ public class MyRobot extends Robot {
                     f.getPose().getHeading());
             if(hasSubsystem(SubsystemConfig.SHOOTER)) shooter.input(turretPose, goalPose);
             if(hasSubsystem(SubsystemConfig.TURRET)) turret.input(turretPose, goalPose);
+
+            if(hasSubsystem(SubsystemConfig.LL)){
+                double now = runtime.getElapsedTimeSeconds();
+
+                Pose odo = f.getPose();
+                double speed = Double.NaN;
+                double omega = Double.NaN;
+
+                ekf.predictFromAbsoluteOdo(now, odo, speed, omega);
+
+                ll.update(now, odo.getHeading());
+
+                VisionMeasurement vm = ll.getMeasurement();
+                if (vm != null) {
+                    ekf.updateVisionWithLatency(
+                            now,
+                            vm.pose,
+                            vm.timestampSec,
+                            speed, omega,
+                            vm.quality
+                    );
+                }
+
+                f.setPose(ekf.getPose());
+                f.update();
+            }
+
         }
         if(hasSubsystem(SubsystemConfig.INTAKE)){
             storage.inputAmps(intake.getCurrent());
@@ -261,11 +302,23 @@ public class MyRobot extends Robot {
 
     public void onStart(){
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
-            if(autoEndPose == null) autoEndPose = new Pose(76.9329, 6.742126, Math.toRadians(180));
+            if(autoEndPose == null) autoEndPose = new Pose(chassisLeft + 1.25, chassisBack, Math.toRadians(90));
             this.f.setStartingPose(autoEndPose);
             this.f.update();
+            this.ekf.resetPose(autoEndPose);
             if(opModeType == OpModeType.TELEOP) this.startDrive();
         }
+    }
+
+    public void setPose(Pose pose){
+        f.setPose(pose);
+        f.update();
+        ekf.resetPose(pose);
+    }
+
+    public void cornerSquare(){
+        if(isRed) setPose(new Pose(chassisLeft + 1.25, chassisBack, Math.toRadians(90)));
+        else setPose(new Pose(144 - chassisLeft - 1.25, chassisBack, Math.toRadians(90)));
     }
 
     /// Commands ///
