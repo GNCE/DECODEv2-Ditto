@@ -13,7 +13,7 @@ import java.util.List;
 public class IntakeTest extends MyCommandOpMode {
     @Override
     public void initialize() {
-        r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.INTAKE));
+        r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.FOLLOWER, SubsystemConfig.INTAKE, SubsystemConfig.DOOR));
     }
 
     @Override

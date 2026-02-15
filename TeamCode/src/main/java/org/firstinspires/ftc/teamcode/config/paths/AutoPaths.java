@@ -9,6 +9,7 @@ import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
 import com.pedropathing.paths.PathConstraints;
 
+import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.util.Alliance;
 
 import java.util.EnumMap;
@@ -19,8 +20,8 @@ public final class AutoPaths {
     // POSE FOR RED
     // START_FRONT (new Pose(25.34814419, 134, Math.toRadians(-127.879678))),
     public enum PoseId {
-        START_FRONT (new Pose(25.954606141522028, 134.19492656875835, Math.toRadians(-127.879678))),
-        START_BACK  (new Pose(54.69, 6.74, Math.toRadians(180))), // TODO
+        START_FRONT (new Pose(28.09, 130.592, Math.toRadians(-124.9))),
+        START_BACK  (new Pose(48 + MyRobot.chassisLeft, MyRobot.chassisBack, Math.toRadians(180))), // TODO
 
         SHOOT_FRONT (new Pose(45.18024032042723, 93.62883845126836, Math.toRadians(180))),
         SHOOT_BACK  (new Pose(63.63684913217624, 24.224299065420563, Math.toRadians(180))),

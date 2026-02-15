@@ -4,6 +4,7 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.util.Timer;
 import com.seattlesolvers.solverslib.command.Command;
+import com.seattlesolvers.solverslib.command.CommandScheduler;
 import com.seattlesolvers.solverslib.command.ConditionalCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
@@ -36,6 +37,7 @@ import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.core.util.Motif;
 import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.PoseEKF;
+import org.firstinspires.ftc.teamcode.config.core.util.SAT2D;
 import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
 import org.firstinspires.ftc.teamcode.config.core.util.ToggleButton;
 import org.firstinspires.ftc.teamcode.config.core.util.VisionMeasurement;
@@ -82,8 +84,21 @@ public class MyRobot extends Robot {
     public static double chassisBack = 6.8661417323;
     public static double chassisFront = 10.413385827;
 
-    ToggleButtonReader allianceSelectionButton;
-    ToggleButton intakeButton;
+    public static double chassisLeftOut = 5.79;
+    public static double chassisRightOut = 5.5196850394;
+
+    SAT2D.PolygonSet launchZones = new SAT2D.PolygonSet()
+            .add("Close",
+                    new SAT2D.Point2(0, 144),
+                    new SAT2D.Point2(144, 144),
+                    new SAT2D.Point2(72, 72))
+            .add("Far",
+                    new SAT2D.Point2(72, 24),
+                    new SAT2D.Point2(48, 0),
+                    new SAT2D.Point2(96, 0));
+
+    ToggleButton autoFireButton;
+    OuttakeCommand outtakeCommand;
     List<SubsystemConfig> subsysList;
     boolean [] enabledSubsys = new boolean[SubsystemConfig.values().length];
     int slotSelect = 0;
@@ -134,14 +149,19 @@ public class MyRobot extends Robot {
         if(hasSubsystem(SubsystemConfig.LIFT)) this.lift = new Lift();
 
         if(this.opModeType == OpModeType.TELEOP){
-            if(hasSubsystems(Arrays.asList(SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SPINDEX))){
-                this.intakeButton = new ToggleButton(false);
+            if(hasSubsystems(Arrays.asList(SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SHOOTER, SubsystemConfig.TURRET))){
+                this.autoFireButton = new ToggleButton(true);
             }
+        }
+
+        if(hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SHOOTER, SubsystemConfig.TURRET))){
+            outtakeCommand = new OuttakeCommand(intake, turret, shooter, door, storage);
         }
 
         if(isRed == null) isRed = false;
         this.lt = new LoopTimer();
         this.runtime = new Timer();
+        this.ekf = new PoseEKF();
     }
     public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, List<SubsystemConfig> subsysList){
         this(h, t, g1, g2, subsysList, OpModeType.TELEOP);
@@ -204,6 +224,8 @@ public class MyRobot extends Robot {
         }
     }
 
+    String prevZone = null;
+
     public void startPeriodic(){
         lt.start();
         resetCache();
@@ -241,6 +263,16 @@ public class MyRobot extends Robot {
                 f.update();
             }
 
+            if(opModeType == OpModeType.TELEOP && hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER, SubsystemConfig.DOOR, SubsystemConfig.FOLLOWER))){
+                autoFireButton.input(g1.getButton(GamepadKeys.Button.X));
+                String zone = launchZones.firstHitName(chassisBox());
+                if(zone != null && !zone.equals(prevZone) && autoFireButton.getVal() && !outtakeCommand.isScheduled() && storage.getSize() > 0){
+                    outtakeCommand.schedule();
+                }
+                if(zone == null && outtakeCommand.isScheduled()) CommandScheduler.getInstance().cancel(outtakeCommand);
+                t.addData("Current Zone", zone);
+                prevZone = zone;
+            }
         }
         if(hasSubsystem(SubsystemConfig.INTAKE)){
             storage.inputAmps(intake.getCurrent());
@@ -263,7 +295,7 @@ public class MyRobot extends Robot {
         if(lt > 0.1 || rt > 0.1) Turret.MANUAL_OFFSET += (rt - lt)/2;
 
         if (g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER) && storage.getSize() != 0)
-            schedule(new OuttakeCommand(intake, turret, shooter, door, storage));
+            schedule(outtakeCommand);
     }
 
     public void liftTeleop(){
@@ -278,7 +310,7 @@ public class MyRobot extends Robot {
             t.addData("Current Velocity", f.getVelocity());
             t.addData("Follower Busy?" , f.isBusy());
         }
-        if(hasSubsystems(List.of(SubsystemConfig.SHOOTER, SubsystemConfig.TURRET, SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SPINDEX))){
+        if(hasSubsystems(List.of(SubsystemConfig.SHOOTER, SubsystemConfig.TURRET, SubsystemConfig.INTAKE, SubsystemConfig.DOOR))){
             t.addLine();
             t.addLine("SHOOTER DATA");
             if(!shooter.readyToShoot()) t.addLine("Shooter Not Ready");
@@ -286,6 +318,10 @@ public class MyRobot extends Robot {
             if(!door.isOpen()) t.addLine("Door Not Open");
             t.addData("Shoot Ready?", shooter.readyToShoot() && turret.reachedTarget() && door.isOpen());
             t.addLine();
+        }
+        if(outtakeCommand != null){
+            t.addData("Outtake Command Scheduled", outtakeCommand.isScheduled());
+            t.addData("Outtake Command Done", outtakeCommand.isFinished());
         }
         g1.readButtons();
         g2.readButtons();
@@ -302,7 +338,7 @@ public class MyRobot extends Robot {
 
     public void onStart(){
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
-            if(autoEndPose == null) autoEndPose = new Pose(chassisLeft + 1.25, chassisBack, Math.toRadians(90));
+            if(autoEndPose == null) autoEndPose = new Pose(chassisLeftOut + 1.25, chassisBack, Math.toRadians(90));
             this.f.setStartingPose(autoEndPose);
             this.f.update();
             this.ekf.resetPose(autoEndPose);
@@ -317,9 +353,36 @@ public class MyRobot extends Robot {
     }
 
     public void cornerSquare(){
-        if(isRed) setPose(new Pose(chassisLeft + 1.25, chassisBack, Math.toRadians(90)));
-        else setPose(new Pose(144 - chassisLeft - 1.25, chassisBack, Math.toRadians(90)));
+        if(isRed) setPose(new Pose(chassisLeftOut + 1.25, chassisBack, Math.toRadians(90)));
+        else setPose(new Pose(144 - chassisRightOut - 1.25, chassisBack, Math.toRadians(90)));
     }
+
+    private SAT2D.ConvexPolygon chassisBox(){
+        final double x = f.getPose().getX();
+        final double y = f.getPose().getY();
+        final double h = f.getPose().getHeading();
+
+        final double c = Math.cos(h);
+        final double s = Math.sin(h);
+
+        // Local corners (robot frame)
+        final double[] lx = { +chassisFront, +chassisFront, -chassisBack,  -chassisBack  };
+        final double[] ly = { +chassisLeft,  -chassisRight, -chassisRight, +chassisLeft };
+
+        SAT2D.Point2 p0 = rotTrans(lx[0], ly[0], x, y, c, s);
+        SAT2D.Point2 p1 = rotTrans(lx[1], ly[1], x, y, c, s);
+        SAT2D.Point2 p2 = rotTrans(lx[2], ly[2], x, y, c, s);
+        SAT2D.Point2 p3 = rotTrans(lx[3], ly[3], x, y, c, s);
+
+        return new SAT2D.ConvexPolygon(p0, p1, p2, p3);
+    }
+
+    private static SAT2D.Point2 rotTrans(double lx, double ly, double x, double y, double c, double s) {
+        double X = x + c * lx - s * ly;
+        double Y = y + s * lx + c * ly;
+        return new SAT2D.Point2(X, Y);
+    }
+
 
     /// Commands ///
 

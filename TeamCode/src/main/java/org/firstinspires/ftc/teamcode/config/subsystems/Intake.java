@@ -20,20 +20,11 @@ public class Intake extends SubsysCore {
     ServoEx servo;
     double pwr;
 
-    public static double INTAKE_DOWN = 0.0;
-    public static double INTAKE_UP = 0.0;
-    public static double TRANSFER_I_POWER = 0.7;
+    public static double INTAKE_DOWN = 0.65;
+    public static double INTAKE_UP = 0.7;
+    public static double TRANSFER_I_POWER = 0.5;
     public static double TRANSFER_T_POWER = 0.7;
-
-    public enum SERVO_POSITIONS {
-        INTAKE_UP(0), INTAKE_DOWN(0.3);
-
-        public final double pos;
-
-        SERVO_POSITIONS(double pos) {
-            this.pos = pos;
-        }
-    }
+    public static double ONE_TRANSFER_T_POWER = 1;
 
     public Intake(){
         im = new CachedMotor(h.get(DcMotorEx.class, "intakeMotor"));
@@ -48,8 +39,8 @@ public class Intake extends SubsysCore {
         setDefaultCommand(new RunCommand(() -> mode = Mode.INTAKE, this));
     }
 
-    public void setIntakePitch(SERVO_POSITIONS sp){
-        servo.set(sp.pos);
+    public void setIntakePitch(double sp){
+        servo.set(sp);
     }
 
     public double getCurrent(){
@@ -90,18 +81,19 @@ public class Intake extends SubsysCore {
                 else tr.setPower(0);
                 if (size >= 3){
                     im.setPower(0);
-                    setIntakePitch(SERVO_POSITIONS.INTAKE_UP);
+                    setIntakePitch(INTAKE_UP);
                 } else {
                     im.setPower(1);
-                    setIntakePitch(SERVO_POSITIONS.INTAKE_DOWN);
+                    setIntakePitch(INTAKE_DOWN);
                 }
                 break;
             case TRANSFER:
                 im.setPower(TRANSFER_I_POWER);
-                tr.setPower(TRANSFER_T_POWER);
+                if(size <= 1) tr.setPower(ONE_TRANSFER_T_POWER);
+                else tr.setPower(TRANSFER_T_POWER);
                 break;
         }
-        if(mode != Mode.INTAKE) setIntakePitch(SERVO_POSITIONS.INTAKE_UP);
+        if(mode != Mode.INTAKE) setIntakePitch(INTAKE_UP);
         t.addData("Intake Mode", mode.name());
     }
 }

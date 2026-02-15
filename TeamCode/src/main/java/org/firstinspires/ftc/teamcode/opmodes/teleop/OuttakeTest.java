@@ -12,22 +12,20 @@ import java.util.List;
 @Configurable
 @TeleOp(name="Bare Shooter Test", group="Test")
 public class OuttakeTest extends MyCommandOpMode {
-    public static double targetVel = 15;
-    public static double hoodAngle = 55;
 
     @Override
     public void initialize() {
-        r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.SHOOTER));
+        r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.FOLLOWER, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER));
     }
 
     @Override
-    public void initialize_loop() {
-
+    public void atStart() {
+        r.startDrive();
     }
 
     @Override
     public void run() {
-        r.shooter.setVelocity(targetVel);
-        r.shooter.setHoodAngle(hoodAngle);
+        r.driveControls();
+        r.runShootTeleop();
     }
 }
