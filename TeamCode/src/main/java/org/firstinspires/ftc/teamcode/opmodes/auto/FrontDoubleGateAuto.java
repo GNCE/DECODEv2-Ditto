@@ -3,31 +3,22 @@ package org.firstinspires.ftc.teamcode.opmodes.auto;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
-import com.seattlesolvers.solverslib.command.ParallelDeadlineGroup;
-import com.seattlesolvers.solverslib.command.ParallelRaceGroup;
-import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitCommand;
-import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.config.commands.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.util.Alliance;
-import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
 import org.firstinspires.ftc.teamcode.config.paths.AutoPaths;
-import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
-import org.firstinspires.ftc.teamcode.config.subsystems.Limelight;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 import java.util.List;
 
-import kotlin.time.Instant;
-
-@Autonomous(group="Partner Auto", name="Front Helper Auto")
-public class FrontHelperAuto extends MyCommandOpMode {
+@Autonomous(group="Partner Auto", name="Front Double Gate Auto")
+public class FrontDoubleGateAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
     @Override
@@ -50,7 +41,6 @@ public class FrontHelperAuto extends MyCommandOpMode {
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                                 new InstantCommand(() -> r.shooter.setActive(true))
                         ),
-                        new WaitCommand(500),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_FRONT_TO_FRONT_SPIKE_START)),
@@ -61,7 +51,7 @@ public class FrontHelperAuto extends MyCommandOpMode {
                         ),
                         new InstantCommand(() -> r.f.setMaxPower(0.8)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_SPIKE_END_TO_GATE)),
-                        new WaitCommand(850),
+                        new WaitCommand(5000),
                         r.goTo(autoPaths.getPose(AutoPaths.PoseId.SHOOT_FRONT)),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
@@ -73,16 +63,6 @@ public class FrontHelperAuto extends MyCommandOpMode {
                         ),
                         new InstantCommand(() -> r.f.setMaxPower(1)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_END_TO_SHOOT_FRONT)),
-                        r.shootAll(),
-                        new InstantCommand(() -> r.door.setOpen(false)),
-                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_FRONT_TO_FAR_SPIKE_START)),
-                        new SequentialCommandGroup(
-                                new InstantCommand(() -> r.f.setMaxPower(0.5)),
-                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FAR_SPIKE_START_TO_FAR_SPIKE_END)),
-                                new InstantCommand(() -> r.f.setMaxPower(1))
-                        ),
-                        new InstantCommand(() -> r.f.setMaxPower(1)),
-                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FAR_SPIKE_END_TO_SHOOT_FRONT_270)),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false))
                 ).withTimeout(29500).andThen(r.goTo(autoPaths.getPose(AutoPaths.PoseId.FRONT_PARK)))

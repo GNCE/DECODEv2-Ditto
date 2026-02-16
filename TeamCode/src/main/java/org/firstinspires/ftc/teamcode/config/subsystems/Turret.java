@@ -27,7 +27,8 @@ public class Turret extends SubsysCore {
     public static double TURRET_OFFSET = 90;
     public static double BOTH_SERVO_OFFSET = 0.009;
     public static double SECOND_SERVO_OFFSET = 0;
-    public static double POSITION_TOLERANCE = 5;
+    public static double POSITION_TOLERANCE = 8;
+    boolean alwaysAtTarget = false;
 
     double previousServoAngle, currentServoAngle;
     double previousPower;
@@ -67,7 +68,12 @@ public class Turret extends SubsysCore {
         previousServoAngle = e1.getCurrentPosition();
         previousPower = 0;
         testingOnly = false;
+        alwaysAtTarget = false;
         setTarget(Target.GOAL);
+    }
+
+    public void setAlwaysAtTarget(boolean alwaysAtTarget){
+        this.alwaysAtTarget = alwaysAtTarget;
     }
     double getCurrentTurretAngle(){
         return (servoToTurretDegrees(wrapCount*360+currentServoAngle+ENCODER_TURRET_OFFSET) + 180) % 360 - 180;
@@ -124,7 +130,7 @@ public class Turret extends SubsysCore {
         previousServoAngle = currentServoAngle;
     }
 
-    public boolean reachedTarget(){ return ((getCurrentTurretAngle() - (targetTurret + MANUAL_OFFSET) + 180) % 360 + 360) % 360 - 180 < POSITION_TOLERANCE; }
+    public boolean reachedTarget(){ return alwaysAtTarget || (((getCurrentTurretAngle() - (targetTurret + MANUAL_OFFSET) + 180) % 360 + 360) % 360 - 180 < POSITION_TOLERANCE); }
 
     public int getWrapCount() {
         return wrapCount;

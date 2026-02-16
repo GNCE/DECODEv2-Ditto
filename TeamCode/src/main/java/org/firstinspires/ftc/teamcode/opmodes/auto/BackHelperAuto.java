@@ -1,29 +1,24 @@
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
-import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
-
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitCommand;
-import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.config.commands.FollowPathCommand;
+import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.util.Alliance;
-import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
-import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
 import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
 import org.firstinspires.ftc.teamcode.config.paths.AutoPaths;
-import org.firstinspires.ftc.teamcode.config.subsystems.Limelight;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 import java.util.List;
 
-@Autonomous(group="Solo Auto", name="Back Solo Auto")
-public class BackSoloAuto extends MyCommandOpMode {
+@Autonomous(group="Partner Auto", name="Back Helper Auto")
+public class BackHelperAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
     @Override
@@ -66,7 +61,7 @@ public class BackSoloAuto extends MyCommandOpMode {
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_START_TO_MID_SPIKE_END)),
                                         new InstantCommand(() -> r.f.setMaxPower(1))
                                 ),
-                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_END_TO_SHOOT_FRONT)),
+                                r.goTo(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK)),
                                 r.shootAll(),
                                 new InstantCommand(() -> r.door.setOpen(false))
                         ).withTimeout(29500),

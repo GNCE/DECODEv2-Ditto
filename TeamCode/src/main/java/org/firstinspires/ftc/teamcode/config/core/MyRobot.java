@@ -97,7 +97,7 @@ public class MyRobot extends Robot {
                     new SAT2D.Point2(48, 0),
                     new SAT2D.Point2(96, 0));
 
-    ToggleButton autoFireButton;
+    ToggleButton autoFireButton, turretAlwaysReadyButton;
     OuttakeCommand outtakeCommand;
     List<SubsystemConfig> subsysList;
     boolean [] enabledSubsys = new boolean[SubsystemConfig.values().length];
@@ -142,7 +142,10 @@ public class MyRobot extends Robot {
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
             this.f = Constants.createFollower(this.h);
 
-            if(hasSubsystem(SubsystemConfig.TURRET)) turret = new Turret(endTurretWrapCount);
+            if(hasSubsystem(SubsystemConfig.TURRET)){
+                turret = new Turret(endTurretWrapCount);
+                if(this.opModeType == OpModeType.TELEOP) turretAlwaysReadyButton = new ToggleButton(false);
+            }
         }
         if(hasSubsystem(SubsystemConfig.SHOOTER)) this.shooter = new Shooter();
         if(hasSubsystem(SubsystemConfig.DOOR)) this.door = new Door();
@@ -150,7 +153,7 @@ public class MyRobot extends Robot {
 
         if(this.opModeType == OpModeType.TELEOP){
             if(hasSubsystems(Arrays.asList(SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SHOOTER, SubsystemConfig.TURRET))){
-                this.autoFireButton = new ToggleButton(true);
+                this.autoFireButton = new ToggleButton(false);
             }
         }
 
@@ -193,7 +196,7 @@ public class MyRobot extends Robot {
         if(g1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.8) cornerSquare();
     }
 
-    private final Pose blueGoalPose = new Pose(16.534, 131.89); // 141x141 x:1.5-142.5 y:0-141
+    private final Pose blueGoalPose = new Pose(15.5, 131.89); // 141x141 x:1.5-142.5 y:0-141 16.534
 
     public void startInitLoop(){
         lt.start();
@@ -264,14 +267,21 @@ public class MyRobot extends Robot {
             }
 
             if(opModeType == OpModeType.TELEOP && hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER, SubsystemConfig.DOOR, SubsystemConfig.FOLLOWER))){
-                autoFireButton.input(g1.getButton(GamepadKeys.Button.X));
+                autoFireButton.input(g1.getButton(GamepadKeys.Button.CROSS));
                 String zone = launchZones.firstHitName(chassisBox());
-                if(zone != null && !zone.equals(prevZone) && autoFireButton.getVal() && !outtakeCommand.isScheduled() && storage.getSize() > 0){
-                    outtakeCommand.schedule();
+                if(autoFireButton.getVal()) {
+                    if (zone != null && !zone.equals(prevZone) && !outtakeCommand.isScheduled() && storage.getSize() > 0) {
+                        outtakeCommand.schedule();
+                    }
+                    if (zone == null && outtakeCommand.isScheduled())
+                        CommandScheduler.getInstance().cancel(outtakeCommand);
                 }
-                if(zone == null && outtakeCommand.isScheduled()) CommandScheduler.getInstance().cancel(outtakeCommand);
                 t.addData("Current Zone", zone);
                 prevZone = zone;
+            }
+            if(opModeType == OpModeType.TELEOP && hasSubsystem(SubsystemConfig.TURRET)){
+                turretAlwaysReadyButton.input(g1.getButton(GamepadKeys.Button.CIRCLE));
+                turret.setAlwaysAtTarget(turretAlwaysReadyButton.getVal());
             }
         }
         if(hasSubsystem(SubsystemConfig.INTAKE)){
