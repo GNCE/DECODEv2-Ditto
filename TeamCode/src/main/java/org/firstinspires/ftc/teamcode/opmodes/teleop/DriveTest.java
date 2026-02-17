@@ -1,11 +1,10 @@
 package org.firstinspires.ftc.teamcode.opmodes.teleop;
 
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.robot.Robot;
 
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
-import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.SubsystemConfig;
 
 import java.util.List;
 

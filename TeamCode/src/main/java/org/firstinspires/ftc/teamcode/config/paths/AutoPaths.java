@@ -8,7 +8,7 @@ import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
 
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
-import org.firstinspires.ftc.teamcode.config.core.util.Alliance;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Alliance;
 
 import java.util.EnumMap;
 

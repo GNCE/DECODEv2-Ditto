@@ -5,7 +5,7 @@ import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
-import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.SubsystemConfig;
 
 import java.util.List;
 

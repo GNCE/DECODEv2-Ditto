@@ -4,7 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
-import org.firstinspires.ftc.teamcode.config.core.util.ModeSmoother;
+import org.firstinspires.ftc.teamcode.config.core.util.hardware.ModeSmoother;
 
 @Configurable
 public class Storage extends SubsysCore{

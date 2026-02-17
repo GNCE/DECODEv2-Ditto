@@ -1,6 +1,5 @@
-package org.firstinspires.ftc.teamcode.config.core.util;
+package org.firstinspires.ftc.teamcode.config.core.util.hardware;
 
-import com.seattlesolvers.solverslib.controller.Controller;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.seattlesolvers.solverslib.util.MathUtils;
 

@@ -3,17 +3,12 @@ package org.firstinspires.ftc.teamcode.config.subsystems;
 import androidx.core.math.MathUtils;
 
 import com.bylazar.configurables.annotations.Configurable;
-import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
-import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Servo;
-import com.seattlesolvers.solverslib.controller.PIDController;
 import com.seattlesolvers.solverslib.hardware.AbsoluteAnalogEncoder;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
-import org.firstinspires.ftc.teamcode.config.core.util.MyPIDFController;
 
 @Configurable
 public class Turret extends SubsysCore {

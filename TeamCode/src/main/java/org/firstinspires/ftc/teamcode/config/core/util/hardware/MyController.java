@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.config.core.util;
+package org.firstinspires.ftc.teamcode.config.core.util.hardware;
 
 import com.seattlesolvers.solverslib.util.MathUtils;
 

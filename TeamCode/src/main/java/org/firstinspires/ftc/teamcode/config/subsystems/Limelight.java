@@ -10,7 +10,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
-import org.firstinspires.ftc.teamcode.config.core.util.Motif;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Motif;
 import org.firstinspires.ftc.teamcode.config.core.util.VisionMeasurement;
 
 import java.util.List;

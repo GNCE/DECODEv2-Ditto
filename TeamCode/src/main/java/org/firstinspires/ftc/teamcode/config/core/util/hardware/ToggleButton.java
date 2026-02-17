@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.config.core.util;
+package org.firstinspires.ftc.teamcode.config.core.util.hardware;
 
 public class ToggleButton {
     private boolean prev = false, stored, m_justChanged;

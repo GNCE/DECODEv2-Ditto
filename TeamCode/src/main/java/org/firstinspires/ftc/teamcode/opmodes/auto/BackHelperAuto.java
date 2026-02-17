@@ -9,9 +9,9 @@ import com.seattlesolvers.solverslib.command.WaitCommand;
 import org.firstinspires.ftc.teamcode.config.commands.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
-import org.firstinspires.ftc.teamcode.config.core.util.Alliance;
-import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
-import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Alliance;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.OpModeType;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.SubsystemConfig;
 import org.firstinspires.ftc.teamcode.config.paths.AutoPaths;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 

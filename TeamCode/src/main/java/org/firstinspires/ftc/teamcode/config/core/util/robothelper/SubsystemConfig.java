@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.config.core.util;
+package org.firstinspires.ftc.teamcode.config.core.util.robothelper;
 
 public enum SubsystemConfig {
     INTAKE,

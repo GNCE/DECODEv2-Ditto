@@ -5,9 +5,7 @@ import com.pedropathing.geometry.Pose;
 import com.pedropathing.util.Timer;
 import com.seattlesolvers.solverslib.command.Command;
 import com.seattlesolvers.solverslib.command.CommandScheduler;
-import com.seattlesolvers.solverslib.command.ConditionalCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
-import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.Robot;
 
 import com.bylazar.telemetry.JoinedTelemetry;
@@ -17,29 +15,22 @@ import com.pedropathing.follower.Follower;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.seattlesolvers.solverslib.command.RunCommand;
-import com.seattlesolvers.solverslib.command.SelectCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
-import com.seattlesolvers.solverslib.command.button.Button;
-import com.seattlesolvers.solverslib.command.button.GamepadButton;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
-import com.seattlesolvers.solverslib.gamepad.ToggleButtonReader;
-import com.seattlesolvers.solverslib.gamepad.TriggerReader;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.config.commands.LiftCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
 import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
-import org.firstinspires.ftc.teamcode.config.core.util.Artifact;
-import org.firstinspires.ftc.teamcode.config.core.util.ArtifactMatch;
-import org.firstinspires.ftc.teamcode.config.core.util.Motif;
-import org.firstinspires.ftc.teamcode.config.core.util.OpModeType;
+import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Motif;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.PoseEKF;
 import org.firstinspires.ftc.teamcode.config.core.util.SAT2D;
-import org.firstinspires.ftc.teamcode.config.core.util.SubsystemConfig;
-import org.firstinspires.ftc.teamcode.config.core.util.ToggleButton;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.SubsystemConfig;
+import org.firstinspires.ftc.teamcode.config.core.util.hardware.ToggleButton;
 import org.firstinspires.ftc.teamcode.config.core.util.VisionMeasurement;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
@@ -51,7 +42,6 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 public class MyRobot extends Robot {
@@ -100,6 +90,7 @@ public class MyRobot extends Robot {
     ToggleButton autoFireButton, turretAlwaysReadyButton;
     OuttakeCommand outtakeCommand;
     List<SubsystemConfig> subsysList;
+    ShotPlanner planner;
     boolean [] enabledSubsys = new boolean[SubsystemConfig.values().length];
     int slotSelect = 0;
 
@@ -165,6 +156,7 @@ public class MyRobot extends Robot {
         this.lt = new LoopTimer();
         this.runtime = new Timer();
         this.ekf = new PoseEKF();
+        this.planner = new ShotPlanner();
     }
     public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, List<SubsystemConfig> subsysList){
         this(h, t, g1, g2, subsysList, OpModeType.TELEOP);
@@ -266,22 +258,30 @@ public class MyRobot extends Robot {
                 f.update();
             }
 
-            if(opModeType == OpModeType.TELEOP && hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER, SubsystemConfig.DOOR, SubsystemConfig.FOLLOWER))){
-                autoFireButton.input(g1.getButton(GamepadKeys.Button.CROSS));
-                String zone = launchZones.firstHitName(chassisBox());
-                if(autoFireButton.getVal()) {
-                    if (zone != null && !zone.equals(prevZone) && !outtakeCommand.isScheduled() && storage.getSize() > 0) {
-                        outtakeCommand.schedule();
+            if(opModeType == OpModeType.TELEOP) {
+                if (hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER, SubsystemConfig.DOOR, SubsystemConfig.FOLLOWER))){
+                    autoFireButton.input(g1.getButton(GamepadKeys.Button.CROSS));
+                    String zone = launchZones.firstHitName(chassisBox());
+                    if (autoFireButton.getVal()) {
+                        if (zone != null && !zone.equals(prevZone) && !outtakeCommand.isScheduled() && storage.getSize() > 0) {
+                            outtakeCommand.schedule();
+                        }
+                        if (zone == null && outtakeCommand.isScheduled())
+                            CommandScheduler.getInstance().cancel(outtakeCommand);
                     }
-                    if (zone == null && outtakeCommand.isScheduled())
-                        CommandScheduler.getInstance().cancel(outtakeCommand);
+                    t.addData("Current Zone", zone);
+                    prevZone = zone;
                 }
-                t.addData("Current Zone", zone);
-                prevZone = zone;
-            }
-            if(opModeType == OpModeType.TELEOP && hasSubsystem(SubsystemConfig.TURRET)){
-                turretAlwaysReadyButton.input(g1.getButton(GamepadKeys.Button.CIRCLE));
-                turret.setAlwaysAtTarget(turretAlwaysReadyButton.getVal());
+                if (hasSubsystems(List.of(SubsystemConfig.SHOOTER, SubsystemConfig.TURRET, SubsystemConfig.FOLLOWER))){
+                    ShotPlanner.ShotCommand cmd = planner.plan(f.getPose(), f.getVelocity().getXComponent(), f.getVelocity().getYComponent(), goalPose);
+
+                    turret.input(f.getPose(), cmd.virtualGoal);
+                    shooter.setPlannedShot(cmd.distancePoseUnits, cmd.targetRpm, cmd.hoodBaselineDegFromVertical);
+                }
+                if (hasSubsystem(SubsystemConfig.TURRET)) {
+                    turretAlwaysReadyButton.input(g1.getButton(GamepadKeys.Button.CIRCLE));
+                    turret.setAlwaysAtTarget(turretAlwaysReadyButton.getVal());
+                }
             }
         }
         if(hasSubsystem(SubsystemConfig.INTAKE)){

@@ -1,4 +1,6 @@
 package org.firstinspires.ftc.teamcode.config.core.util;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Artifact;
+
 import java.util.LinkedList;
 import java.util.Queue;
 public class ArtifactDataSmoother {
