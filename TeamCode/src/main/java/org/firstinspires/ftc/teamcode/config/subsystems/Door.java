@@ -21,7 +21,7 @@ public class Door extends SubsysCore {
     public static double OFFSET_POS = 0;
     public static double OPEN_POS = 0.25;
     public static double CLOSED_POS = 0.45;
-    public static long ACTUATION_TIME_MS = 500;
+    public static long ACTUATION_TIME_MS = 300;
 
     boolean open;
 

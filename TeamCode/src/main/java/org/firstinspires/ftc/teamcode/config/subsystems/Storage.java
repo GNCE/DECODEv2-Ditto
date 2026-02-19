@@ -12,8 +12,9 @@ public class Storage extends SubsysCore{
     boolean st1, st2, st3; // States
     ModeSmoother<Integer> sizeContainer;
     int cnt = 0;
-    double curAmps = 0;
+    double curAmps = 0, curVelo = 0;
     public static double currentLimit = 4;
+    public static double veloLimit = 40;
 
     public Storage(){
         s1 = h.get(DigitalChannel.class, "s1");
@@ -34,11 +35,12 @@ public class Storage extends SubsysCore{
         p2.setState(true);
         p3.setState(true);
 
-        sizeContainer = new ModeSmoother<>(10, 0);
+        sizeContainer = new ModeSmoother<>(20, 3);
     }
 
-    public void inputAmps(double cur){
-        curAmps = cur;
+    public void input(double curAmps, double curVelo){
+        this.curAmps = curAmps;
+        this.curVelo = Math.abs(curVelo);
     }
 
     @Override
@@ -56,7 +58,8 @@ public class Storage extends SubsysCore{
             }
         }
 
-        if(curAmps > 4) cnt = 3;
+//        if(cnt == 3 && curVelo >= veloLimit) cnt = 2;
+//        if(curAmps > currentLimit && curVelo < veloLimit) cnt = 3;
 
         sizeContainer.add(cnt);
 

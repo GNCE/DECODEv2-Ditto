@@ -229,8 +229,11 @@ public class MyRobot extends Robot {
                     f.getPose().getX() + TURRET_OFFSET_INCHES * Math.cos(f.getPose().getHeading()),
                     f.getPose().getY() + TURRET_OFFSET_INCHES * Math.sin(f.getPose().getHeading()),
                     f.getPose().getHeading());
-            if(hasSubsystem(SubsystemConfig.SHOOTER)) shooter.input(turretPose, goalPose);
-            if(hasSubsystem(SubsystemConfig.TURRET)) turret.input(turretPose, goalPose);
+
+            ShotPlanner.ShotCommand cmd = planner.plan(turretPose, f.getVelocity().getXComponent(), f.getVelocity().getYComponent(), goalPose);
+
+            if(hasSubsystem(SubsystemConfig.TURRET)) turret.input(turretPose, cmd.virtualGoal);
+            if(hasSubsystem(SubsystemConfig.SHOOTER)) shooter.setPlannedShot(cmd.distancePoseUnits, cmd.targetRpm, cmd.hoodBaselineDegFromVertical);
 
             if(hasSubsystem(SubsystemConfig.LL)){
                 double now = runtime.getElapsedTimeSeconds();
@@ -272,12 +275,7 @@ public class MyRobot extends Robot {
                     t.addData("Current Zone", zone);
                     prevZone = zone;
                 }
-                if (hasSubsystems(List.of(SubsystemConfig.SHOOTER, SubsystemConfig.TURRET, SubsystemConfig.FOLLOWER))){
-                    ShotPlanner.ShotCommand cmd = planner.plan(f.getPose(), f.getVelocity().getXComponent(), f.getVelocity().getYComponent(), goalPose);
 
-                    turret.input(f.getPose(), cmd.virtualGoal);
-                    shooter.setPlannedShot(cmd.distancePoseUnits, cmd.targetRpm, cmd.hoodBaselineDegFromVertical);
-                }
                 if (hasSubsystem(SubsystemConfig.TURRET)) {
                     turretAlwaysReadyButton.input(g1.getButton(GamepadKeys.Button.CIRCLE));
                     turret.setAlwaysAtTarget(turretAlwaysReadyButton.getVal());
@@ -285,7 +283,7 @@ public class MyRobot extends Robot {
             }
         }
         if(hasSubsystem(SubsystemConfig.INTAKE)){
-            storage.inputAmps(intake.getCurrent());
+            storage.input(intake.getCurrent(), intake.getIntakeVelocity());
             intake.inputStorageSize(storage.getSize());
         }
     }

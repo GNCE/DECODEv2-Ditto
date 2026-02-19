@@ -22,8 +22,8 @@ public class Intake extends SubsysCore {
 
     public static double INTAKE_DOWN = 0.65;
     public static double INTAKE_UP = 0.7;
-    public static double TRANSFER_I_POWER = 0.6;
-    public static double TRANSFER_T_POWER = 0.7;
+    public static double TRANSFER_I_POWER = 1;
+    public static double TRANSFER_T_POWER = 0.5;
     public static double ONE_TRANSFER_T_POWER = 1;
 
     public Intake(){
@@ -64,6 +64,9 @@ public class Intake extends SubsysCore {
     public void setMode(Mode mode){
         this.mode = mode;
     }
+    public double getIntakeVelocity(){
+        return im.getVelocity();
+    }
 
     @Override
     public void periodic() {
@@ -95,5 +98,8 @@ public class Intake extends SubsysCore {
         }
         if(mode != Mode.INTAKE) setIntakePitch(INTAKE_UP);
         t.addData("Intake Mode", mode.name());
+        t.addData("Intake Current", im.getCurrent());
+        t.addData("Intake Velocity", im.getVelocity());
+        t.addData("Transfer Current", tr.getCurrent());
     }
 }

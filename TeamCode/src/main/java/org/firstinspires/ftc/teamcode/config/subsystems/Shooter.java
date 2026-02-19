@@ -8,16 +8,9 @@ import com.seattlesolvers.solverslib.controller.PIDFController;
 import com.seattlesolvers.solverslib.hardware.motors.Motor;
 import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.seattlesolvers.solverslib.hardware.motors.MotorGroup;
-import com.seattlesolvers.solverslib.util.InterpLUT;
-
-import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
-import com.pedropathing.geometry.Pose;
 import com.seattlesolvers.solverslib.util.MathUtils;
 
-import java.sql.Array;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 
 @Configurable
 public class Shooter extends SubsysCore {
@@ -36,54 +29,31 @@ public class Shooter extends SubsysCore {
     private double currentTargetVelocity = 0.0;
     private double currentTargetHoodAngle = 30;
 
-    public static double LAUNCHER_HEIGHT_M = 0.26839625; // legacy (not used by physics below)
-
-    // Hood angle range (deg FROM VERTICAL: 0° up, 90° horizontal)
     public static double MIN_HOOD_ANGLE_DEG = 29;
     public static double MAX_HOOD_ANGLE_DEG = 52.514;
 
-    // Servo positions at angle limits
     public static double HOOD_MAX_SERVO_POS = 0.9;
     public static double HOOD_GEAR_RATIO = (double) 300 / 44;
     public static double HOOD_SERVO_RANGE = 355.0;
     public static double IDLE_HOOD_ANGLE_DEG = MAX_HOOD_ANGLE_DEG;
 
-    // Kept (harmless) even though planner owns LUT now
-    private final double[] distances = {
-            24.508, 39.477, 65.4485, 87.6797, 112.16, 118.97, 128.7672 ,155.791
-    };
-    private final double[] velocities = {
-            1200, 1300, 1340, 1540, 1700, 1740, 1800, 2000
-    };
-    private final double[] hoodAngles = {
-            29, 38, 45, 50, 52, 52.5, 52.5, 52.5
-    };
-
     PIDFController pidfController;
-    private final InterpLUT velocityLut = new InterpLUT();
-    private final InterpLUT hoodAngleLut = new InterpLUT();
-
-    private double currentDistanceM = 0.0;
     boolean active = false;
 
-    // Keep semantics: when true, Shooter should NOT run normal operation.
     public static boolean testModeOnly = false;
 
-    // ---------------- Planner inputs (set by ShotPlanner caller) ----------------
-    private double plannedDistPoseUnits = 0.0;        // distance to VIRTUAL goal (inches)
-    private double plannedTargetRpm = 0.0;            // rpm from ShotPlanner LUT
-    private double plannedHoodBaselineDeg = IDLE_HOOD_ANGLE_DEG; // baseline hood from ShotPlanner LUT
+    private double plannedDistPoseUnits = 0.0;        // inches
+    private double plannedTargetRpm = 0.0;            // rpm
+    private double plannedHoodBaselineDeg = IDLE_HOOD_ANGLE_DEG; // hood deg (your convention)
 
     public void setPlannedShot(double distPoseUnits, double targetRpm, double hoodBaselineDegFromVertical) {
         plannedDistPoseUnits = distPoseUnits;
         plannedTargetRpm = targetRpm;
         plannedHoodBaselineDeg = hoodBaselineDegFromVertical;
     }
-    // --------------------------------------------------------------------------
 
     public static double NOMINAL_VOLTAGE = 13.5;
 
-    // ---------------- PHYSICS-BASED VELOCITY COMPENSATION ----------------
     public static double POSE_UNITS_TO_METERS = 0.0254;
 
     public static double GOAL_HEIGHT_M = 1.14;
@@ -97,23 +67,29 @@ public class Shooter extends SubsysCore {
     public static double PHYS_COMP_MIN_FRAC = 0.55;
     public static boolean PHYS_COMP_ENABLED = true;
 
-    private double hoodToThetaRad(double hoodDegFromVertical) {
-        return Math.toRadians(90.0 - hoodDegFromVertical);
+    private double hoodToThetaRad(double hoodDeg) {
+        return Math.toRadians(90.0 - hoodDeg);
     }
 
     private double thetaToHoodDeg(double thetaRadFromHorizontal) {
         return 90.0 - Math.toDegrees(thetaRadFromHorizontal);
     }
 
-    private double solveThetaRad(double x, double v, double dh, double thetaHintRad) {
-        if (x <= 1e-6 || v <= 1e-6) return Double.NaN;
+    private static class ThetaPair {
+        final double thLo;
+        final double thHi;
+        ThetaPair(double thLo, double thHi) { this.thLo = thLo; this.thHi = thHi; }
+    }
+
+    private ThetaPair solveThetaPair(double x, double v, double dh) {
+        if (x <= 1e-6 || v <= 1e-6) return null;
 
         double g = GRAVITY;
         double v2 = v * v;
         double v4 = v2 * v2;
 
         double disc = v4 - g * (g * x * x + 2.0 * dh * v2);
-        if (disc < 0.0) return Double.NaN;
+        if (disc < 0.0) return null;
 
         double sqrt = Math.sqrt(disc);
 
@@ -123,28 +99,36 @@ public class Shooter extends SubsysCore {
         double thHi = Math.atan(tanHi);
         double thLo = Math.atan(tanLo);
 
-        double dHi = Math.abs(thHi - thetaHintRad);
-        double dLo = Math.abs(thLo - thetaHintRad);
-        return (dHi <= dLo) ? thHi : thLo;
+        return new ThetaPair(thLo, thHi);
+    }
+
+    private boolean wouldClip(double hoodDeg) {
+        return hoodDeg < MIN_HOOD_ANGLE_DEG || hoodDeg > MAX_HOOD_ANGLE_DEG;
+    }
+
+    private double clipAmount(double hoodDeg) {
+        if (hoodDeg < MIN_HOOD_ANGLE_DEG) return MIN_HOOD_ANGLE_DEG - hoodDeg;
+        if (hoodDeg > MAX_HOOD_ANGLE_DEG) return hoodDeg - MAX_HOOD_ANGLE_DEG;
+        return 0.0;
     }
 
     private double physicsCompensatedHoodDeg(double distPoseUnits,
                                              double targetRPM,
                                              double actualRPM,
-                                             double hoodBaselineDegFromVertical) {
+                                             double hoodBaselineDeg) {
 
         if (!PHYS_COMP_ENABLED) {
-            return Range.clip(hoodBaselineDegFromVertical, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+            return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
         }
 
         double tgt = Math.abs(targetRPM);
         double act = Math.abs(actualRPM);
 
         if (tgt < 1.0) {
-            return Range.clip(hoodBaselineDegFromVertical, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+            return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
         }
         if (act < PHYS_COMP_MIN_FRAC * tgt) {
-            return Range.clip(hoodBaselineDegFromVertical, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+            return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
         }
 
         double x = distPoseUnits * POSE_UNITS_TO_METERS;
@@ -153,27 +137,53 @@ public class Shooter extends SubsysCore {
         double vTarget = tgt * EXIT_VEL_M_PER_RPM;
         double vActual = act * EXIT_VEL_M_PER_RPM;
 
-        double thetaHint = hoodToThetaRad(hoodBaselineDegFromVertical);
+        ThetaPair pairT = solveThetaPair(x, vTarget, dh);
+        ThetaPair pairA = solveThetaPair(x, vActual, dh);
 
-        double thetaTarget = solveThetaRad(x, vTarget, dh, thetaHint);
-        double thetaActual = solveThetaRad(x, vActual, dh, thetaHint);
-
-        if (!Double.isFinite(thetaTarget) || !Double.isFinite(thetaActual)) {
-            return Range.clip(hoodBaselineDegFromVertical, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+        if (pairT == null || pairA == null) {
+            return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
         }
 
-        double dTheta = thetaActual - thetaTarget;
-        double thetaCmd = thetaHint + dTheta;
+        // Compute hoodCmd for LO branch
+        double hoodTargetLo = thetaToHoodDeg(pairT.thLo);
+        double hoodActualLo = thetaToHoodDeg(pairA.thLo);
+        double deltaLo = Range.clip(hoodActualLo - hoodTargetLo, -PHYS_COMP_MAX_DELTA_DEG, PHYS_COMP_MAX_DELTA_DEG);
+        double hoodCmdLo = hoodBaselineDeg + deltaLo;
 
-        double hoodCmd = thetaToHoodDeg(thetaCmd);
+        // Compute hoodCmd for HI branch
+        double hoodTargetHi = thetaToHoodDeg(pairT.thHi);
+        double hoodActualHi = thetaToHoodDeg(pairA.thHi);
+        double deltaHi = Range.clip(hoodActualHi - hoodTargetHi, -PHYS_COMP_MAX_DELTA_DEG, PHYS_COMP_MAX_DELTA_DEG);
+        double hoodCmdHi = hoodBaselineDeg + deltaHi;
 
-        double deltaHood = hoodCmd - hoodBaselineDegFromVertical;
-        deltaHood = Range.clip(deltaHood, -PHYS_COMP_MAX_DELTA_DEG, PHYS_COMP_MAX_DELTA_DEG);
+        boolean clipLo = wouldClip(hoodCmdLo);
+        boolean clipHi = wouldClip(hoodCmdHi);
 
-        hoodCmd = hoodBaselineDegFromVertical + deltaHood;
+        // YOUR RULE:
+        // Choose the other branch if one branch clips.
+        double hoodCmd;
+        if (clipLo && !clipHi) hoodCmd = hoodCmdHi;
+        else if (clipHi && !clipLo) hoodCmd = hoodCmdLo;
+        else if (!clipLo && !clipHi) {
+            // neither clips: pick the branch whose TARGET solution is closer to LUT baseline (follows LUT family)
+            double aLo = Math.abs(hoodTargetLo - hoodBaselineDeg);
+            double aHi = Math.abs(hoodTargetHi - hoodBaselineDeg);
+            hoodCmd = (aHi <= aLo) ? hoodCmdHi : hoodCmdLo;
+        } else {
+            // both clip: pick smaller clip amount
+            hoodCmd = (clipAmount(hoodCmdLo) <= clipAmount(hoodCmdHi)) ? hoodCmdLo : hoodCmdHi;
+        }
+
+        t.addData("Hood Target Calc", thetaToHoodDeg((!clipLo && clipHi) ? pairT.thLo : (!clipHi && clipLo) ? pairT.thHi : pairT.thLo));
+        t.addData("Hood Actual Calc", thetaToHoodDeg((!clipLo && clipHi) ? pairA.thLo : (!clipHi && clipLo) ? pairA.thHi : pairA.thLo));
+        t.addData("Hood LUT", hoodBaselineDeg);
+        t.addData("HoodCmdLo", hoodCmdLo);
+        t.addData("HoodCmdHi", hoodCmdHi);
+        t.addData("ClipLo", clipLo);
+        t.addData("ClipHi", clipHi);
+
         return Range.clip(hoodCmd, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
     }
-    // --------------------------------------------------------------------
 
     public Shooter() {
         Motor m1 = new MotorEx(h, "shooter1", Motor.GoBILDA.BARE), m2 = new MotorEx(h, "shooter2", Motor.GoBILDA.BARE);
@@ -185,13 +195,6 @@ public class Shooter extends SubsysCore {
         encoder.setDirection(Motor.Direction.FORWARD);
 
         hood = h.get(Servo.class, "hood");
-
-        for (int i = 0; i < distances.length; i++) {
-            velocityLut.add(distances[i], velocities[i]);
-            hoodAngleLut.add(distances[i], hoodAngles[i]);
-        }
-        velocityLut.createLUT();
-        hoodAngleLut.createLUT();
 
         pidfController = new PIDFController(kp, ki, kd, kV);
 
@@ -216,12 +219,6 @@ public class Shooter extends SubsysCore {
         return Math.abs(getTargetVelocity() - getVelocity()) < VELOCITY_READY_THRESHOLD;
     }
 
-    public void input(Pose robotPose, Pose goalPose) {
-        double dx = goalPose.getX() - robotPose.getX();
-        double dy = goalPose.getY() - robotPose.getY();
-        currentDistanceM = Math.hypot(dx, dy);
-    }
-
     private double hoodAngleToServoPos(double hoodAngleDeg) {
         double clipped = Range.clip(hoodAngleDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
         double t = (MAX_HOOD_ANGLE_DEG - clipped);
@@ -236,9 +233,6 @@ public class Shooter extends SubsysCore {
     public void periodic() {
         pidfController.setPIDF(kp, ki, kd, kV);
 
-        // Rule you asked for:
-        // - if testModeOnly is OFF => planner mode (use planned targets)
-        // - if testModeOnly is ON  => do NOT run normal operation (preserve original semantics)
         if (active && !testModeOnly) {
             currentTargetVelocity = Range.clip(plannedTargetRpm, 0.0, 2800);
             currentTargetHoodAngle = Range.clip(plannedHoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
@@ -254,11 +248,11 @@ public class Shooter extends SubsysCore {
                 ? physicsCompensatedHoodDeg(plannedDistPoseUnits, currentTargetVelocity, getVelocity(), currentTargetHoodAngle)
                 : currentTargetHoodAngle;
 
-        hood.setPosition(hoodAngleToServoPos(hoodCmdDeg));
+        double servoPos = hoodAngleToServoPos(hoodCmdDeg);
+        hood.setPosition(servoPos);
 
         t.addData("Shooter Velocity Error", getTargetVelocity() - getVelocity());
         t.addData("Shooter Target Power", targetPower);
-        t.addData("Shooter Distance (M)", currentDistanceM);
         t.addData("Shooter Velocity", getVelocity());
         t.addData("Shooter Target Velocity", getTargetVelocity());
         t.addData("Shooter Ready", readyToShoot());
@@ -266,5 +260,6 @@ public class Shooter extends SubsysCore {
         t.addData("Shooter Planned Dist (in)", plannedDistPoseUnits);
         t.addData("Shooter Hood Baseline (deg)", currentTargetHoodAngle);
         t.addData("Shooter Hood Cmd (deg)", hoodCmdDeg);
+        t.addData("Shooter Commanded Servo Pos", servoPos);
     }
 }
