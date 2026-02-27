@@ -13,6 +13,7 @@ import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.teamcode.config.hardware.PinpointVisionLocalizer;
 
 public class Constants {
 
@@ -59,7 +60,7 @@ public class Constants {
         return new FollowerBuilder(followerConstants, hardwareMap)
                 .pathConstraints(pathConstraints)
                 .mecanumDrivetrain(driveConstants)
-                .pinpointLocalizer(localizerConstants)
+                .setLocalizer(new PinpointVisionLocalizer(hardwareMap, localizerConstants))
                 .build();
     }
 }

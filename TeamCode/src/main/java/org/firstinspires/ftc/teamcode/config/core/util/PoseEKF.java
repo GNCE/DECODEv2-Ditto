@@ -8,7 +8,7 @@ public final class PoseEKF {
 
     // Tunables
     public double baseVisionPosStd = 2.0;                   // inches
-    public double baseVisionHeadingStd = Math.toRadians(10);// rad
+    public double baseVisionHeadingStd = Math.toRadians(1.5);// rad. setting to 45 does nothing.
     public double visionPosStdPerInPerSec = 0.08;
     public double visionHeadingStdPerRadPerSec = 0.60;
 

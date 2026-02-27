@@ -63,6 +63,8 @@ public class MyRobot extends Robot {
     public static Pose autoEndPose;
     public static Motif currentMotif;
     public static int endTurretWrapCount;
+    public static VisionMeasurement vm;
+    public static double runtimeNow;
     Pose goalPose;
     OpModeType opModeType;
 
@@ -130,17 +132,17 @@ public class MyRobot extends Robot {
         if(hasSubsystem(SubsystemConfig.LL)){
             this.ll = new Limelight();
         }
+        if(hasSubsystem(SubsystemConfig.SHOOTER)) this.shooter = new Shooter();
+        if(hasSubsystem(SubsystemConfig.DOOR)) this.door = new Door();
+        if(hasSubsystem(SubsystemConfig.LIFT)) this.lift = new Lift();
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
-            this.f = Constants.createFollower(this.h);
+            this.f = Constants.createFollower(this.h); // Put follower lower than limelight.
 
             if(hasSubsystem(SubsystemConfig.TURRET)){
                 turret = new Turret(endTurretWrapCount);
                 if(this.opModeType == OpModeType.TELEOP) turretAlwaysReadyButton = new ToggleButton(false);
             }
         }
-        if(hasSubsystem(SubsystemConfig.SHOOTER)) this.shooter = new Shooter();
-        if(hasSubsystem(SubsystemConfig.DOOR)) this.door = new Door();
-        if(hasSubsystem(SubsystemConfig.LIFT)) this.lift = new Lift();
 
         if(this.opModeType == OpModeType.TELEOP){
             if(hasSubsystems(Arrays.asList(SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SHOOTER, SubsystemConfig.TURRET))){
@@ -236,29 +238,13 @@ public class MyRobot extends Robot {
             if(hasSubsystem(SubsystemConfig.SHOOTER)) shooter.setPlannedShot(cmd.distancePoseUnits, cmd.targetRpm, cmd.hoodBaselineDegFromVertical);
 
             if(hasSubsystem(SubsystemConfig.LL)){
-                double now = runtime.getElapsedTimeSeconds();
-
-                Pose odo = f.getPose();
-                double speed = Double.NaN;
-                double omega = Double.NaN;
-
-                ekf.predictFromAbsoluteOdo(now, odo, speed, omega);
-
-                ll.update(now, odo.getHeading());
-
-                VisionMeasurement vm = ll.getMeasurement();
-                if (vm != null) {
-                    ekf.updateVisionWithLatency(
-                            now,
-                            vm.pose,
-                            vm.timestampSec,
-                            speed, omega,
-                            vm.quality
-                    );
+                // TODO: make this local in ll class.
+                if(ll.getMode() == Limelight.Mode.LOCALIZATION) {
+                    runtimeNow = runtime.getElapsedTimeSeconds();
+                    ll.update(runtimeNow, Math.toDegrees(f.getPose().getHeading()));
+                    vm = ll.getMeasurement();
+                    if(vm != null) t.addData("VM Sending", vm.timestampSec);
                 }
-
-                f.setPose(ekf.getPose());
-                f.update();
             }
 
             if(opModeType == OpModeType.TELEOP) {

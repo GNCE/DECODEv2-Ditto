@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.config.subsystems;
 
+import com.pedropathing.ftc.FTCCoordinates;
+import com.pedropathing.geometry.PedroCoordinates;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
@@ -43,6 +45,10 @@ public class Limelight extends SubsysCore {
     }
 
     public boolean isAprilTagDetected(){ return llResult !=null && llResult.isValid(); }
+
+    public Mode getMode() {
+        return mode;
+    }
 
     public enum Mode {
         LOCALIZATION,
@@ -104,16 +110,30 @@ public class Limelight extends SubsysCore {
             switch (mode){
                 case LOCALIZATION:
                     if (llResult.isValid()) {
-                        Pose3D bot = llResult.getBotpose_MT2();
-                        if (bot != null) {
-                            // Assumption: botpose units match your Pinpoint/Pedro units (inches).
-                            // If you later find botpose is meters, convert here.
+                        double in = 39.37007874;
+                        Pose3D mt1Pose = llResult.getBotpose();
+                        Pose3D mt2Pose = llResult.getBotpose_MT2();
 
-                            double x = bot.getPosition().x;
-                            double y = bot.getPosition().y;
-                            double headingRad = bot.getOrientation().getYaw(AngleUnit.RADIANS);
+                        if (mt1Pose != null && mt2Pose != null) {
+                            t.addData("MT1 BotPose", mt1Pose.toString());
+                            t.addData("MT2 BotPose", mt2Pose.toString());
 
-                            // Backdate measurement time by capture+targeting (ms -> s)
+                            Pose pedro1 = FTCCoordinates.INSTANCE.convertToPedro(new Pose(
+                                    mt1Pose.getPosition().x * in,
+                                    mt1Pose.getPosition().y * in,
+                                    mt1Pose.getOrientation().getYaw(AngleUnit.RADIANS)
+                            ));
+
+                            Pose pedro2 = FTCCoordinates.INSTANCE.convertToPedro(new Pose(
+                                    mt2Pose.getPosition().x * in,
+                                    mt2Pose.getPosition().y * in,
+                                    mt2Pose.getOrientation().getYaw(AngleUnit.RADIANS)
+                            ));
+
+                            t.addData("MT1 PedroConv", pedro1);
+                            t.addData("MT2 PedroConv", pedro2);
+
+
                             double tVision = nowSec - (captureLatency + targetingLatency) / 1000.0;
 
                             // Quality inflation (>=1): staleness, parse latency, etc.
@@ -124,12 +144,11 @@ public class Limelight extends SubsysCore {
                             if (parseLatency > 15) quality *= 1.5;
 
                             latestMeasurement = new VisionMeasurement(
-                                    new Pose(x, y, headingRad),
+                                    pedro1,
                                     tVision,
                                     quality
                             );
 
-                            t.addData("MT2 Pose", "x=%.2f y=%.2f h=%.1fdeg", x, y, Math.toDegrees(headingRad));
                             t.addData("MT2 tVision", "%.3f", tVision);
                             t.addData("MT2 quality", "%.2f", quality);
                         }

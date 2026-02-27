@@ -12,7 +12,7 @@ import java.util.List;
 public class DriveTest extends MyCommandOpMode {
     @Override
     public void initialize() {
-        r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.FOLLOWER));
+        r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.FOLLOWER, SubsystemConfig.LL));
     }
 
     @Override
