@@ -153,8 +153,8 @@ public class PinpointVisionLocalizer implements Localizer {
     public void update() {
         odo.update();
         Pose currentPinpointPose = PoseConverter.pose2DToPose(odo.getPosition(), PedroCoordinates.INSTANCE);
+        MyRobot.rawPinpointPose = currentPinpointPose;
         // Thank you to GoldenElf58 of FTC Team 16657 for spotting a bug here; it was resolved by adding the turn direction.
-
 
         double now = MyRobot.runtimeNow;
         double speed = Double.NaN, omega = Double.NaN; // Todo: maybe add vel terms

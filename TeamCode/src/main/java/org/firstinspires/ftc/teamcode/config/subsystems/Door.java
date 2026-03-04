@@ -19,9 +19,9 @@ import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 public class Door extends SubsysCore {
     Servo door;
     public static double OFFSET_POS = 0;
-    public static double OPEN_POS = 0.25;
-    public static double CLOSED_POS = 0.45;
-    public static long ACTUATION_TIME_MS = 300;
+    public static double OPEN_POS = 0.55;
+    public static double CLOSED_POS = 0.7;
+    public static long ACTUATION_TIME_MS = 250;
 
     boolean open;
 

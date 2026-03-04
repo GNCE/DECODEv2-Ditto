@@ -16,13 +16,14 @@ public class Turret extends SubsysCore {
     AbsoluteAnalogEncoder e1, e2;
     Pose motifPose = new Pose(72, 150);
     public static double MANUAL_OFFSET = 0;
-    public static double ENCODER_TURRET_OFFSET = -105;
+    public static double ENCODER_TURRET_OFFSET = -181;
     final double GEAR_RATIO = (double) 99 / 24 * 20 / 96;
     public static double SERVO_RANGE = 310;
-    public static double TURRET_OFFSET = 90;
-    public static double BOTH_SERVO_OFFSET = 0.009;
+    public static double TURRET_OFFSET = -180;
+    public static double TURRET_SECOND_OFFSET = 0;
+    public static double BOTH_SERVO_OFFSET = 0.001;
     public static double SECOND_SERVO_OFFSET = 0;
-    public static double POSITION_TOLERANCE = 8;
+    public static double POSITION_TOLERANCE = 10;
     boolean alwaysAtTarget = false;
 
     double previousServoAngle, currentServoAngle;
@@ -111,7 +112,7 @@ public class Turret extends SubsysCore {
         actualTargetTurret = MathUtils.clamp(actualTargetTurret, -180, 180); // -180 ~ 180
         err = actualTargetTurret - getCurrentTurretAngle();
 
-        double sp = turretToServoDegrees((actualTargetTurret + TURRET_OFFSET + 360)%360)/SERVO_RANGE + BOTH_SERVO_OFFSET; // Needs 0 ~ 360
+        double sp = turretToServoDegrees((actualTargetTurret + TURRET_OFFSET + 360)%360 + TURRET_SECOND_OFFSET)/SERVO_RANGE + BOTH_SERVO_OFFSET; // Needs 0 ~ 360
 
         s1.setPosition(sp);
         s2.setPosition(sp+SECOND_SERVO_OFFSET);

@@ -20,10 +20,10 @@ public class Intake extends SubsysCore {
     ServoEx servo;
     double pwr;
 
-    public static double INTAKE_DOWN = 0.65;
-    public static double INTAKE_UP = 0.7;
+    public static double INTAKE_DOWN = 0.565;
+    public static double INTAKE_UP = 0.58;
     public static double TRANSFER_I_POWER = 1;
-    public static double TRANSFER_T_POWER = 0.5;
+    public static double TRANSFER_T_POWER = 1;
     public static double ONE_TRANSFER_T_POWER = 1;
 
     public Intake(){

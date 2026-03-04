@@ -18,16 +18,16 @@ import org.firstinspires.ftc.teamcode.config.hardware.PinpointVisionLocalizer;
 public class Constants {
 
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(12.88)
-            .forwardZeroPowerAcceleration(-50.67629478691113)
-            .lateralZeroPowerAcceleration(-82.11302475953939)
-            .translationalPIDFCoefficients(new PIDFCoefficients(0.17, 0, 0.014, 0.035))
-            .headingPIDFCoefficients(new PIDFCoefficients(1.1, 0, 0.025, 0.04))
-            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.03, 0, 0.00006, 0.6, 0.04))
+            .mass(13.063)
+            .forwardZeroPowerAcceleration(-44.91963496749996)
+            .lateralZeroPowerAcceleration(-78.90419634432997)
+            .translationalPIDFCoefficients(new PIDFCoefficients(0.34, 0, 0.024, 0.032))
+            .headingPIDFCoefficients(new PIDFCoefficients(1, 0, 0.033, 0.05))
+            .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.05, 0, 0.0004, 0.6, 0.068))
             ;
 
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.99, 50, 1.15, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.99, 50, 1, 1);
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .maxPower(1)
@@ -39,8 +39,8 @@ public class Constants {
             .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
             .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
             .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
-            .xVelocity(79.11519977239175)
-            .yVelocity(62.39379306102362)
+            .xVelocity(76.87675704355316)
+            .yVelocity(62.67799870047982)
             .useBrakeModeInTeleOp(true);
     /*
     123.8 43.24 2.478

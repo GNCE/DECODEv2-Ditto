@@ -43,12 +43,12 @@ public class Lift extends SubsysCore {
 
     public Lift(){
         front = new MotorGroup(
-                new MotorEx(h, "fl"),
-                new MotorEx(h, "fr").setInverted(true)
+                new MotorEx(h, "fl").setInverted(true),
+                new MotorEx(h, "fr")
         );
         back = new MotorGroup(
-                new MotorEx(h, "bl"),
-                new MotorEx(h, "br").setInverted(true)
+                new MotorEx(h, "bl").setInverted(true),
+                new MotorEx(h, "br")
         );
         pto = new ServoEx(h, "pto");
         back.setRunMode(Motor.RunMode.RawPower);
@@ -68,10 +68,10 @@ public class Lift extends SubsysCore {
         INACTIVE
     }
 
-    Mode mode;
+    public static Mode mode;
 
     public void setMode(Mode mode) {
-        this.mode = mode;
+        Lift.mode = mode;
     }
 
     double pwr = 0;

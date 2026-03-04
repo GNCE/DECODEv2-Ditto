@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.config.core;
 
 import com.seattlesolvers.solverslib.command.CommandOpMode;
+import com.seattlesolvers.solverslib.command.CommandScheduler;
 
 public abstract class MyCommandOpMode extends CommandOpMode {
     protected MyRobot r;
@@ -9,6 +10,7 @@ public abstract class MyCommandOpMode extends CommandOpMode {
 
     @Override
     public void runOpMode() throws InterruptedException {
+        CommandScheduler.getInstance().reset();
         initialize();
 
         // run the scheduler

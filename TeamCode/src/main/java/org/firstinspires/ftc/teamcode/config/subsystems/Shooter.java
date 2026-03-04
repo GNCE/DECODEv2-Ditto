@@ -21,18 +21,18 @@ public class Shooter extends SubsysCore {
     public static double INACTIVE_VELOCITY = 0.0;
     public static double VELOCITY_READY_THRESHOLD = 100.0;
 
-    public static double kp = 0.0006;
+    public static double kp = 0.01;
     public static double ki = 0.0;
     public static double kd = 0;
-    public static double kV = 0.000400;
+    public static double kV = 0.000455;
 
     private double currentTargetVelocity = 0.0;
     private double currentTargetHoodAngle = 30;
 
-    public static double MIN_HOOD_ANGLE_DEG = 29;
-    public static double MAX_HOOD_ANGLE_DEG = 52.514;
+    public static double MIN_HOOD_ANGLE_DEG = 30;
+    public static double MAX_HOOD_ANGLE_DEG = 55;
 
-    public static double HOOD_MAX_SERVO_POS = 0.9;
+    public static double HOOD_MAX_SERVO_POS = 0.65;
     public static double HOOD_GEAR_RATIO = (double) 300 / 44;
     public static double HOOD_SERVO_RANGE = 355.0;
     public static double IDLE_HOOD_ANGLE_DEG = MAX_HOOD_ANGLE_DEG;
@@ -187,7 +187,7 @@ public class Shooter extends SubsysCore {
 
     public Shooter() {
         Motor m1 = new MotorEx(h, "shooter1", Motor.GoBILDA.BARE), m2 = new MotorEx(h, "shooter2", Motor.GoBILDA.BARE);
-        m1.setInverted(true);
+        m2.setInverted(true);
         flywheel = new MotorGroup(m1, m2);
         flywheel.setRunMode(Motor.RunMode.RawPower);
         flywheel.setZeroPowerBehavior(Motor.ZeroPowerBehavior.FLOAT);

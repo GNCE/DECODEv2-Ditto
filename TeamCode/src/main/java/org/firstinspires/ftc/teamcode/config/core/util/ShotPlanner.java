@@ -55,18 +55,18 @@ public class ShotPlanner {
     public static double MAX_RPM = 2800.0;
 
     // Hood clamp (keep in sync with Shooter)
-    public static double MIN_HOOD_ANGLE_DEG = 29.0;
-    public static double MAX_HOOD_ANGLE_DEG = 52.514;
+    public static double MIN_HOOD_ANGLE_DEG = 30;
+    public static double MAX_HOOD_ANGLE_DEG = 55;
 
     // -------------------- LUT data (from your latest Shooter) --------------------
     private final double[] distances = {
-            24.508, 39.477, 65.4485, 87.6797, 112.16, 118.97, 128.7672 ,155.791
+            49.1, 55.7, 70.2, 93.18, 114, 121.4, 145
     };
     private final double[] velocities = {
-            1200, 1300, 1340, 1540, 1700, 1740, 1800, 2000
+            1400, 1450, 1600, 1650, 1900, 2000, 2200
     };
     private final double[] hoodAngles = {
-            29, 38, 45, 50, 52, 52.5, 52.5, 52.5
+            33, 36, 38, 41, 45, 47, 50
     };
 
     private final InterpLUT velocityLut = new InterpLUT();

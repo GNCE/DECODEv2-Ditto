@@ -4,6 +4,7 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
+import com.pedropathing.paths.Path;
 import com.pedropathing.paths.PathBuilder;
 import com.pedropathing.paths.PathChain;
 
@@ -17,49 +18,34 @@ public final class AutoPaths {
 
     // POSE FOR RED
     // START_FRONT (new Pose(25.34814419, 134, Math.toRadians(-127.879678))),
+
+    static final double START_FRONT_X = 33.1;
+
     public enum PoseId {
-        START_FRONT (new Pose(28.09, 130.592, Math.toRadians(-124.9))),
+        // FRONT AUTO POSES
+        START_FRONT (new Pose(START_FRONT_X, 135, Math.toRadians(-90))),
+        START_FRONT_1 (new Pose(START_FRONT_X, 125, Math.toRadians(-90))),
+        START_FRONT_1_1 (new Pose(34.79839786381842, 103.62616822429906)),
+        START_FRONT_1_2 (new Pose(83, 75)),
+        SHOOT_FRONT (new Pose(55, 80, Math.toRadians(180))),
+        GATE_INTAKE (new Pose(15.76, 60.02)),
+        SHOOT_FRONT_TO_GATE_INTAKE_CONTROL (new Pose(34.41388518024032, 56.13885180240321)),
+ // 17.348, 63.94, 151.96
+
+        // BACK AUTO POSES
         START_BACK  (new Pose(48 + MyRobot.chassisBack, MyRobot.chassisLeft, Math.toRadians(180))), // TODO
 
-        SHOOT_FRONT (new Pose(36, 108, Math.toRadians(180))),
-        SHOOT_FRONT_270 (new Pose(36, 108, Math.toRadians(270))),
-        SHOOT_FRONT_90 (new Pose(36, 108, Math.toRadians(90))),
-        SHOOT_BACK  (new Pose(63.63684913217624, 24.224299065420563, Math.toRadians(180))),
-        GATE   (new Pose(23.8, 68, Math.toRadians(180))), // TODO: CHECK
-        GATE_BALLS (new Pose(24.4, 64, Math.toRadians(180))),
-        SHOOT_FRONT_TO_GATE_CONTROL (new Pose(45.18024032042723, 72.09612817089453, Math.toRadians(180))),
-        GATE_SAFE_INTAKE (new Pose(20, 55, Math.toRadians(120))),
-        GATE_TO_GATE_SAFE_INTAKE_CONTROL (new Pose(23.455273698264353, 49.98664886515355, Math.toRadians(180))),
 
-        GATE_SAFE_INTAKE_TO_SHOOT_FRONT_90_CONTROL (new Pose(49.025367156208276, 60.75300400534044, Math.toRadians(180))),
-
+        // SPIKE MARKS
         FRONT_SPIKE_START (new Pose(50, 81.5, Math.toRadians(180))), // RED 82
-        FRONT_SPIKE_1 (new Pose(37, 81.5, Math.toRadians(180))),
-        FRONT_SPIKE_2 (new Pose(31.8, 81.5, Math.toRadians(180))),
         FRONT_SPIKE_END   (new Pose(26, 81.5, Math.toRadians(180))),
-        FRONT_SPIKE_END_TO_GATE_CONTROL (new Pose(50, 75)),
-
-
-
-        MID_SPIKE_START   (new Pose(52, 58, Math.toRadians(180))), // 58
-        MID_SPIKE_1 (new Pose(37, 58, Math.toRadians(180))),
-        MID_SPIKE_2 (new Pose(31.8, 58, Math.toRadians(180))),
-        GATE_TO_MID_START_CONTROL (new Pose(40, 74.5)),
-        MID_SPIKE_END     (new Pose(22, 58, Math.toRadians(180))),
-
-        MID_SPIKE_END_TO_FRONT_SHOOT_CONTROL (new Pose(45.75700934579439, 57.292389853137514)),
+        MID_SPIKE_START   (new Pose(48, 59, Math.toRadians(180))), // 58
+        MID_SPIKE_END     (new Pose(22, 59, Math.toRadians(180))),
 
         FAR_SPIKE_START   (new Pose(50, 34, Math.toRadians(180))),
-        FAR_SPIKE_END     (new Pose(23, 34, Math.toRadians(180))),
-        FAR_SPIKE_END_TO_FRONT_SHOOT_CONTROL (new Pose(47.67957276368491, 45.37249666221629, Math.toRadians(180))),
+        FAR_SPIKE_END     (new Pose(23, 34, Math.toRadians(180)));
 
-        HUMAN_PLAYER_ZONE_1(new Pose(14.034712950600802, 18.64886515353805, Math.toRadians(180))),
-        HUMAN_PLAYER_ZONE_2(new Pose(14.034712950600802, 12.688918558077429, Math.toRadians(180))),
 
-        HUMAN_PLAYER_ZONE_END (new Pose(14.034712950600802, 7.882510013351133, Math.toRadians(180))),
-
-        FRONT_PARK (new Pose(55, 117, Math.toRadians(180))),
-        BACK_PARK (new Pose(61.90654205607476, 34.413885180240314, Math.toRadians(180)));
 
         private final Pose blue;
 
@@ -79,32 +65,10 @@ public final class AutoPaths {
 
     // ====== EVERY EDGE IS A PATH ======
     public enum PathId {
-        START_FRONT_TO_SHOOT_FRONT,
-
-        SHOOT_FRONT_TO_FRONT_SPIKE_START,
-        FRONT_SPIKE_START_TO_FRONT_SPIKE_END,
-        FRONT_SPIKE_START_TO_FRONT_SPIKE_1,
-        FRONT_SPIKE_1_TO_FRONT_SPIKE_2,
-        FRONT_SPIKE_2_TO_FRONT_SPIKE_END,
-        FRONT_SPIKE_END_TO_SHOOT_FRONT,
-        FRONT_SPIKE_END_TO_GATE,
-        FRONT_SHOOT_TO_GATE,
-        FRONT_SHOOT_TO_GATE_BALLS,
-
-        SHOOT_FRONT_TO_MID_SPIKE_START,
-        MID_SPIKE_START_TO_MID_SPIKE_END,
-        MID_SPIKE_START_TO_MID_SPIKE_1,
-        MID_SPIKE_1_TO_MID_SPIKE_2,
-        MID_SPIKE_2_TO_MID_SPIKE_END,
+        START_FRONT_TO_MID_SPIKE_END,
         MID_SPIKE_END_TO_SHOOT_FRONT,
-
-        SHOOT_FRONT_TO_FAR_SPIKE_START,
-        FAR_SPIKE_START_TO_FAR_SPIKE_END,
-        FAR_SPIKE_END_TO_SHOOT_FRONT,
-        FAR_SPIKE_END_TO_SHOOT_FRONT_270,
-        GATE_TO_MID_SPIKE_START,
-        GATE_TO_GATE_SAFE_INTAKE,
-        GATE_SAFE_INTAKE_TO_SHOOT_FRONT
+        SHOOT_FRONT_TO_GATE_INTAKE,
+        GATE_INTAKE_TO_SHOOT_FRONT,
     }
 
     // ====== INSTANCE STATE ======
@@ -139,104 +103,38 @@ public final class AutoPaths {
 
     // ====== PATH DEFINITIONS ======
     private void buildPaths() {
-
-        // START → SHOOT
-        put(PathId.START_FRONT_TO_SHOOT_FRONT,
-                PoseId.START_FRONT, PoseId.SHOOT_FRONT);
-
-        // FRONT SPIKE
-        put(PathId.SHOOT_FRONT_TO_FRONT_SPIKE_START,
-                PoseId.SHOOT_FRONT, PoseId.FRONT_SPIKE_START);
-        paths.put(
-                PathId.FRONT_SPIKE_START_TO_FRONT_SPIKE_END,
-                line(PoseId.FRONT_SPIKE_START, PoseId.FRONT_SPIKE_END).build()
-                );
-        // put(PathId.FRONT_SPIKE_START_TO_FRONT_SPIKE_END, PoseId.FRONT_SPIKE_START, PoseId.FRONT_SPIKE_END);
-        put(PathId.FRONT_SPIKE_END_TO_SHOOT_FRONT,
-                PoseId.FRONT_SPIKE_END, PoseId.SHOOT_FRONT);
-
-        paths.put(PathId.FRONT_SPIKE_END_TO_GATE,
+        paths.put(PathId.START_FRONT_TO_MID_SPIKE_END,
                 f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.FRONT_SPIKE_END), getPose(PoseId.FRONT_SPIKE_END_TO_GATE_CONTROL), getPose(PoseId.GATE)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.FRONT_SPIKE_END).getHeading(), getPose(PoseId.GATE).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.START_FRONT), getPose(PoseId.START_FRONT_1)))
+                        .addPath(new BezierCurve(getPose(PoseId.START_FRONT_1), getPose(PoseId.START_FRONT_1_1), getPose(PoseId.START_FRONT_1_2), getPose(PoseId.MID_SPIKE_START)))
+                        .addPath(new BezierLine(getPose(PoseId.MID_SPIKE_START), getPose(PoseId.MID_SPIKE_END)))
+                        .setGlobalTangentHeadingInterpolation()
+                        .setGlobalDeceleration()
                         .build()
         );
-
-        paths.put(PathId.FRONT_SHOOT_TO_GATE,
-                f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.SHOOT_FRONT), getPose(PoseId.SHOOT_FRONT_TO_GATE_CONTROL), getPose(PoseId.GATE)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.SHOOT_FRONT).getHeading(), getPose(PoseId.GATE).getHeading())
-                        .build()
-        );
-
-        paths.put(PathId.FRONT_SHOOT_TO_GATE_BALLS,
-                f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.SHOOT_FRONT), getPose(PoseId.SHOOT_FRONT_TO_GATE_CONTROL), getPose(PoseId.GATE_BALLS)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.SHOOT_FRONT).getHeading(), getPose(PoseId.GATE_BALLS).getHeading())
-                        .setTimeoutConstraint(50)
-                        .build()
-        );
-
-        paths.put(PathId.GATE_SAFE_INTAKE_TO_SHOOT_FRONT,
-                f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.GATE_SAFE_INTAKE), getPose(PoseId.GATE_SAFE_INTAKE_TO_SHOOT_FRONT_90_CONTROL), getPose(PoseId.SHOOT_FRONT_90)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_SAFE_INTAKE).getHeading(), getPose(PoseId.SHOOT_FRONT_90).getHeading())
-                        .build()
-        );
-
-        paths.put(PathId.GATE_TO_GATE_SAFE_INTAKE,
-                f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.GATE), getPose(PoseId.GATE_TO_GATE_SAFE_INTAKE_CONTROL), getPose(PoseId.GATE_SAFE_INTAKE)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.GATE).getHeading(), getPose(PoseId.GATE_SAFE_INTAKE).getHeading())
-                        .build()
-        );
-
-        paths.put(PathId.FAR_SPIKE_END_TO_SHOOT_FRONT_270,
-                f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.FAR_SPIKE_END), getPose(PoseId.FAR_SPIKE_END_TO_FRONT_SHOOT_CONTROL), getPose(PoseId.SHOOT_FRONT_270)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.FAR_SPIKE_END).getHeading(), getPose(PoseId.SHOOT_FRONT_270).getHeading())
-                        .build()
-        );
-
-
-        put(PathId.FRONT_SPIKE_START_TO_FRONT_SPIKE_1, PoseId.FRONT_SPIKE_START, PoseId.FRONT_SPIKE_1);
-        put(PathId.FRONT_SPIKE_1_TO_FRONT_SPIKE_2, PoseId.FRONT_SPIKE_1, PoseId.FRONT_SPIKE_2);
-        put(PathId.FRONT_SPIKE_2_TO_FRONT_SPIKE_END, PoseId.FRONT_SPIKE_2, PoseId.FRONT_SPIKE_END);
-
-        put(PathId.MID_SPIKE_START_TO_MID_SPIKE_1, PoseId.MID_SPIKE_START, PoseId.MID_SPIKE_1);
-        put(PathId.MID_SPIKE_1_TO_MID_SPIKE_2, PoseId.MID_SPIKE_1, PoseId.MID_SPIKE_2);
-        put(PathId.MID_SPIKE_2_TO_MID_SPIKE_END, PoseId.MID_SPIKE_2, PoseId.MID_SPIKE_END);
-
-
-        // MID SPIKE
-        put(PathId.SHOOT_FRONT_TO_MID_SPIKE_START,
-                PoseId.SHOOT_FRONT, PoseId.MID_SPIKE_START);
-
-        put(PathId.MID_SPIKE_START_TO_MID_SPIKE_END,
-                PoseId.MID_SPIKE_START, PoseId.MID_SPIKE_END);
-
         paths.put(PathId.MID_SPIKE_END_TO_SHOOT_FRONT,
                 f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.MID_SPIKE_END), getPose(PoseId.MID_SPIKE_END_TO_FRONT_SHOOT_CONTROL), getPose(PoseId.SHOOT_FRONT)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.MID_SPIKE_END).getHeading(), getPose(PoseId.SHOOT_FRONT).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.MID_SPIKE_END), getPose(PoseId.SHOOT_FRONT)))
+                        .setTangentHeadingInterpolation()
+                        .setReversed()
                         .build()
         );
-
-        // FAR SPIKE
-        put(PathId.SHOOT_FRONT_TO_FAR_SPIKE_START,
-                PoseId.SHOOT_FRONT, PoseId.FAR_SPIKE_START);
-        put(PathId.FAR_SPIKE_START_TO_FAR_SPIKE_END,
-                PoseId.FAR_SPIKE_START, PoseId.FAR_SPIKE_END);
-        put(PathId.FAR_SPIKE_END_TO_SHOOT_FRONT,
-                PoseId.FAR_SPIKE_END, PoseId.SHOOT_FRONT);
-        paths.put(PathId.GATE_TO_MID_SPIKE_START,
+        paths.put(PathId.SHOOT_FRONT_TO_GATE_INTAKE,
                 f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.GATE), getPose(PoseId.GATE_TO_MID_START_CONTROL), getPose(PoseId.MID_SPIKE_START)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.GATE).getHeading(), getPose(PoseId.MID_SPIKE_START).getHeading())
+                        .addPath(new BezierCurve(getPose(PoseId.SHOOT_FRONT), getPose(PoseId.SHOOT_FRONT_TO_GATE_INTAKE_CONTROL), getPose(PoseId.GATE_INTAKE)))
+                        .setTangentHeadingInterpolation()
+                        .setBrakingStrength(0.7)
+                        .build()
+        );
+        paths.put(PathId.GATE_INTAKE_TO_SHOOT_FRONT,
+                f.pathBuilder()
+                        .addPath(new BezierCurve(getPose(PoseId.GATE_INTAKE), getPose(PoseId.SHOOT_FRONT_TO_GATE_INTAKE_CONTROL), getPose(PoseId.SHOOT_FRONT)))
+                        .setTangentHeadingInterpolation()
+                        .setReversed()
                         .build()
         );
     }
-
+ // 33.18, 134.21
     // Small helper: ONE BezierLine = ONE PathChain
     private void put(PathId id, PoseId from, PoseId to) {
         paths.put(id,

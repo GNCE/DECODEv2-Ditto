@@ -1,5 +1,8 @@
 package org.firstinspires.ftc.teamcode.config.core;
 
+import com.bylazar.field.FieldPresetParams;
+import com.bylazar.field.PanelsField;
+import com.bylazar.panels.Panels;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.util.Timer;
@@ -64,6 +67,7 @@ public class MyRobot extends Robot {
     public static Motif currentMotif;
     public static int endTurretWrapCount;
     public static VisionMeasurement vm;
+    public static Pose rawPinpointPose;
     public static double runtimeNow;
     Pose goalPose;
     OpModeType opModeType;
@@ -76,8 +80,8 @@ public class MyRobot extends Robot {
     public static double chassisBack = 6.8661417323;
     public static double chassisFront = 10.413385827;
 
-    public static double chassisLeftOut = 5.79;
-    public static double chassisRightOut = 5.5196850394;
+    public static double chassisLeftOut = 7.05;
+    public static double chassisRightOut = 7.05;
 
     SAT2D.PolygonSet launchZones = new SAT2D.PolygonSet()
             .add("Close",
@@ -113,6 +117,9 @@ public class MyRobot extends Robot {
         for(SubsystemConfig subsystem: subsysList){
             enabledSubsys[subsystem.ordinal()] = true;
         }
+
+        PanelsField.INSTANCE.getField().setOffsets(PanelsField.INSTANCE.getPresets().getPEDRO_PATHING());
+        PanelsField.INSTANCE.getField().setStyle("red", "blue", 2.0);
 
         this.h = h;
         this.t = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), t);
@@ -159,6 +166,14 @@ public class MyRobot extends Robot {
         this.runtime = new Timer();
         this.ekf = new PoseEKF();
         this.planner = new ShotPlanner();
+
+        if(hasSubsystem(SubsystemConfig.FOLLOWER)) {
+            try {
+                f.getPoseTracker().getLocalizer().resetIMU();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
     public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, List<SubsystemConfig> subsysList){
         this(h, t, g1, g2, subsysList, OpModeType.TELEOP);
@@ -173,11 +188,6 @@ public class MyRobot extends Robot {
         t.addData("Current Alliance", isRed?"RED": "BLUE");
     }
 
-    public void preloadSelection(){
-        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) slotSelect = Math.max(0, slotSelect-1);
-        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)) slotSelect = Math.min(2, slotSelect+1);
-    }
-
     public void startDrive(){
         f.startTeleopDrive();
         f.update();
@@ -190,21 +200,21 @@ public class MyRobot extends Robot {
         if(g1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.8) cornerSquare();
     }
 
-    private final Pose blueGoalPose = new Pose(15.5, 131.89); // 141x141 x:1.5-142.5 y:0-141 16.534
-
+    private final Pose blueGoalPose = new Pose(15.5, 131.89); // 141x141 x:1.5-142.5 y:0-141 16.534. TODO:
     public void startInitLoop(){
         lt.start();
         resetCache();
         allianceSelection();
         g1.readButtons();
         g2.readButtons();
+
         if(!isRed) goalPose = blueGoalPose;
         else goalPose = blueGoalPose.mirror();
     }
 
     public void endInitLoop(){
-        if(hasSubsystem(SubsystemConfig.FOLLOWER)) f.update();
         lt.end();
+        t.addData("Current Pose", f.getPose());
         t.addData("Loop Time (ms)", lt.getMs());
         t.addData("Loop Frequency (Hz)", lt.getHz());
         t.update();
@@ -301,8 +311,13 @@ public class MyRobot extends Robot {
         if (hasSubsystem(SubsystemConfig.FOLLOWER)) {
             f.update();
             t.addData("Current Pose", f.getPose());
+            t.addData("Current Pinpoint Pose", MyRobot.rawPinpointPose);
             t.addData("Current Velocity", f.getVelocity());
             t.addData("Follower Busy?" , f.isBusy());
+
+            PanelsField.INSTANCE.getField().moveCursor(f.getPose().getX(), f.getPose().getY());
+            PanelsField.INSTANCE.getField().circle(1);
+            PanelsField.INSTANCE.getField().update();
         }
         if(hasSubsystems(List.of(SubsystemConfig.SHOOTER, SubsystemConfig.TURRET, SubsystemConfig.INTAKE, SubsystemConfig.DOOR))){
             t.addLine();
@@ -332,7 +347,7 @@ public class MyRobot extends Robot {
 
     public void onStart(){
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
-            if(autoEndPose == null) autoEndPose = new Pose(chassisLeftOut + 1.25, chassisBack, Math.toRadians(90));
+            if(autoEndPose == null) autoEndPose = new Pose(chassisLeftOut + 1.25, chassisBack + 1.25, Math.toRadians(90));
             this.f.setStartingPose(autoEndPose);
             this.f.update();
             this.ekf.resetPose(autoEndPose);
@@ -347,8 +362,8 @@ public class MyRobot extends Robot {
     }
 
     public void cornerSquare(){
-        if(isRed) setPose(new Pose(chassisLeftOut + 1.25, chassisBack, Math.toRadians(90)));
-        else setPose(new Pose(144 - chassisRightOut - 1.25, chassisBack, Math.toRadians(90)));
+        if(isRed) setPose(new Pose(chassisLeftOut + 1.25, chassisBack + 1.25, Math.toRadians(90)));
+        else setPose(new Pose(144 - chassisRightOut - 1.25, chassisBack + 1.25, Math.toRadians(90)));
     }
 
     private SAT2D.ConvexPolygon chassisBox(){
