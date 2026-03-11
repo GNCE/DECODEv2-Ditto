@@ -30,11 +30,11 @@ public class Shooter extends SubsysCore {
     private double currentTargetHoodAngle = 30;
 
     public static double MIN_HOOD_ANGLE_DEG = 30;
-    public static double MAX_HOOD_ANGLE_DEG = 55;
+    public static double MAX_HOOD_ANGLE_DEG = 55.5;
 
-    public static double HOOD_MAX_SERVO_POS = 0.65;
+    public static double HOOD_MAX_SERVO_POS = 1;
     public static double HOOD_GEAR_RATIO = (double) 300 / 44;
-    public static double HOOD_SERVO_RANGE = 355.0;
+    public static double HOOD_SERVO_RANGE = 255;
     public static double IDLE_HOOD_ANGLE_DEG = MAX_HOOD_ANGLE_DEG;
 
     PIDFController pidfController;

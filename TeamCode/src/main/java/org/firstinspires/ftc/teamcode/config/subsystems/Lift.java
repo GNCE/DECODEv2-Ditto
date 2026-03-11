@@ -25,8 +25,8 @@ public class Lift extends SubsysCore {
     public static int tar = 0;
     public static double kp = 0, ki = 0, kd = 0, kf = 0;
     public static int positionTolerance = 50;
-    public static double CLUTCH_PULLED = 0;
-    public static double CLUTCH_MESHED = 1;
+    public static double CLUTCH_PULLED = 1;
+    public static double CLUTCH_MESHED = 0;
     public static double ENGAGING_POWER = 0.3;
     public static long ENGAGING_DELAY = 1000;
     PIDFController pidf;
@@ -43,17 +43,17 @@ public class Lift extends SubsysCore {
 
     public Lift(){
         front = new MotorGroup(
-                new MotorEx(h, "fl").setInverted(true),
-                new MotorEx(h, "fr")
+                new Motor(h, "fl").setInverted(true),
+                new Motor(h, "fr")
         );
         back = new MotorGroup(
-                new MotorEx(h, "bl").setInverted(true),
-                new MotorEx(h, "br")
+                new MotorEx(h, "br"),
+                new MotorEx(h, "bl").setInverted(true)
         );
         pto = new ServoEx(h, "pto");
         back.setRunMode(Motor.RunMode.RawPower);
         setMode(Mode.INACTIVE);
-        setTargetPosition(LiftPositions.RETRACTED);
+        //setTargetPosition(LiftPositions.RETRACTED);
         pidf = new PIDFController(kp, ki, kd, kf);
         pidf.setTolerance(positionTolerance);
     }
@@ -102,11 +102,11 @@ public class Lift extends SubsysCore {
         if(mode == Mode.INACTIVE) pto.set(CLUTCH_PULLED);
         else pto.set(CLUTCH_MESHED);
 
-        t.addData("Lift Current Position", getCurrentPosition());
+        //t.addData("Lift Current Position", getCurrentPosition());
         t.addData("Lift Power", pwr);
-        t.addData("Lift Position Error", tar - getCurrentPosition());
+        //t.addData("Lift Position Error", tar - getCurrentPosition());
         // t.addData("Lift Current Amps", back.getMotor().motor.);
-        t.addData("Lift Reached Target?", reachedTarget());
+        //t.addData("Lift Reached Target?", reachedTarget());
     }
 
     public boolean reachedTarget(){

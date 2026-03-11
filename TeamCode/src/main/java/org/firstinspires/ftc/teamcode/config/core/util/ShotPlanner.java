@@ -60,13 +60,13 @@ public class ShotPlanner {
 
     // -------------------- LUT data (from your latest Shooter) --------------------
     private final double[] distances = {
-            49.1, 55.7, 70.2, 93.18, 114, 121.4, 145
+            50, 53, 57.777, 62.5, 67.5, 96.5, 118.6, 133.452, 150
     };
     private final double[] velocities = {
-            1400, 1450, 1600, 1650, 1900, 2000, 2200
+            1160, 1240, 1360, 1380, 1460, 1520, 1680, 1840, 2000
     };
     private final double[] hoodAngles = {
-            33, 36, 38, 41, 45, 47, 50
+            30, 35, 38.5, 39, 41, 41, 43, 44, 44
     };
 
     private final InterpLUT velocityLut = new InterpLUT();

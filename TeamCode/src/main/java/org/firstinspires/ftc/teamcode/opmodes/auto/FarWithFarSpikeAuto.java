@@ -21,8 +21,8 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 import java.util.List;
 
-@Autonomous(group="Close Auto", name="Close Solo Auto")
-public class CloseSoloAuto extends MyCommandOpMode {
+@Autonomous(group="Far Auto", name="Far With Far Spike Auto")
+public class FarWithFarSpikeAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
     @Override

@@ -31,11 +31,11 @@ public class CloseSoloAutoPathing extends MyCommandOpMode {
         r.overrideAutoEndPose(autoPaths.getPose(AutoPaths.PoseId.START_FRONT));
         schedule(
                 new SequentialCommandGroup(
-                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_FRONT_TO_MID_SPIKE_END)),
-                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_END_TO_SHOOT_FRONT)),
-                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_FRONT_TO_GATE_INTAKE)),
-                        new WaitCommand(3000),
-                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.GATE_INTAKE_TO_SHOOT_FRONT))
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_FRONT_TO_SHOOT_FRONT_1)),
+                        new WaitCommand(1000),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_FRONT_1_TO_FRONT_TRIPLE_END)),
+                        new WaitCommand(1000),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_TRIPLE_END_TO_SHOOT_FRONT))
                 )
         );
     }

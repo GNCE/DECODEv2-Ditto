@@ -14,6 +14,7 @@ import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Motif;
 import org.firstinspires.ftc.teamcode.config.core.util.VisionMeasurement;
+import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 
 import java.util.List;
 
@@ -81,7 +82,7 @@ public class Limelight extends SubsysCore {
         switch (mode){
             case LOCALIZATION:
                 ll.pipelineSwitch(1);
-                ll.updateRobotOrientation(robotHeading);
+                ll.updateRobotOrientation((robotHeading + 90)%360);
                 break;
             case MOTIF_DETECTION:
                 ll.pipelineSwitch(0);
@@ -123,34 +124,19 @@ public class Limelight extends SubsysCore {
                                     mt1Pose.getPosition().y * in,
                                     mt1Pose.getOrientation().getYaw(AngleUnit.RADIANS)
                             ));
+                            pedro1 = new Pose(pedro1.getX() - 3.5, pedro1.getY()-1, pedro1.getHeading());
 
                             Pose pedro2 = FTCCoordinates.INSTANCE.convertToPedro(new Pose(
                                     mt2Pose.getPosition().x * in,
                                     mt2Pose.getPosition().y * in,
                                     mt2Pose.getOrientation().getYaw(AngleUnit.RADIANS)
                             ));
+                            pedro2 = new Pose(pedro2.getX(), pedro2.getY()+1.5, pedro2.getHeading());
 
                             t.addData("MT1 PedroConv", pedro1);
                             t.addData("MT2 PedroConv", pedro2);
 
-
-                            double tVision = nowSec - (captureLatency + targetingLatency) / 1000.0;
-
-                            // Quality inflation (>=1): staleness, parse latency, etc.
-                            double quality = 1.0;
-                            long stale = llResult.getStaleness();
-                            if (stale > 80) quality *= 2.0;
-                            if (stale > 150) quality *= 5.0;
-                            if (parseLatency > 15) quality *= 1.5;
-
-                            latestMeasurement = new VisionMeasurement(
-                                    pedro1,
-                                    tVision,
-                                    quality
-                            );
-
-                            t.addData("MT2 tVision", "%.3f", tVision);
-                            t.addData("MT2 quality", "%.2f", quality);
+                            Constants.fusionLocalizer.addMeasurement(pedro2, System.nanoTime());
                         }
                     }
                     break;
