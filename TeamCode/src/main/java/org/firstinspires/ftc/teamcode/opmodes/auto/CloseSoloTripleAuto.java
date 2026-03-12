@@ -38,15 +38,13 @@ public class CloseSoloTripleAuto extends MyCommandOpMode {
                                 new InstantCommand(() -> r.shooter.setActive(true))
                         ),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_FRONT_TO_SHOOT_FRONT_1)),
-                        new WaitCommand(250),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_FRONT_1_TO_FRONT_TRIPLE_END)),
-                        new WaitCommand(500),
+                        new WaitCommand(400),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.FRONT_TRIPLE_END_TO_SHOOT_FRONT)),
-                        new WaitCommand(250),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
@@ -56,7 +54,6 @@ public class CloseSoloTripleAuto extends MyCommandOpMode {
                         new WaitCommand(500),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_TRIPLE_END_TO_GATE_OPEN)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.GATE_OPEN_SIDE_TO_FRONT_SHOOT)),
-                        new WaitCommand(250),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
@@ -64,7 +61,6 @@ public class CloseSoloTripleAuto extends MyCommandOpMode {
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_TO_GATE_INTAKE_1)),
                         new WaitCommand(1600),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.GATE_INTAKE_TO_SHOOT_NORMAL)),
-                        new WaitCommand(250),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
@@ -72,9 +68,9 @@ public class CloseSoloTripleAuto extends MyCommandOpMode {
                                 new SequentialCommandGroup(
                                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
-                                        new WaitCommand(1600),
-                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.GATE_INTAKE_TO_SHOOT_NORMAL)),
-                                        new WaitCommand(250),
+                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE)),
+                                        new WaitCommand(1000),
+                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.TRIPLE_GATE_INTAKE_SAFE_TO_SHOOT)),
                                         r.shootAll(),
                                         new InstantCommand(() -> r.door.setOpen(false))
                                 ),

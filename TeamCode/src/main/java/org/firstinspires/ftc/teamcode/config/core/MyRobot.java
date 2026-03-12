@@ -76,8 +76,8 @@ public class MyRobot extends Robot {
     public static double chassisBack = 6.8661417323;
     public static double chassisFront = 10.413385827;
 
-    public static double chassisLeftOut = 7.26;
-    public static double chassisRightOut = 7.26;
+    public static double chassisLeftOut = 7.375;
+    public static double chassisRightOut = 7.375;
     public static double chassisBackOut = 6.8661417323;
     public static double fieldWallThickness = 1.25;
 
