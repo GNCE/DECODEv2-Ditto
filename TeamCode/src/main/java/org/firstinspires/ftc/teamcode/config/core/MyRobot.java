@@ -404,12 +404,23 @@ public class MyRobot extends Robot {
         return new OuttakeCommand(intake, turret, shooter, door, storage);
     }
 
-    public Command goTo(Pose tar){
+    public Command goToLinear(Pose tar){
         return new SequentialCommandGroup(
                 new InstantCommand(() -> f.followPath(
                         f.pathBuilder()
                                 .addPath(new BezierLine(f.getPose(), tar))
                                 .setLinearHeadingInterpolation(f.getHeading(), tar.getHeading())
+                                .build()
+                )),
+                new WaitUntilCommand(() -> !f.isBusy())
+        );
+    }
+    public Command goToTangential(Pose tar){
+        return new SequentialCommandGroup(
+                new InstantCommand(() -> f.followPath(
+                        f.pathBuilder()
+                                .addPath(new BezierLine(f.getPose(), tar))
+                                .setTangentHeadingInterpolation()
                                 .build()
                 )),
                 new WaitUntilCommand(() -> !f.isBusy())

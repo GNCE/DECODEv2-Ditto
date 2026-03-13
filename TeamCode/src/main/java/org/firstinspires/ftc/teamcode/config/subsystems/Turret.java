@@ -23,8 +23,8 @@ public class Turret extends SubsysCore {
     public static double TURRET_SECOND_OFFSET = 0;
     public static double BOTH_SERVO_OFFSET = 0.001;
     public static double SECOND_SERVO_OFFSET = 0;
-    public static double POSITION_TOLERANCE = 20;
-    boolean alwaysAtTarget = false;
+    public static double POSITION_TOLERANCE = 10;
+    boolean alwaysAtTarget;
 
     double previousServoAngle, currentServoAngle;
     double previousPower;
@@ -64,7 +64,7 @@ public class Turret extends SubsysCore {
         previousServoAngle = e1.getCurrentPosition();
         previousPower = 0;
         testingOnly = false;
-        alwaysAtTarget = false;
+        alwaysAtTarget = true; // Todo
         setTarget(Target.GOAL);
     }
 

@@ -49,6 +49,7 @@ public final class AutoPaths {
 
 
 
+
         SHOOT_FRONT_GATE_CYCLE (new Pose(55, 80, Math.toRadians(222))),
         GATE_INTAKE (new Pose(15.76, 60.02)),
         GATE_INTAKE_SAFE (new Pose(15.76, 57)),
@@ -57,7 +58,7 @@ public final class AutoPaths {
  // 17.348, 63.94, 151.96
 
         // BACK AUTO POSES
-        START_BACK  (new Pose(57.136, 8.969, Math.toRadians(180))), // TODO
+        START_BACK  (new Pose(53.825, 7.984, Math.toRadians(180))), // TODO
         HP_END (new Pose(11, 8.969, Math.toRadians(180))),
         SHOOT_BACK_1 (new Pose(47.3185, 10.1238, Math.toRadians(136.376))),
         TRIPLE_FAR_SPIKE_END(new Pose(20.42, 36.542, Math.toRadians(136.376))),
@@ -65,6 +66,8 @@ public final class AutoPaths {
         SHOOT_BACK_3 (new Pose(50.386, 13.819, Math.toRadians(151.526))),
         TRIPLE_GATE_SWEEP_END(new Pose(11, 36, Math.toRadians(103.421))),
         TRIPLE_GATE_SWEEP_CONTROL (new Pose(24, 12)),
+        ALT_GATE_SWEEP_MID (new Pose(19, 10, Math.toRadians(100))),
+        ALT_GATE_SWEEP_END (new Pose(14, 30, Math.toRadians(100))),
 
 
         SHOOT_BACK (new Pose(56.5580774365821, 14.833110814419216)),
@@ -134,7 +137,14 @@ public final class AutoPaths {
         SHOOT_BACK_2_TO_HP_END,
         HP_END_TO_SHOOT_BACK_3,
         SHOOT_BACK_3_TO_GATE_SWEEP_END,
-        GATE_SWEEP_END_TO_SHOOT_BACK_3
+        GATE_SWEEP_END_TO_SHOOT_BACK_3,
+        GATE_SWEEP_END_TO_SHOOT_BACK_2,
+        HP_END_TO_SHOOT_BACK_2,
+
+        SHOOT_BACK_2_ALT_GATE_SWEEP_MID,
+        SHOOT_BACK_2_ALT_GATE_SWEEP_END,
+        ALT_GATE_SWEEP_MID_TO_GATE_SWEEP_END,
+        ALT_GATE_SWEEP_END_TO_SHOOT_BACK_2,
     }
 
     // ====== INSTANCE STATE ======
@@ -187,6 +197,23 @@ public final class AutoPaths {
                         .setReversed()
                         .build()
         );
+        put(PathId.GATE_SWEEP_END_TO_SHOOT_BACK_2, PoseId.TRIPLE_GATE_SWEEP_END, PoseId.SHOOT_BACK_2);
+        put(PathId.HP_END_TO_SHOOT_BACK_2, PoseId.HP_END, PoseId.SHOOT_BACK_2);
+
+
+        paths.put(PathId.SHOOT_BACK_2_ALT_GATE_SWEEP_END,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.SHOOT_BACK_2), getPose(PoseId.ALT_GATE_SWEEP_MID)))
+                        .setConstantHeadingInterpolation(getPose(PoseId.SHOOT_BACK_2).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.ALT_GATE_SWEEP_MID), getPose(PoseId.ALT_GATE_SWEEP_END)))
+                        .setConstantHeadingInterpolation(getPose(PoseId.ALT_GATE_SWEEP_END).getHeading())
+                        .build()
+        );
+        put(PathId.SHOOT_BACK_2_ALT_GATE_SWEEP_MID, PoseId.SHOOT_BACK_2, PoseId.ALT_GATE_SWEEP_MID);
+        put(PathId.ALT_GATE_SWEEP_MID_TO_GATE_SWEEP_END, PoseId.ALT_GATE_SWEEP_MID, PoseId.ALT_GATE_SWEEP_END);
+        put(PathId.ALT_GATE_SWEEP_END_TO_SHOOT_BACK_2, PoseId.ALT_GATE_SWEEP_END, PoseId.SHOOT_BACK_2);
+
+
 
         // CLOSE TRIPLE AUTO
         put(PathId.START_FRONT_TO_SHOOT_FRONT_1, PoseId.START_FRONT, PoseId.START_FRONT_SHOOT_1);
