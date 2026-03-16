@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.config.subsystems;
 
+import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 import com.seattlesolvers.solverslib.command.Command;
@@ -26,6 +27,8 @@ public class Intake extends SubsysCore {
     public static double TRANSFER_T_POWER = 1;
     public static double ONE_TRANSFER_T_POWER = 1;
 
+    Timer timer;
+
     public Intake(){
         im = new CachedMotor(h.get(DcMotorEx.class, "intakeMotor"));
         im.setDirection(DcMotorSimple.Direction.REVERSE);
@@ -37,6 +40,8 @@ public class Intake extends SubsysCore {
         pwr = 0;
         mode = Mode.INTAKE;
         setDefaultCommand(new RunCommand(() -> mode = Mode.INTAKE, this));
+        timer = new Timer();
+        timer.resetTimer();
     }
 
     public void setIntakePitch(double sp){
@@ -57,6 +62,7 @@ public class Intake extends SubsysCore {
     Mode mode;
 
     int size;
+    int prevsize;
 
     public void inputStorageSize(int size){
         this.size = size;
@@ -83,8 +89,11 @@ public class Intake extends SubsysCore {
                 if (size <= 0) tr.setPower(1);
                 else tr.setPower(0);
                 if (size >= 3){
-                    im.setPower(0);
-                    setIntakePitch(INTAKE_UP);
+                    if(prevsize != size) timer.resetTimer();
+                    if(timer.getElapsedTimeSeconds() > 0.5){
+                        im.setPower(0);
+                        setIntakePitch(INTAKE_UP);
+                    }
                 } else {
                     im.setPower(1);
                     setIntakePitch(INTAKE_DOWN);
@@ -96,10 +105,11 @@ public class Intake extends SubsysCore {
                 else tr.setPower(TRANSFER_T_POWER);
                 break;
         }
-        if(mode != Mode.INTAKE) setIntakePitch(INTAKE_UP);
+        if(mode != Mode.INTAKE && mode != Mode.DISABLE) setIntakePitch(INTAKE_UP);
         t.addData("Intake Mode", mode.name());
         t.addData("Intake Current", im.getCurrent());
         t.addData("Intake Velocity", im.getVelocity());
         t.addData("Transfer Current", tr.getCurrent());
+        prevsize = size;
     }
 }

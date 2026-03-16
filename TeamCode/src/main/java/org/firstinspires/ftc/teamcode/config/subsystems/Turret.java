@@ -21,7 +21,7 @@ public class Turret extends SubsysCore {
     public static double SERVO_RANGE = 310;
     public static double TURRET_OFFSET = -180;
     public static double TURRET_SECOND_OFFSET = 0;
-    public static double BOTH_SERVO_OFFSET = 0.001;
+    public static double BOTH_SERVO_OFFSET = 0.00;
     public static double SECOND_SERVO_OFFSET = 0;
     public static double POSITION_TOLERANCE = 10;
     boolean alwaysAtTarget;
@@ -41,7 +41,8 @@ public class Turret extends SubsysCore {
 
     public enum Target {
         MOTIF,
-        GOAL
+        GOAL,
+        DISABLE
     }
 
     public static boolean testingOnly = false;
@@ -103,9 +104,12 @@ public class Turret extends SubsysCore {
             case MOTIF:
                 targetPose = motifPose;
                 break;
+            case DISABLE:
+                targetTurret = 0;
+                break;
         }
 
-        if(!testingOnly) targetTurret = calculateTargetPose(robotPose, targetPose);
+        if(!testingOnly && target != Target.DISABLE) targetTurret = calculateTargetPose(robotPose, targetPose);
 
         double actualTargetTurret = targetTurret;
         actualTargetTurret += MANUAL_OFFSET;

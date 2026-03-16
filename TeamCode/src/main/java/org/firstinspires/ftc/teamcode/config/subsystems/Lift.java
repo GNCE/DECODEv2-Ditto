@@ -16,24 +16,21 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 
-import kotlin.time.Instant;
-
 @Configurable
 public class Lift extends SubsysCore {
     MotorGroup front, back;
     ServoEx pto;
     public static int tar = 0;
-    public static double kp = 0, ki = 0, kd = 0, kf = 0;
-    public static int positionTolerance = 50;
+    public static double kp = 0.9, ki = 0, kd = 0, kf = 0.3;
+    public static int positionTolerance = 30;
     public static double CLUTCH_PULLED = 1;
     public static double CLUTCH_MESHED = 0;
-    public static double ENGAGING_POWER = 0.3;
-    public static long ENGAGING_DELAY = 1000;
+    public static double ENGAGING_POWER = 0.5;
+    public static long ENGAGING_DELAY = 300;
     PIDFController pidf;
 
-
     public enum LiftPositions {
-        RETRACTED(0), EXTENDED(11000);
+        RETRACTED(0), EXTENDED(3830);
 
         private final int ticks;
         LiftPositions(int ticks){
@@ -53,7 +50,7 @@ public class Lift extends SubsysCore {
         pto = new ServoEx(h, "pto");
         back.setRunMode(Motor.RunMode.RawPower);
         setMode(Mode.INACTIVE);
-        //setTargetPosition(LiftPositions.RETRACTED);
+        setTargetPosition(LiftPositions.RETRACTED);
         pidf = new PIDFController(kp, ki, kd, kf);
         pidf.setTolerance(positionTolerance);
     }
@@ -80,7 +77,11 @@ public class Lift extends SubsysCore {
         this.pwr = pwr;
     }
     public int getCurrentPosition(){
-        return back.getCurrentPosition();
+        return back.getMotor().getCurrentPosition();
+    }
+
+    public Mode getMode(){
+        return mode;
     }
 
     @Override
@@ -91,7 +92,8 @@ public class Lift extends SubsysCore {
                 pidf.setTolerance(positionTolerance);
                 pidf.setSetPoint(tar);
                 pwr = MathUtils.clamp(pidf.calculate(getCurrentPosition()) + kf, -1, 1);
-                back.set(pwr);
+                if(!pidf.atSetPoint()) back.set(pwr);
+                else back.set(0);
                 t.addData("Lift Target Position", tar);
                 break;
             case RAW:
@@ -102,11 +104,11 @@ public class Lift extends SubsysCore {
         if(mode == Mode.INACTIVE) pto.set(CLUTCH_PULLED);
         else pto.set(CLUTCH_MESHED);
 
-        //t.addData("Lift Current Position", getCurrentPosition());
+        t.addData("Lift Current Position", getCurrentPosition());
         t.addData("Lift Power", pwr);
-        //t.addData("Lift Position Error", tar - getCurrentPosition());
-        // t.addData("Lift Current Amps", back.getMotor().motor.);
-        //t.addData("Lift Reached Target?", reachedTarget());
+        t.addData("Lift Position Error", tar - getCurrentPosition());
+        t.addData("Lift Reached Target?", reachedTarget());
+        t.addData("Lift Mode", getMode().name());
     }
 
     public boolean reachedTarget(){
@@ -114,14 +116,14 @@ public class Lift extends SubsysCore {
     }
 
     public void resetEncoder(){
-        back.resetEncoder();
+        back.getMotor().resetEncoder();
     }
 
     public Command SetModeCommand(Mode newMode){
         return new InstantCommand(() -> mode = newMode);
     }
 
-    public Command EngageClutchCommand(){
+    public Command FullLiftCommand(){
         return new SequentialCommandGroup(
                 new ParallelCommandGroup(
                         this.SetModeCommand(Mode.RAW),

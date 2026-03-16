@@ -28,7 +28,10 @@ public class CloseSoloTripleAuto extends MyCommandOpMode {
     @Override
     public void initialize() {
         r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.INTAKE, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER, SubsystemConfig.DOOR, SubsystemConfig.FOLLOWER), OpModeType.AUTO);
+    }
 
+    @Override
+    public void atStart() {
         autoPaths = new AutoPaths(r.f, MyRobot.isRed ? Alliance.RED : Alliance.BLUE);
         r.overrideAutoEndPose(autoPaths.getPose(AutoPaths.PoseId.START_FRONT));
         schedule(

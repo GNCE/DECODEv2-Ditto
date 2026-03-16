@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.config.core;
 
+import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.field.PanelsField;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
@@ -16,6 +17,7 @@ import com.pedropathing.follower.Follower;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
@@ -23,6 +25,7 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.config.commands.LiftCommand;
+import org.firstinspires.ftc.teamcode.config.commands.LiftManualEngageCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
 import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
 import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
@@ -44,6 +47,7 @@ import org.firstinspires.ftc.teamcode.pedroPathing.Constants;
 import java.util.Arrays;
 import java.util.List;
 
+@Configurable
 public class MyRobot extends Robot {
     HardwareMap h;
     public JoinedTelemetry t;
@@ -179,6 +183,8 @@ public class MyRobot extends Robot {
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+
+            Constants.fusionLocalizer.t = this.t;
         }
     }
     public MyRobot(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, List<SubsystemConfig> subsysList){
@@ -201,12 +207,21 @@ public class MyRobot extends Robot {
     }
 
     public void driveControls(){
-        if(g1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)>0.8) f.setTeleOpDrive(g1.getLeftY()*0.3, -g1.getLeftX()*0.3, -g1.getRightX()*0.3, true);
-        else f.setTeleOpDrive(g1.getLeftY(), -g1.getLeftX(), -g1.getRightX(), true);
+        if(hasSubsystem(SubsystemConfig.FOLLOWER)){
+            if(g1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)>0.8) f.setTeleOpDrive(g1.getLeftY()*0.3, -g1.getLeftX()*0.3, -g1.getRightX()*0.3, true);
+            else f.setTeleOpDrive(g1.getLeftY(), -g1.getLeftX(), -g1.getRightX(), true);
+        }
+
         if(g1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.8) cornerSquare();
+        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) closeWallSquare();
+        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) farWallSquare();
+        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) allianceWallSquare();
     }
 
-    private final Pose blueGoalPose = new Pose(7, fieldSize-7);
+
+    public static double blueGoalPoseX = 5;
+    public static double blueGoalPoseY = 137;
+    private Pose blueGoalPose = new Pose(blueGoalPoseX, blueGoalPoseY);
     public void startInitLoop(){
         lt.start();
         resetCache();
@@ -240,6 +255,10 @@ public class MyRobot extends Robot {
     String prevZone = null;
 
     public void startPeriodic(){
+        blueGoalPose = new Pose(blueGoalPoseX, blueGoalPoseY);
+        if(!isRed) goalPose = blueGoalPose;
+        else goalPose = blueGoalPose.mirror(fieldSize);
+
         lt.start();
         resetCache();
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
@@ -289,6 +308,10 @@ public class MyRobot extends Robot {
             if(storage.getSize() == 3) g1.gamepad.rumble(Gamepad.RUMBLE_DURATION_CONTINUOUS);
             else g1.gamepad.stopRumble();
         }
+
+        if(hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER, SubsystemConfig.LIFT))){
+            liftTeleop();
+        }
     }
     public void runIntakeTeleop(){
         g1.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenHeld(new InstantCommand(() -> intake.setMode(Intake.Mode.REVERSE), intake));
@@ -309,14 +332,22 @@ public class MyRobot extends Robot {
             schedule(outtakeCommand);
     }
 
+
+    Pose parkPose = new Pose(107.8, 28, Math.toRadians(-45));
     public void liftTeleop(){
-        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) schedule(new LiftCommand(intake, turret, shooter, lift));
+        if(g1.wasJustPressed(GamepadKeys.Button.SQUARE)){
+            turret.setTarget(Turret.Target.DISABLE);
+            schedule(new RunCommand(() -> intake.setMode(Intake.Mode.DISABLE)));
+            schedule(new RunCommand(() -> shooter.setActive(false), shooter));
+        }
+        if(g1.wasJustPressed(GamepadKeys.Button.TRIANGLE)) schedule(lift.FullLiftCommand());
+        // if(g1.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) schedule(new LiftCommand(intake, turret, shooter, lift));
     }
 
     public void endPeriodic() {
+        if(hasSubsystem(SubsystemConfig.FOLLOWER)) f.update();
         this.run();
         if (hasSubsystem(SubsystemConfig.FOLLOWER)) {
-            f.update();
             t.addData("Current Pose", f.getPose());
             t.addData("Current Pinpoint Pose", Constants.fusionLocalizer.getDeadReckoningPose());
             t.addData("Current Velocity", f.getVelocity());
@@ -369,6 +400,20 @@ public class MyRobot extends Robot {
     public void cornerSquare(){
         if(isRed) setPose(new Pose(chassisLeftOut, chassisBack, Math.toRadians(90)));
         else setPose(new Pose(fieldSize - chassisRightOut, chassisBack, Math.toRadians(90)));
+    }
+
+
+    public void farWallSquare(){
+        setPose(new Pose(f.getPose().getX(), f.getPose().getY(), Math.toRadians(90)));
+    }
+
+    public void allianceWallSquare(){
+        if(isRed) setPose(new Pose(f.getPose().getX(), f.getPose().getY(), Math.toRadians(0)));
+        else setPose(new Pose(f.getPose().getX(), f.getPose().getY(), Math.toRadians(180)));
+    }
+
+    public void closeWallSquare(){
+        setPose(new Pose(f.getPose().getX(), f.getPose().getY(), Math.toRadians(-90)));
     }
 
     private SAT2D.ConvexPolygon chassisBox(){

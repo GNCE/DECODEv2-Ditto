@@ -21,59 +21,57 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 import java.util.List;
 
-@Autonomous(group="Close Auto", name="Close Solo Auto")
+@Autonomous(group="Close Auto", name="Close SINGLE Auto")
 public class CloseSoloAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
     @Override
     public void initialize() {
         r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.INTAKE, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER, SubsystemConfig.DOOR, SubsystemConfig.FOLLOWER), OpModeType.AUTO);
+    }
 
+    @Override
+    public void atStart() {
         autoPaths = new AutoPaths(r.f, MyRobot.isRed ? Alliance.RED : Alliance.BLUE);
-        r.overrideAutoEndPose(autoPaths.getPose(AutoPaths.PoseId.START_FRONT));
+        r.overrideAutoEndPose(autoPaths.getPose(AutoPaths.PoseId.SINGLE_FRONT_START));
         schedule(
                 new SequentialCommandGroup(
                         new ParallelCommandGroup(
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                                 new InstantCommand(() -> r.shooter.setActive(true))
                         ),
-                        new ParallelDeadlineGroup(
-                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_FRONT_TO_MID_SPIKE_END)),
-                                new SequentialCommandGroup(
-                                        new WaitCommand(250),
-                                        r.shootAll(),
-                                        new InstantCommand(() -> r.door.setOpen(false))
-                                )
-                        ),
-                        new ParallelCommandGroup(
-                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-                                new InstantCommand(() -> r.door.setOpen(false))
-                        ),
-                        new ParallelDeadlineGroup(
-                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.MID_SPIKE_END_TO_SHOOT_FRONT)),
-                                new SequentialCommandGroup(
-                                        new WaitUntilCommand(() -> r.f.getPathCompletion() > 0.9),
-                                        r.shootAll(),
-                                        new InstantCommand(() -> r.door.setOpen(false))
-                                )
-                        ),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
+                        r.shootAll(),
+                        new InstantCommand(() -> r.door.setOpen(false)),
+
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
+                        new WaitCommand(100),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE)),
+                        r.shootAll(),
+                        new InstantCommand(() -> r.door.setOpen(false)),
+
                         new RepeatCommand(
                                 new SequentialCommandGroup(
-                                        new ParallelCommandGroup(
-                                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-                                                new InstantCommand(() -> r.door.setOpen(false))
-                                        ),
-                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_FRONT_TO_GATE_INTAKE)),
-                                        new WaitCommand(2000),
-                                        new ParallelCommandGroup(
-                                                new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.GATE_INTAKE_TO_SHOOT_FRONT)),
-                                                new SequentialCommandGroup(
-                                                        new WaitUntilCommand(() -> r.f.getPathCompletion() > 0.9),
-                                                        r.shootAll()
-                                                )
-                                        )
-                                ), 3
-                        )
+                                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
+                                        new WaitCommand(400),
+                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE)),
+                                        new WaitCommand(800),
+                                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.TRIPLE_GATE_INTAKE_SAFE_TO_SHOOT)),
+                                        r.shootAll(),
+                                        new InstantCommand(() -> r.door.setOpen(false))
+                                ),
+                                2
+                        ),
+
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_START)),
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_CLOSE_SPIKE_START_TO_CLOSE_SPIKE_END)),
+                        new WaitCommand(100),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT)),
+                        r.shootAll(),
+                        new InstantCommand(() -> r.door.setOpen(false))
                 )
         );
     }

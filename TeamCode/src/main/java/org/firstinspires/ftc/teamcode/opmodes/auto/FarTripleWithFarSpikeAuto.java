@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.seattlesolvers.solverslib.command.ConditionalCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.ParallelDeadlineGroup;
@@ -21,6 +22,7 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 import java.util.List;
+import java.util.concurrent.locks.Condition;
 
 @Autonomous(group="Far Auto", name="Far Triple Far Spike Auto")
 public class FarTripleWithFarSpikeAuto extends MyCommandOpMode {
@@ -54,6 +56,7 @@ public class FarTripleWithFarSpikeAuto extends MyCommandOpMode {
                                 new WaitUntilCommand(() -> r.storage.getSize() == 3)
                                 ),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_1)),
+                        new WaitCommand(100),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
@@ -61,7 +64,7 @@ public class FarTripleWithFarSpikeAuto extends MyCommandOpMode {
                         new ParallelRaceGroup(
                                 new SequentialCommandGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_1_TO_FAR_SPIKE_END)),
-                                        new WaitCommand(500)
+                                        new WaitCommand(300)
                                 ),
                                 new WaitUntilCommand(() -> r.storage.getSize() == 3)
                         ),
@@ -74,9 +77,9 @@ public class FarTripleWithFarSpikeAuto extends MyCommandOpMode {
                                 new ParallelRaceGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_3_TO_GATE_SWEEP_END)),
                                         new WaitUntilCommand(() -> r.storage.getSize() == 3)
-                                        ),
+                                ),
                                 r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_2)),
-                                r.shootAll(),
+                                new ConditionalCommand(r.shootAll(), new InstantCommand(), () -> r.storage.getSize() >= 2),
                                 new InstantCommand(() -> r.door.setOpen(false)),
                                 new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                         ),
@@ -86,9 +89,9 @@ public class FarTripleWithFarSpikeAuto extends MyCommandOpMode {
                                 new ParallelRaceGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_2_ALT_GATE_SWEEP_END)),
                                         new WaitUntilCommand(() -> r.storage.getSize() == 3)
-                                        ),
+                                ),
                                 r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_2)),
-                                r.shootAll(),
+                                new ConditionalCommand(r.shootAll(), new InstantCommand(), () -> r.storage.getSize() >= 2),
                                 new InstantCommand(() -> r.door.setOpen(false)),
                                 new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                         ),
@@ -99,7 +102,7 @@ public class FarTripleWithFarSpikeAuto extends MyCommandOpMode {
                                         new WaitUntilCommand(() -> r.storage.getSize() == 3)
                                 ),
                                 r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_2)),
-                                r.shootAll(),
+                                new ConditionalCommand(r.shootAll(), new InstantCommand(), () -> r.storage.getSize() >= 2),
                                 new InstantCommand(() -> r.door.setOpen(false)),
                                 new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                         ),
@@ -109,12 +112,14 @@ public class FarTripleWithFarSpikeAuto extends MyCommandOpMode {
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_2_ALT_GATE_SWEEP_END)),
                                         new WaitUntilCommand(() -> r.storage.getSize() == 3)
                                 ),
-                                r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_2)),
-                                r.shootAll(),
+                                r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_FINAL)),
+                                new ConditionalCommand(r.shootAll(), new InstantCommand(), () -> r.storage.getSize() >= 2),
                                 new InstantCommand(() -> r.door.setOpen(false)),
                                 new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                         )
                 )
+                        .raceWith(new WaitCommand(29500))
+                        .andThen(r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.PARK_FINAL)))
         );
     }
 }

@@ -16,7 +16,7 @@ public class OuttakeCommand extends SequentialCommandGroup {
     public OuttakeCommand(Intake intake, Turret turret, Shooter shooter, Door door, Storage storage){
         addCommands(
                 new ParallelCommandGroup(
-                        new WaitUntilCommand(turret::reachedTarget),
+                        //new WaitUntilCommand(turret::reachedTarget),
                         new WaitUntilCommand(shooter::readyToShoot)
                 ),
                 door.setOpenCommand(true),

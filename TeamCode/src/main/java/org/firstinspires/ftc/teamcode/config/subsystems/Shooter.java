@@ -11,10 +11,11 @@ import com.seattlesolvers.solverslib.hardware.motors.MotorGroup;
 import com.seattlesolvers.solverslib.util.MathUtils;
 
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
+import org.firstinspires.ftc.teamcode.config.core.util.hardware.VoltageCompensatedMotorGroup;
 
 @Configurable
 public class Shooter extends SubsysCore {
-    private final MotorGroup flywheel;
+    private final VoltageCompensatedMotorGroup flywheel;
     private final Motor.Encoder encoder;
     private final Servo hood;
 
@@ -35,7 +36,7 @@ public class Shooter extends SubsysCore {
     public static double HOOD_MAX_SERVO_POS = 1;
     public static double HOOD_GEAR_RATIO = (double) 300 / 44;
     public static double HOOD_SERVO_RANGE = 255;
-    public static double IDLE_HOOD_ANGLE_DEG = MAX_HOOD_ANGLE_DEG;
+    public static double IDLE_HOOD_ANGLE_DEG = 31;
 
     PIDFController pidfController;
     boolean active = false;
@@ -65,7 +66,7 @@ public class Shooter extends SubsysCore {
 
     public static double PHYS_COMP_MAX_DELTA_DEG = 6.0;
     public static double PHYS_COMP_MIN_FRAC = 0.55;
-    public static boolean PHYS_COMP_ENABLED = true;
+    public static boolean PHYS_COMP_ENABLED = false;
 
     private double hoodToThetaRad(double hoodDeg) {
         return Math.toRadians(90.0 - hoodDeg);
@@ -188,7 +189,7 @@ public class Shooter extends SubsysCore {
     public Shooter() {
         Motor m1 = new MotorEx(h, "shooter1", Motor.GoBILDA.BARE), m2 = new MotorEx(h, "shooter2", Motor.GoBILDA.BARE);
         m2.setInverted(true);
-        flywheel = new MotorGroup(m1, m2);
+        flywheel = new VoltageCompensatedMotorGroup(h, 500L, 12.0, m1, m2);
         flywheel.setRunMode(Motor.RunMode.RawPower);
         flywheel.setZeroPowerBehavior(Motor.ZeroPowerBehavior.FLOAT);
         encoder = m1.encoder;
@@ -251,6 +252,7 @@ public class Shooter extends SubsysCore {
         double servoPos = hoodAngleToServoPos(hoodCmdDeg);
         hood.setPosition(servoPos);
 
+        t.addData("Shooter Cached Voltage", flywheel.getCachedVoltage());
         t.addData("Shooter Velocity Error", getTargetVelocity() - getVelocity());
         t.addData("Shooter Target Power", targetPower);
         t.addData("Shooter Velocity", getVelocity());

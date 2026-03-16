@@ -22,7 +22,7 @@ public class LiftManualControl extends MyCommandOpMode {
     public void run() {
         if(r.g1.wasJustPressed(GamepadKeys.Button.TRIANGLE)) r.lift.setMode(Lift.Mode.RAW);
         if(r.g1.wasJustPressed(GamepadKeys.Button.SQUARE)) r.lift.setMode(Lift.Mode.INACTIVE);
+        if(r.g1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) schedule(r.lift.FullLiftCommand());
         r.lift.setManualPower(r.g1.getLeftY());
-        r.liftTeleop();
     }
 }

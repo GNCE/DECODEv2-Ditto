@@ -47,7 +47,7 @@ public class ShotPlanner {
     public static double EXIT_VEL_M_PER_RPM = 0.0039;
 
     // Lead tuning
-    public static boolean MOVE_SHOT_ENABLED = true;
+    public static boolean MOVE_SHOT_ENABLED = false;
     public static int MOVE_SHOT_ITERS = 2;
     public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 18.0;
 
@@ -60,13 +60,16 @@ public class ShotPlanner {
 
     // -------------------- LUT data (from your latest Shooter) --------------------
     private final double[] distances = {
-            50, 53, 57.777, 62.5, 67.5, 96.5, 118.6, 133.452, 150
+            //120.99649140247442, 130.998778563601, 140.51913130739305
+            50, 53, 57.777, 62.5, 67.5, 96.5, 121.59989031660349, 133.452, 137.83283020070846, 150, 170
     };
     private final double[] velocities = {
-            1160, 1240, 1360, 1380, 1460, 1520, 1680, 1840, 2000
+            // 1900, 2000, 2100
+            1160, 1240, 1360, 1380, 1460, 1520, 1700, 1840, 1800, 2000, 2400
     };
     private final double[] hoodAngles = {
-            30, 35, 38.5, 39, 41, 41, 43, 44, 44
+            // 49, 49, 50
+            30, 35, 38.5, 39, 41, 41, 43, 44, 44, 44, 47
     };
 
     private final InterpLUT velocityLut = new InterpLUT();

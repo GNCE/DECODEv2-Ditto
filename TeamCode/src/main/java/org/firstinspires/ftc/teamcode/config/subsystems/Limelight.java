@@ -95,6 +95,7 @@ public class Limelight extends SubsysCore {
             double captureLatency = llResult.getCaptureLatency();
             double targetingLatency = llResult.getTargetingLatency();
             double parseLatency = llResult.getParseLatency();
+
             t.addData("LL Latency", captureLatency + targetingLatency);
             t.addData("LL Parse Latency", parseLatency);
 
@@ -131,12 +132,14 @@ public class Limelight extends SubsysCore {
                                     mt2Pose.getPosition().y * in,
                                     mt2Pose.getOrientation().getYaw(AngleUnit.RADIANS)
                             ));
-                            pedro2 = new Pose(pedro2.getX(), pedro2.getY()+1.5, pedro2.getHeading());
+                            pedro2 = new Pose(pedro2.getX(), pedro2.getY()+1.5, Double.NaN);
+
 
                             t.addData("MT1 PedroConv", pedro1);
                             t.addData("MT2 PedroConv", pedro2);
 
-                            Constants.fusionLocalizer.addMeasurement(pedro2, System.nanoTime());
+                            long captureTime = System.nanoTime() - (long)((captureLatency + targetingLatency)*(1e6));
+                            Constants.fusionLocalizer.addMeasurement(pedro2, captureTime);
                         }
                     }
                     break;
