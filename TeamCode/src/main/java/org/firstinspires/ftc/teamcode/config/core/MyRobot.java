@@ -27,6 +27,7 @@ import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.config.commands.LiftCommand;
 import org.firstinspires.ftc.teamcode.config.commands.LiftManualEngageCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
+import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand2;
 import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
 import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Motif;
@@ -447,6 +448,10 @@ public class MyRobot extends Robot {
 
     public Command shootAll(){
         return new OuttakeCommand(intake, turret, shooter, door, storage);
+    }
+
+    public Command shootAll2(){
+        return new OuttakeCommand2(intake, turret, shooter, door, storage);
     }
 
     public Command goToLinear(Pose tar){
