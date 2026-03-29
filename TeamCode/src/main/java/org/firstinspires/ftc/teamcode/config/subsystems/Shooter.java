@@ -20,7 +20,7 @@ public class Shooter extends SubsysCore {
     private final Servo hood;
 
     public static double INACTIVE_VELOCITY = 0.0;
-    public static double VELOCITY_READY_THRESHOLD = 100.0;
+    public static double VELOCITY_READY_THRESHOLD = 40.0;
 
     public static double kp = 0.01;
     public static double ki = 0.0;

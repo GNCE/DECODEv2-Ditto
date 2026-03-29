@@ -88,6 +88,7 @@ public class Lift extends SubsysCore {
     public void periodic() {
         switch (mode){
             case PID:
+                front.set(0);
                 pidf.setPIDF(kp, ki, kd, 0);
                 pidf.setTolerance(positionTolerance);
                 pidf.setSetPoint(tar);

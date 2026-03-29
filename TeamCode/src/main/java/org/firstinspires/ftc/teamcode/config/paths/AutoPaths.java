@@ -50,7 +50,7 @@ public final class AutoPaths {
         SPIKE_MID_TRIPLE_END (new Pose(26.3+ X_OFFSET_FRONT, 62+Y_OFFSET_FRONT, Math.toRadians(270))),
         SPIKE_MID_THEN_GATE_OPEN (new Pose(24.8+ X_OFFSET_FRONT, 75.833+Y_OFFSET_FRONT, Math.toRadians(-145))),
         SPIKE_MID_THEN_SHOOT_FRONT (new Pose(59.82+ X_OFFSET_FRONT, 77.8+Y_OFFSET_FRONT, Math.toRadians(-142.34))),
-        GATE_INTAKE_TRIPLE (new Pose(20.4+ X_OFFSET_FRONT, 59.5+Y_OFFSET_FRONT, Math.toRadians(152))), // 12.3 56.66 150.14
+        GATE_INTAKE_TRIPLE (new Pose(21+ X_OFFSET_FRONT, 60.5+Y_OFFSET_FRONT, Math.toRadians(152))), // 12.3 56.66 150.14
         GATE_INTAKE_SAFE_TRIPLE (new Pose(20.4+ X_OFFSET_FRONT, 56.5+Y_OFFSET_FRONT, Math.toRadians(152))),
         FRONT_SHOOT_AFTER_GATE (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(210))),
 
@@ -60,7 +60,7 @@ public final class AutoPaths {
         SINGLE_MID_SPIKE_CONTROL (new Pose(40, 54)),
         SINGLE_MID_SPIKE_END(new Pose(12.248912466205642, 59, Math.toRadians(180))),
         SINGLE_CLOSE_SPIKE_START (new Pose(54, 83, Math.toRadians(180))),
-        SINGLE_CLOSE_SPIKE_END (new Pose(21, 83, Math.toRadians(180))),
+        SINGLE_CLOSE_SPIKE_END (new Pose(19, 83, Math.toRadians(180))),
         SINGLE_FINAL_SHOOT (new Pose(59, 102, Math.toRadians(200))),
 
 
