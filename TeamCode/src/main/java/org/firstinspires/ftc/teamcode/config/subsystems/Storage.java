@@ -35,7 +35,7 @@ public class Storage extends SubsysCore{
         p2.setState(true);
         p3.setState(true);
 
-        sizeContainer = new ModeSmoother<>(10, 3);
+        sizeContainer = new ModeSmoother<>(15, 3);
     }
 
     public void input(double curAmps, double curVelo){

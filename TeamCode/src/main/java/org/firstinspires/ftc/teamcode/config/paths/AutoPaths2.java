@@ -50,17 +50,18 @@ public final class AutoPaths2 {
         SPIKE_MID_TRIPLE_END (new Pose(26.3+ X_OFFSET_FRONT, 62+Y_OFFSET_FRONT, Math.toRadians(270))),
         SPIKE_MID_THEN_GATE_OPEN (new Pose(24.8+ X_OFFSET_FRONT, 75.833+Y_OFFSET_FRONT, Math.toRadians(-145))),
         SPIKE_MID_THEN_SHOOT_FRONT (new Pose(59.82+ X_OFFSET_FRONT, 77.8+Y_OFFSET_FRONT, Math.toRadians(-142.34))),
-        GATE_INTAKE_TRIPLE (new Pose(20.4+ X_OFFSET_FRONT, 59.75+Y_OFFSET_FRONT, Math.toRadians(150))), // 12.3 56.66 150.14
-        GATE_INTAKE_SAFE_TRIPLE (new Pose(20.4+ X_OFFSET_FRONT, 56.5+Y_OFFSET_FRONT, Math.toRadians(150))),
-        FRONT_SHOOT_AFTER_GATE (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(210))),
+        GATE_INTAKE_TRIPLE (new Pose(18.5+ X_OFFSET_FRONT, 60.50+Y_OFFSET_FRONT, Math.toRadians(152))), // 12.3 56.66 150.14
+        GATE_INTAKE_SAFE_TRIPLE (new Pose(20.25+ X_OFFSET_FRONT, 56.25+Y_OFFSET_FRONT, Math.toRadians(151))),
+        GATE_INTAKE_SAFE_TRIPLE_SAFE (new Pose(19+ X_OFFSET_FRONT, 56.3+Y_OFFSET_FRONT, Math.toRadians(180))),
+        FRONT_SHOOT_AFTER_GATE (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(215))),
 
         // SINGLE AUTO CLOSE
         SINGLE_FRONT_START (new Pose(17, 111.64, Math.toRadians(180))),
-        SINGLE_MID_SPIKE_START (new Pose(47, 97, Math.toRadians(-154))),
-        SINGLE_MID_SPIKE_CONTROL (new Pose(42, 66)),
-        SINGLE_MID_SPIKE_END(new Pose(12, 59, Math.toRadians(180))),
-        SINGLE_CLOSE_SPIKE_START (new Pose(54, 83, Math.toRadians(180))),
-        SINGLE_CLOSE_SPIKE_END (new Pose(21, 83, Math.toRadians(180))),
+        SINGLE_MID_SPIKE_START (new Pose(57, 84, Math.toRadians(206))),
+        SINGLE_MID_SPIKE_CONTROL (new Pose(60, 55.5)),
+        SINGLE_MID_SPIKE_END(new Pose(9.35, 59, Math.toRadians(180))),
+        SINGLE_CLOSE_SPIKE_START (new Pose(42.578, 83.5327, Math.toRadians(180))),
+        SINGLE_CLOSE_SPIKE_END (new Pose(17.5, 84, Math.toRadians(180))),
         SINGLE_FINAL_SHOOT (new Pose(59, 100, Math.toRadians(200))),
 
 
@@ -106,9 +107,8 @@ public final class AutoPaths2 {
         MID_SPIKE_START   (new Pose(48, 59, Math.toRadians(180))), // 58
         MID_SPIKE_END     (new Pose(22, 59, Math.toRadians(180))),
 
-        INTERMEDIATE_FAR_INTAKE_POSE   (new Pose(48, 20, Math.toRadians(180))),
-        FAR_SPIKE_END     (new Pose(23, 34, Math.toRadians(180)));
-
+        INTERMEDIATE_FAR_INTAKE_POSE   (new Pose(54.5, 29.5)),
+        FAR_SPIKE_END     (new Pose(13, 36, Math.toRadians(180)));
 
 
         private final Pose blue;
@@ -172,6 +172,8 @@ public final class AutoPaths2 {
         SHOOT_BACK_2_ALT_GATE_SWEEP_END,
         ALT_GATE_SWEEP_MID_TO_GATE_SWEEP_END,
         ALT_GATE_SWEEP_END_TO_SHOOT_BACK_2,
+        TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE,
+        GATE_INTAKE_SAFE_SAFE_TO_SHOOT,
     }
 
     // ====== INSTANCE STATE ======
@@ -342,6 +344,26 @@ public final class AutoPaths2 {
                         .setHeadingInterpolation(HeadingInterpolator.piecewise(
                                 HeadingInterpolator.PiecewiseNode.linear(0.0, 0.3, getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE).getHeading(), getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE).getHeading()),
                                 HeadingInterpolator.PiecewiseNode.linear(0.3, 1, getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE).getHeading(), getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading())
+                        ))
+                        .build()
+        );
+
+        paths.put(PathId.TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE), getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE_SAFE)))
+                        .setHeadingInterpolation(HeadingInterpolator.piecewise(
+                                HeadingInterpolator.PiecewiseNode.linear(0.0, 0.3, getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE).getHeading(), getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE_SAFE).getHeading()),
+                                HeadingInterpolator.PiecewiseNode.linear(0.3, 1, getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE).getHeading(), getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE_SAFE).getHeading())
+                        ))
+                        .build()
+        );
+
+        paths.put(PathId.GATE_INTAKE_SAFE_SAFE_TO_SHOOT,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE_SAFE), getPose(PoseId.FRONT_SHOOT_AFTER_GATE)))
+                        .setHeadingInterpolation(HeadingInterpolator.piecewise(
+                                HeadingInterpolator.PiecewiseNode.linear(0.0, 0.3, getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE_SAFE).getHeading(), getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading()),
+                                HeadingInterpolator.PiecewiseNode.linear(0.3, 1, getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading(), getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading())
                         ))
                         .build()
         );

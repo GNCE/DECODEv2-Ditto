@@ -28,6 +28,7 @@ import org.firstinspires.ftc.teamcode.config.commands.LiftCommand;
 import org.firstinspires.ftc.teamcode.config.commands.LiftManualEngageCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand2;
+import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand3;
 import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
 import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Motif;
@@ -99,7 +100,8 @@ public class MyRobot extends Robot {
                     new SAT2D.Point2(fieldSize/2 + 24, 0));
 
     ToggleButton autoFireButton, turretAlwaysReadyButton;
-    OuttakeCommand outtakeCommand;
+    OuttakeCommand2 outtakeCommand;
+    OuttakeCommand3 outtakeCommand3;
     List<SubsystemConfig> subsysList;
     ShotPlanner planner;
     boolean [] enabledSubsys = new boolean[SubsystemConfig.values().length];
@@ -170,7 +172,7 @@ public class MyRobot extends Robot {
         }
 
         if(hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SHOOTER, SubsystemConfig.TURRET))){
-            outtakeCommand = new OuttakeCommand(intake, turret, shooter, door, storage);
+            outtakeCommand3 = new OuttakeCommand3(intake, turret, shooter, door, storage);
         }
 
         if(isRed == null) isRed = false;
@@ -330,7 +332,7 @@ public class MyRobot extends Robot {
         if(lt > 0.1 || rt > 0.1) Turret.MANUAL_OFFSET += (rt - lt)/2;
 
         if (g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER) && storage.getSize() != 0)
-            schedule(outtakeCommand);
+            schedule(outtakeCommand3);
     }
 
 

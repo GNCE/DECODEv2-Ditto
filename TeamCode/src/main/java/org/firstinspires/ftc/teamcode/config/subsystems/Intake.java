@@ -90,7 +90,7 @@ public class Intake extends SubsysCore {
                 else tr.setPower(0);
                 if (size >= 3){
                     if(prevsize != size) timer.resetTimer();
-                    if(timer.getElapsedTimeSeconds() > 0.3){
+                    if(timer.getElapsedTimeSeconds() > 0.15){
                         im.setPower(0);
                         setIntakePitch(INTAKE_UP);
                     }
