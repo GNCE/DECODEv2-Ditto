@@ -10,11 +10,16 @@ import com.pedropathing.geometry.Pose;
  * Pure-math planner:
  *  - Uses LUT(distance)->RPM
  *  - Computes hood angle from physics (projectile lo-branch solution)
+ *  - Guarantees ball clears front lip before reaching back wall
  *  - Computes virtual goal for shooting on the move (iterative lead)
  *  - Provides a single coherent "ShotCommand" to feed Turret + Shooter
  *
  * Pose units assumed inches by default (POSE_UNITS_TO_METERS = 0.0254).
  * Hood angle convention: degrees FROM VERTICAL (0 up, 90 horizontal).
+ *
+ * Goal geometry (like a basketball hoop):
+ *   - Front lip at distance x_lip = x - GOAL_DEPTH_M, height GOAL_LIP_HEIGHT_M (0.98425m)
+ *   - Back wall at distance x,                        height GOAL_HEIGHT_M     (1.14m)
  */
 @Configurable
 public class ShotPlanner {
@@ -60,7 +65,12 @@ public class ShotPlanner {
     public static double MAX_HOOD_ANGLE_DEG = 55;
 
     // -------------------- Physics constants (for hood angle solver) --------------------
+    // Back wall of goal — where we want the ball to land
     public static double GOAL_HEIGHT_M = 1.14;
+    // Front lip of goal — must be cleared (closer to robot, lower than back wall)
+    public static double GOAL_LIP_HEIGHT_M = 0.98425;
+    // Horizontal depth of goal: 12*sqrt(2) inches -> meters (~0.4311m)
+    public static double GOAL_DEPTH_M = 12 * Math.sqrt(2) * 0.0254;
     public static double LAUNCHER_HEIGHT_ACTUAL_M = 0.38;
     public static double GRAVITY = 9.80665;
 
@@ -105,29 +115,72 @@ public class ShotPlanner {
     }
 
     // -------------------- Physics hood solver --------------------
-    // Solves projectile equations for the lo-branch launch angle (flatter trajectory)
-    // given horizontal distance (m), exit velocity (m/s), and height difference (m).
-    // Returns hood angle in degrees from vertical, or fallback to MIN if no solution.
+    // Goal is like a basketball hoop:
+    //   - Front lip is CLOSER to robot at (x - GOAL_DEPTH_M), height GOAL_LIP_HEIGHT_M
+    //   - Back wall is FARTHER from robot at x,               height GOAL_HEIGHT_M
+    //
+    // Step 1: Solve lo-branch angle to land at back wall.
+    // Step 2: Check if that arc clears the front lip.
+    // Step 3: If it does clear, use it.
+    // Step 4: If it clips the lip, solve the minimum angle that just clears the lip instead.
     private double solveHoodDeg(double distPoseUnits, double rpm) {
-        double x = distPoseUnits * POSE_UNITS_TO_METERS;
-        double v = Math.abs(rpm) * EXIT_VEL_M_PER_RPM;
-        double dh = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;
+        double x      = distPoseUnits * POSE_UNITS_TO_METERS;
+        double v      = Math.abs(rpm) * EXIT_VEL_M_PER_RPM;
+        double dhBack = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;     // height diff to back wall
+        double dhLip  = GOAL_LIP_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M; // height diff to front lip
+        double xLip   = x - GOAL_DEPTH_M;                             // horizontal dist to front lip
 
         if (x <= 1e-6 || v <= 1e-6) return MIN_HOOD_ANGLE_DEG;
 
-        double g = GRAVITY;
+        double g  = GRAVITY;
         double v2 = v * v;
         double v4 = v2 * v2;
 
-        double disc = v4 - g * (g * x * x + 2.0 * dh * v2);
-        if (disc < 0.0) return MIN_HOOD_ANGLE_DEG; // no solution, fallback
+        // --- Step 1: solve lo-branch angle to hit back wall ---
+        double thetaLo = Double.NaN;
+        double discBack = v4 - g * (g * x * x + 2.0 * dhBack * v2);
+        if (discBack >= 0.0) {
+            double sqrtBack = Math.sqrt(discBack);
+            double tanLo = (v2 - sqrtBack) / (g * x); // lo branch = flatter trajectory
+            thetaLo = Math.atan(tanLo);
+        }
 
-        double sqrt = Math.sqrt(disc);
-        double tanLo = (v2 - sqrt) / (g * x); // lo branch = flatter trajectory
-        double thetaLo = Math.atan(tanLo);     // radians from horizontal
+        // --- Step 2: check if lo-branch arc clears the front lip ---
+        // Projectile height above launcher at horizontal distance xLip:
+        // h(xLip) = xLip * tan(theta) - g * xLip^2 / (2 * v^2 * cos^2(theta))
+        boolean loClipsLip = true;
+        if (!Double.isNaN(thetaLo) && xLip > 0) {
+            double cosLo  = Math.cos(thetaLo);
+            double hAtLip = xLip * Math.tan(thetaLo)
+                    - (g * xLip * xLip) / (2.0 * v2 * cosLo * cosLo);
+            // total height at lip = height gained above launcher + launcher height
+            loClipsLip = (hAtLip + LAUNCHER_HEIGHT_ACTUAL_M) < GOAL_LIP_HEIGHT_M;
+        } else if (!Double.isNaN(thetaLo)) {
+            // xLip <= 0: robot is closer than goal depth, lip is behind robot — ignore lip
+            loClipsLip = false;
+        }
 
-        double hoodDeg = 90.0 - Math.toDegrees(thetaLo); // convert to deg from vertical
-        return Range.clip(hoodDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+        // --- Step 3: lo-branch clears the lip, use it ---
+        if (!Double.isNaN(thetaLo) && !loClipsLip) {
+            double hoodDeg = 90.0 - Math.toDegrees(thetaLo);
+            return Range.clip(hoodDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+        }
+
+        // --- Step 4: lo-branch clips the lip (or no back-wall solution exists) ---
+        // Solve minimum angle that just clears the lip using lo-branch at (xLip, dhLip)
+        if (xLip > 1e-6) {
+            double discLip = v4 - g * (g * xLip * xLip + 2.0 * dhLip * v2);
+            if (discLip >= 0.0) {
+                double sqrtLip  = Math.sqrt(discLip);
+                double tanLipLo = (v2 - sqrtLip) / (g * xLip); // lo branch at lip
+                double thetaLipLo = Math.atan(tanLipLo);
+                double hoodDeg = 90.0 - Math.toDegrees(thetaLipLo);
+                return Range.clip(hoodDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+            }
+        }
+
+        // --- Fallback: no valid solution, return MIN ---
+        return MIN_HOOD_ANGLE_DEG;
     }
 
     private double estimateFlightTimeSec(double distPoseUnits, double rpm, double hoodDegFromVertical) {
