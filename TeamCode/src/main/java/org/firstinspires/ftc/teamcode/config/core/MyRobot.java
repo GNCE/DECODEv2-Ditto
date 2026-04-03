@@ -272,6 +272,16 @@ public class MyRobot extends Robot {
 
             ShotPlanner.ShotCommand cmd = planner.plan(turretPose, f.getVelocity().getXComponent(), f.getVelocity().getYComponent(), goalPose);
 
+            // ---- SOTM DEBUG TELEMETRY (remove when done tuning) ----
+            t.addData("SOTM Virtual Goal X", cmd.virtualGoal.getX());
+            t.addData("SOTM Virtual Goal Y", cmd.virtualGoal.getY());
+            t.addData("SOTM Real Goal X", goalPose.getX());
+            t.addData("SOTM Real Goal Y", goalPose.getY());
+            t.addData("SOTM Flight Time (s)", String.format("%.3f", cmd.flightTimeSec));
+            t.addData("SOTM Lead X (in)", String.format("%.2f", cmd.virtualGoal.getX() - goalPose.getX()));
+            t.addData("SOTM Lead Y (in)", String.format("%.2f", cmd.virtualGoal.getY() - goalPose.getY()));
+// ---- END SOTM DEBUG TELEMETRY ----
+
             if(hasSubsystem(SubsystemConfig.TURRET)) turret.input(turretPose, cmd.virtualGoal);
             if(hasSubsystem(SubsystemConfig.SHOOTER)) shooter.setPlannedShot(cmd.distancePoseUnits, cmd.targetRpm, cmd.hoodBaselineDegFromVertical);
 

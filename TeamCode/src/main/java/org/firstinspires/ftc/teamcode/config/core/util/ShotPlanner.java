@@ -47,9 +47,9 @@ public class ShotPlanner {
     public static double EXIT_VEL_M_PER_RPM = 0.0039;
 
     // Lead tuning
-    public static boolean MOVE_SHOT_ENABLED = false;
+    public static boolean MOVE_SHOT_ENABLED = true;
     public static int MOVE_SHOT_ITERS = 2;
-    public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 18.0;
+    public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 24.0;
 
     // Clamp output setpoints (match your Shooter constraints)
     public static double MAX_RPM = 2800.0;
