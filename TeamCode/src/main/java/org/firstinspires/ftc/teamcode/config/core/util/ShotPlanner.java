@@ -8,7 +8,8 @@ import com.pedropathing.geometry.Pose;
 
 /**
  * Pure-math planner:
- *  - Uses LUT(distance)->(RPM, hoodAngle)
+ *  - Uses LUT(distance)->RPM
+ *  - Computes hood angle from physics (projectile lo-branch solution)
  *  - Computes virtual goal for shooting on the move (iterative lead)
  *  - Provides a single coherent "ShotCommand" to feed Turret + Shooter
  *
@@ -58,6 +59,11 @@ public class ShotPlanner {
     public static double MIN_HOOD_ANGLE_DEG = 30;
     public static double MAX_HOOD_ANGLE_DEG = 55;
 
+    // -------------------- Physics constants (for hood angle solver) --------------------
+    public static double GOAL_HEIGHT_M = 1.14;
+    public static double LAUNCHER_HEIGHT_ACTUAL_M = 0.38;
+    public static double GRAVITY = 9.80665;
+
     // -------------------- LUT data (from your latest Shooter) --------------------
     private final double[] distances = {
             //120.99649140247442, 130.998778563601, 140.51913130739305
@@ -67,21 +73,23 @@ public class ShotPlanner {
             // 1900, 2000, 2100
             1160, 1240, 1360, 1380, 1460, 1520, 1700, 1840, 1800, 2000, 2400
     };
-    private final double[] hoodAngles = {
-            // 49, 49, 50
-            30, 35, 38.5, 39, 41, 41, 43, 44, 44, 44, 47
-    };
+    // Hood angle LUT commented out — replaced by physics solver
+    // private final double[] hoodAngles = {
+    //         // 49, 49, 50
+    //         30, 35, 38.5, 39, 41, 41, 43, 44, 44, 44, 47
+    // };
 
     private final InterpLUT velocityLut = new InterpLUT();
-    private final InterpLUT hoodAngleLut = new InterpLUT();
+    // Hood angle LUT commented out — replaced by physics solver
+    // private final InterpLUT hoodAngleLut = new InterpLUT();
 
     public ShotPlanner() {
         for (int i = 0; i < distances.length; i++) {
             velocityLut.add(distances[i], velocities[i]);
-            hoodAngleLut.add(distances[i], hoodAngles[i]);
+            // hoodAngleLut.add(distances[i], hoodAngles[i]); // commented out — using physics now
         }
         velocityLut.createLUT();
-        hoodAngleLut.createLUT();
+        // hoodAngleLut.createLUT(); // commented out — using physics now
     }
 
     private double clampDist(double distPoseUnits) {
@@ -94,6 +102,32 @@ public class ShotPlanner {
 
     private double hoodDegToThetaRadFromHorizontal(double hoodDegFromVertical) {
         return Math.toRadians(90.0 - hoodDegFromVertical);
+    }
+
+    // -------------------- Physics hood solver --------------------
+    // Solves projectile equations for the lo-branch launch angle (flatter trajectory)
+    // given horizontal distance (m), exit velocity (m/s), and height difference (m).
+    // Returns hood angle in degrees from vertical, or fallback to MIN if no solution.
+    private double solveHoodDeg(double distPoseUnits, double rpm) {
+        double x = distPoseUnits * POSE_UNITS_TO_METERS;
+        double v = Math.abs(rpm) * EXIT_VEL_M_PER_RPM;
+        double dh = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;
+
+        if (x <= 1e-6 || v <= 1e-6) return MIN_HOOD_ANGLE_DEG;
+
+        double g = GRAVITY;
+        double v2 = v * v;
+        double v4 = v2 * v2;
+
+        double disc = v4 - g * (g * x * x + 2.0 * dh * v2);
+        if (disc < 0.0) return MIN_HOOD_ANGLE_DEG; // no solution, fallback
+
+        double sqrt = Math.sqrt(disc);
+        double tanLo = (v2 - sqrt) / (g * x); // lo branch = flatter trajectory
+        double thetaLo = Math.atan(tanLo);     // radians from horizontal
+
+        double hoodDeg = 90.0 - Math.toDegrees(thetaLo); // convert to deg from vertical
+        return Range.clip(hoodDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
     }
 
     private double estimateFlightTimeSec(double distPoseUnits, double rpm, double hoodDegFromVertical) {
@@ -121,7 +155,7 @@ public class ShotPlanner {
             double distClamped = clampDist(distPose);
 
             double rpm = Range.clip(velocityLut.get(distClamped), 0.0, MAX_RPM);
-            double hood = Range.clip(hoodAngleLut.get(distClamped), MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+            double hood = solveHoodDeg(distClamped, rpm); // physics solver replaces hoodAngleLut.get()
 
             double t = estimateFlightTimeSec(distClamped, rpm, hood);
 
@@ -167,7 +201,7 @@ public class ShotPlanner {
         double distClamped = clampDist(distPose);
 
         double rpm = Range.clip(velocityLut.get(distClamped), 0.0, MAX_RPM);
-        double hood = Range.clip(hoodAngleLut.get(distClamped), MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+        double hood = solveHoodDeg(distClamped, rpm); // physics solver replaces hoodAngleLut.get()
 
         double t = estimateFlightTimeSec(distClamped, rpm, hood);
 
@@ -179,7 +213,13 @@ public class ShotPlanner {
         return Range.clip(velocityLut.get(clampDist(distPoseUnits)), 0.0, MAX_RPM);
     }
 
-    public double getLutHoodDeg(double distPoseUnits) {
-        return Range.clip(hoodAngleLut.get(clampDist(distPoseUnits)), MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+    // Hood angle LUT helper commented out — replaced by physics solver
+    // public double getLutHoodDeg(double distPoseUnits) {
+    //     return Range.clip(hoodAngleLut.get(clampDist(distPoseUnits)), MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+    // }
+
+    // Optional: expose physics hood angle directly (useful for debugging)
+    public double getPhysicsHoodDeg(double distPoseUnits) {
+        return solveHoodDeg(clampDist(distPoseUnits), getLutRpm(distPoseUnits));
     }
 }

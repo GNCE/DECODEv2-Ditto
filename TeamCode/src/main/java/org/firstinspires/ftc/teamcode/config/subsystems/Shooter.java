@@ -64,127 +64,135 @@ public class Shooter extends SubsysCore {
 
     public static double EXIT_VEL_M_PER_RPM = 0.0039;
 
-    public static double PHYS_COMP_MAX_DELTA_DEG = 6.0;
-    public static double PHYS_COMP_MIN_FRAC = 0.55;
-    public static boolean PHYS_COMP_ENABLED = false;
+    // Physics comp commented out — hood angle now computed purely in ShotPlanner
+    // public static double PHYS_COMP_MAX_DELTA_DEG = 6.0;
+    // public static double PHYS_COMP_MIN_FRAC = 0.55;
+    // public static boolean PHYS_COMP_ENABLED = false;
 
-    private double hoodToThetaRad(double hoodDeg) {
-        return Math.toRadians(90.0 - hoodDeg);
-    }
+    // Commented out — no longer used now that physics comp is removed
+    // private double hoodToThetaRad(double hoodDeg) {
+    //     return Math.toRadians(90.0 - hoodDeg);
+    // }
 
-    private double thetaToHoodDeg(double thetaRadFromHorizontal) {
-        return 90.0 - Math.toDegrees(thetaRadFromHorizontal);
-    }
+    // Commented out — no longer used now that physics comp is removed
+    // private double thetaToHoodDeg(double thetaRadFromHorizontal) {
+    //     return 90.0 - Math.toDegrees(thetaRadFromHorizontal);
+    // }
 
-    private static class ThetaPair {
-        final double thLo;
-        final double thHi;
-        ThetaPair(double thLo, double thHi) { this.thLo = thLo; this.thHi = thHi; }
-    }
+    // Commented out — no longer used now that physics comp is removed
+    // private static class ThetaPair {
+    //     final double thLo;
+    //     final double thHi;
+    //     ThetaPair(double thLo, double thHi) { this.thLo = thLo; this.thHi = thHi; }
+    // }
 
-    private ThetaPair solveThetaPair(double x, double v, double dh) {
-        if (x <= 1e-6 || v <= 1e-6) return null;
+    // Commented out — no longer used now that physics comp is removed
+    // private ThetaPair solveThetaPair(double x, double v, double dh) {
+    //     if (x <= 1e-6 || v <= 1e-6) return null;
+    //
+    //     double g = GRAVITY;
+    //     double v2 = v * v;
+    //     double v4 = v2 * v2;
+    //
+    //     double disc = v4 - g * (g * x * x + 2.0 * dh * v2);
+    //     if (disc < 0.0) return null;
+    //
+    //     double sqrt = Math.sqrt(disc);
+    //
+    //     double tanHi = (v2 + sqrt) / (g * x);
+    //     double tanLo = (v2 - sqrt) / (g * x);
+    //
+    //     double thHi = Math.atan(tanHi);
+    //     double thLo = Math.atan(tanLo);
+    //
+    //     return new ThetaPair(thLo, thHi);
+    // }
 
-        double g = GRAVITY;
-        double v2 = v * v;
-        double v4 = v2 * v2;
+    // Commented out — no longer used now that physics comp is removed
+    // private boolean wouldClip(double hoodDeg) {
+    //     return hoodDeg < MIN_HOOD_ANGLE_DEG || hoodDeg > MAX_HOOD_ANGLE_DEG;
+    // }
 
-        double disc = v4 - g * (g * x * x + 2.0 * dh * v2);
-        if (disc < 0.0) return null;
+    // Commented out — no longer used now that physics comp is removed
+    // private double clipAmount(double hoodDeg) {
+    //     if (hoodDeg < MIN_HOOD_ANGLE_DEG) return MIN_HOOD_ANGLE_DEG - hoodDeg;
+    //     if (hoodDeg > MAX_HOOD_ANGLE_DEG) return hoodDeg - MAX_HOOD_ANGLE_DEG;
+    //     return 0.0;
+    // }
 
-        double sqrt = Math.sqrt(disc);
-
-        double tanHi = (v2 + sqrt) / (g * x);
-        double tanLo = (v2 - sqrt) / (g * x);
-
-        double thHi = Math.atan(tanHi);
-        double thLo = Math.atan(tanLo);
-
-        return new ThetaPair(thLo, thHi);
-    }
-
-    private boolean wouldClip(double hoodDeg) {
-        return hoodDeg < MIN_HOOD_ANGLE_DEG || hoodDeg > MAX_HOOD_ANGLE_DEG;
-    }
-
-    private double clipAmount(double hoodDeg) {
-        if (hoodDeg < MIN_HOOD_ANGLE_DEG) return MIN_HOOD_ANGLE_DEG - hoodDeg;
-        if (hoodDeg > MAX_HOOD_ANGLE_DEG) return hoodDeg - MAX_HOOD_ANGLE_DEG;
-        return 0.0;
-    }
-
-    private double physicsCompensatedHoodDeg(double distPoseUnits,
-                                             double targetRPM,
-                                             double actualRPM,
-                                             double hoodBaselineDeg) {
-
-        if (!PHYS_COMP_ENABLED) {
-            return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
-        }
-
-        double tgt = Math.abs(targetRPM);
-        double act = Math.abs(actualRPM);
-
-        if (tgt < 1.0) {
-            return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
-        }
-        if (act < PHYS_COMP_MIN_FRAC * tgt) {
-            return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
-        }
-
-        double x = distPoseUnits * POSE_UNITS_TO_METERS;
-        double dh = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;
-
-        double vTarget = tgt * EXIT_VEL_M_PER_RPM;
-        double vActual = act * EXIT_VEL_M_PER_RPM;
-
-        ThetaPair pairT = solveThetaPair(x, vTarget, dh);
-        ThetaPair pairA = solveThetaPair(x, vActual, dh);
-
-        if (pairT == null || pairA == null) {
-            return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
-        }
-
-        // Compute hoodCmd for LO branch
-        double hoodTargetLo = thetaToHoodDeg(pairT.thLo);
-        double hoodActualLo = thetaToHoodDeg(pairA.thLo);
-        double deltaLo = Range.clip(hoodActualLo - hoodTargetLo, -PHYS_COMP_MAX_DELTA_DEG, PHYS_COMP_MAX_DELTA_DEG);
-        double hoodCmdLo = hoodBaselineDeg + deltaLo;
-
-        // Compute hoodCmd for HI branch
-        double hoodTargetHi = thetaToHoodDeg(pairT.thHi);
-        double hoodActualHi = thetaToHoodDeg(pairA.thHi);
-        double deltaHi = Range.clip(hoodActualHi - hoodTargetHi, -PHYS_COMP_MAX_DELTA_DEG, PHYS_COMP_MAX_DELTA_DEG);
-        double hoodCmdHi = hoodBaselineDeg + deltaHi;
-
-        boolean clipLo = wouldClip(hoodCmdLo);
-        boolean clipHi = wouldClip(hoodCmdHi);
-
-        // YOUR RULE:
-        // Choose the other branch if one branch clips.
-        double hoodCmd;
-        if (clipLo && !clipHi) hoodCmd = hoodCmdHi;
-        else if (clipHi && !clipLo) hoodCmd = hoodCmdLo;
-        else if (!clipLo && !clipHi) {
-            // neither clips: pick the branch whose TARGET solution is closer to LUT baseline (follows LUT family)
-            double aLo = Math.abs(hoodTargetLo - hoodBaselineDeg);
-            double aHi = Math.abs(hoodTargetHi - hoodBaselineDeg);
-            hoodCmd = (aHi <= aLo) ? hoodCmdHi : hoodCmdLo;
-        } else {
-            // both clip: pick smaller clip amount
-            hoodCmd = (clipAmount(hoodCmdLo) <= clipAmount(hoodCmdHi)) ? hoodCmdLo : hoodCmdHi;
-        }
-
-        t.addData("Hood Target Calc", thetaToHoodDeg((!clipLo && clipHi) ? pairT.thLo : (!clipHi && clipLo) ? pairT.thHi : pairT.thLo));
-        t.addData("Hood Actual Calc", thetaToHoodDeg((!clipLo && clipHi) ? pairA.thLo : (!clipHi && clipLo) ? pairA.thHi : pairA.thLo));
-        t.addData("Hood LUT", hoodBaselineDeg);
-        t.addData("HoodCmdLo", hoodCmdLo);
-        t.addData("HoodCmdHi", hoodCmdHi);
-        t.addData("ClipLo", clipLo);
-        t.addData("ClipHi", clipHi);
-
-        return Range.clip(hoodCmd, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
-    }
+    // Commented out — replaced by physics solver in ShotPlanner; hood angle arrives already correct
+    // private double physicsCompensatedHoodDeg(double distPoseUnits,
+    //                                          double targetRPM,
+    //                                          double actualRPM,
+    //                                          double hoodBaselineDeg) {
+    //
+    //     if (!PHYS_COMP_ENABLED) {
+    //         return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+    //     }
+    //
+    //     double tgt = Math.abs(targetRPM);
+    //     double act = Math.abs(actualRPM);
+    //
+    //     if (tgt < 1.0) {
+    //         return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+    //     }
+    //     if (act < PHYS_COMP_MIN_FRAC * tgt) {
+    //         return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+    //     }
+    //
+    //     double x = distPoseUnits * POSE_UNITS_TO_METERS;
+    //     double dh = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;
+    //
+    //     double vTarget = tgt * EXIT_VEL_M_PER_RPM;
+    //     double vActual = act * EXIT_VEL_M_PER_RPM;
+    //
+    //     ThetaPair pairT = solveThetaPair(x, vTarget, dh);
+    //     ThetaPair pairA = solveThetaPair(x, vActual, dh);
+    //
+    //     if (pairT == null || pairA == null) {
+    //         return Range.clip(hoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+    //     }
+    //
+    //     // Compute hoodCmd for LO branch
+    //     double hoodTargetLo = thetaToHoodDeg(pairT.thLo);
+    //     double hoodActualLo = thetaToHoodDeg(pairA.thLo);
+    //     double deltaLo = Range.clip(hoodActualLo - hoodTargetLo, -PHYS_COMP_MAX_DELTA_DEG, PHYS_COMP_MAX_DELTA_DEG);
+    //     double hoodCmdLo = hoodBaselineDeg + deltaLo;
+    //
+    //     // Compute hoodCmd for HI branch
+    //     double hoodTargetHi = thetaToHoodDeg(pairT.thHi);
+    //     double hoodActualHi = thetaToHoodDeg(pairA.thHi);
+    //     double deltaHi = Range.clip(hoodActualHi - hoodTargetHi, -PHYS_COMP_MAX_DELTA_DEG, PHYS_COMP_MAX_DELTA_DEG);
+    //     double hoodCmdHi = hoodBaselineDeg + deltaHi;
+    //
+    //     boolean clipLo = wouldClip(hoodCmdLo);
+    //     boolean clipHi = wouldClip(hoodCmdHi);
+    //
+    //     // YOUR RULE:
+    //     // Choose the other branch if one branch clips.
+    //     double hoodCmd;
+    //     if (clipLo && !clipHi) hoodCmd = hoodCmdHi;
+    //     else if (clipHi && !clipLo) hoodCmd = hoodCmdLo;
+    //     else if (!clipLo && !clipHi) {
+    //         // neither clips: pick the branch whose TARGET solution is closer to LUT baseline (follows LUT family)
+    //         double aLo = Math.abs(hoodTargetLo - hoodBaselineDeg);
+    //         double aHi = Math.abs(hoodTargetHi - hoodBaselineDeg);
+    //         hoodCmd = (aHi <= aLo) ? hoodCmdHi : hoodCmdLo;
+    //     } else {
+    //         // both clip: pick smaller clip amount
+    //         hoodCmd = (clipAmount(hoodCmdLo) <= clipAmount(hoodCmdHi)) ? hoodCmdLo : hoodCmdHi;
+    //     }
+    //
+    //     t.addData("Hood Target Calc", thetaToHoodDeg((!clipLo && clipHi) ? pairT.thLo : (!clipHi && clipLo) ? pairT.thHi : pairT.thLo));
+    //     t.addData("Hood Actual Calc", thetaToHoodDeg((!clipLo && clipHi) ? pairA.thLo : (!clipHi && clipLo) ? pairA.thHi : pairA.thLo));
+    //     t.addData("Hood LUT", hoodBaselineDeg);
+    //     t.addData("HoodCmdLo", hoodCmdLo);
+    //     t.addData("HoodCmdHi", hoodCmdHi);
+    //     t.addData("ClipLo", clipLo);
+    //     t.addData("ClipHi", clipHi);
+    //
+    //     return Range.clip(hoodCmd, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+    // }
 
     public Shooter() {
         Motor m1 = new MotorEx(h, "shooter1", Motor.GoBILDA.BARE), m2 = new MotorEx(h, "shooter2", Motor.GoBILDA.BARE);
@@ -245,9 +253,11 @@ public class Shooter extends SubsysCore {
         double targetPower = MathUtils.clamp(pidfController.calculate(getVelocity(), getTargetVelocity()), -1, 1);
         flywheel.set(targetPower);
 
-        double hoodCmdDeg = (active && !testModeOnly)
-                ? physicsCompensatedHoodDeg(plannedDistPoseUnits, currentTargetVelocity, getVelocity(), currentTargetHoodAngle)
-                : currentTargetHoodAngle;
+        // Physics comp removed — hood angle from ShotPlanner is already physics-correct
+        // double hoodCmdDeg = (active && !testModeOnly)
+        //         ? physicsCompensatedHoodDeg(plannedDistPoseUnits, currentTargetVelocity, getVelocity(), currentTargetHoodAngle)
+        //         : currentTargetHoodAngle;
+        double hoodCmdDeg = currentTargetHoodAngle;
 
         double servoPos = hoodAngleToServoPos(hoodCmdDeg);
         hood.setPosition(servoPos);
