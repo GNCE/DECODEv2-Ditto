@@ -146,8 +146,8 @@ public class ShotPlanner {
         }
 
         // --- Step 2: check if lo-branch arc clears the front lip ---
-        // Skip lip check if robot is far (>2.5m) — at range the lo-branch reliably clears it.
-        if (x > 2.5 && !Double.isNaN(thetaLo)) {
+        // Skip lip check if robot is far (>2.14m) — at range the lo-branch reliably clears it.
+        if (x > 2.14 && !Double.isNaN(thetaLo)) {
             double hoodDeg = 90.0 - Math.toDegrees(thetaLo);
             return Range.clip(hoodDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
         }
