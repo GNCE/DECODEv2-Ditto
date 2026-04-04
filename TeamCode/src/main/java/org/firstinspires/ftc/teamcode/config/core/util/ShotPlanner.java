@@ -50,12 +50,12 @@ public class ShotPlanner {
 
     // Calibrated from your LUT + heights earlier:
     // v_exit (m/s) ~= EXIT_VEL_M_PER_RPM * RPM
-    public static double EXIT_VEL_M_PER_RPM = 0.00333;
+    public static double EXIT_VEL_M_PER_RPM = 0.00375;
 
     // Lead tuning
     public static boolean MOVE_SHOT_ENABLED = true;
     public static int MOVE_SHOT_ITERS = 2;
-    public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 100.0;
+    public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 30.0;
 
     // Clamp output setpoints (match your Shooter constraints)
     public static double MAX_RPM = 2800.0;
@@ -81,7 +81,7 @@ public class ShotPlanner {
     };
     private final double[] velocities = {
             // 1900, 2000, 2100
-            1200, 1300, 1360, 1400, 1500, 1600, 1700, 1900, 1940, 2000, 2400
+            1160, 1240, 1360, 1380, 1460, 1520, 1700, 1840, 1800, 2000, 2400
     };
     // Hood angle LUT commented out — replaced by physics solver
     // private final double[] hoodAngles = {
@@ -120,7 +120,7 @@ public class ShotPlanner {
     //   - Back wall is FARTHER from robot at x,               height GOAL_HEIGHT_M
     //
     // Step 1: Solve lo-branch angle to land at back wall.
-    // Step 2: Check if that arc clears the front lip.
+    // Step 2: Check if that arc clears the front lip (skipped if x > 2.5m).
     // Step 3: If it does clear, use it.
     // Step 4: If it clips the lip, solve the minimum angle that just clears the lip instead.
     private double solveHoodDeg(double distPoseUnits, double rpm) {
@@ -146,6 +146,12 @@ public class ShotPlanner {
         }
 
         // --- Step 2: check if lo-branch arc clears the front lip ---
+        // Skip lip check if robot is far (>2.5m) — at range the lo-branch reliably clears it.
+        if (x > 2.5 && !Double.isNaN(thetaLo)) {
+            double hoodDeg = 90.0 - Math.toDegrees(thetaLo);
+            return Range.clip(hoodDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+        }
+
         // Projectile height above launcher at horizontal distance xLip:
         // h(xLip) = xLip * tan(theta) - g * xLip^2 / (2 * v^2 * cos^2(theta))
         boolean loClipsLip = true;
