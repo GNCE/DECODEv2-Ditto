@@ -50,12 +50,12 @@ public class ShotPlanner {
 
     // Calibrated from your LUT + heights earlier:
     // v_exit (m/s) ~= EXIT_VEL_M_PER_RPM * RPM
-    public static double EXIT_VEL_M_PER_RPM = 0.0039;
+    public static double EXIT_VEL_M_PER_RPM = 0.00333;
 
     // Lead tuning
     public static boolean MOVE_SHOT_ENABLED = true;
     public static int MOVE_SHOT_ITERS = 2;
-    public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 24.0;
+    public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 100.0;
 
     // Clamp output setpoints (match your Shooter constraints)
     public static double MAX_RPM = 2800.0;
@@ -81,7 +81,7 @@ public class ShotPlanner {
     };
     private final double[] velocities = {
             // 1900, 2000, 2100
-            1160, 1240, 1360, 1380, 1460, 1520, 1700, 1840, 1800, 2000, 2400
+            1200, 1300, 1360, 1400, 1500, 1600, 1700, 1900, 1940, 2000, 2400
     };
     // Hood angle LUT commented out — replaced by physics solver
     // private final double[] hoodAngles = {
