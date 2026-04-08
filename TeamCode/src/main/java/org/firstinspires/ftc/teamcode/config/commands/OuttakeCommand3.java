@@ -20,7 +20,7 @@ public class OuttakeCommand3 extends SequentialCommandGroup {
                 ),
                 door.setOpenCommand(true),
                 new InstantCommand(() -> intake.setMode(Intake.Mode.TRANSFER)),
-                new WaitCommand(200),
+                new WaitCommand(300),
                 new InstantCommand(() -> intake.setMode(Intake.Mode.INTAKE))
         );
         addRequirements(door, shooter, intake, turret);
