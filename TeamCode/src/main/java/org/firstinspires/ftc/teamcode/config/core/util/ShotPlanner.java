@@ -94,6 +94,9 @@ public class ShotPlanner {
     public static double MIN_HOOD_ANGLE_DEG = 30;
     public static double MAX_HOOD_ANGLE_DEG = 55;
 
+    public static double FAR_SHOT_THRESHOLD_M = 2.0;
+    public static double FAR_SHOT_HOOD_DEG_FROM_HORIZONTAL = 44.0;
+
     public static double GOAL_HEIGHT_M = 1.25;
     public static double GOAL_LIP_HEIGHT_M = 1.0;
     public static double GOAL_DEPTH_M = 1 * 0.0254;
@@ -316,6 +319,35 @@ public class ShotPlanner {
         return Double.NaN;
     }
 
+    // Solves for RPM needed to reach distPoseUnits at a fixed hood angle of
+    // FAR_SHOT_HOOD_DEG_FROM_HORIZONTAL degrees from horizontal.
+    // Returns NaN if geometrically impossible or exceeds MAX_RPM.
+    private static double solveRpmForLockedHood(double distPoseUnits) {
+        double x = distPoseUnits * POSE_UNITS_TO_METERS;
+        double theta = Math.toRadians(FAR_SHOT_HOOD_DEG_FROM_HORIZONTAL);
+        double dh = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;
+
+        double cosTheta = Math.cos(theta);
+        double tanTheta = Math.tan(theta);
+
+        // From: dh = x*tan(θ) - (g*x²) / (2*v²*cos²(θ))
+        // Solving for v²: v² = (g*x²) / (2*cos²(θ)*(x*tan(θ) - dh))
+        double denom = 2.0 * cosTheta * cosTheta * (x * tanTheta - dh);
+
+        // Safety guard: if denom <= 0, target is above what this angle can reach
+        if (denom <= 1e-9) return Double.NaN;
+
+        double v2 = (GRAVITY * x * x) / denom;
+        if (v2 <= 0.0) return Double.NaN;
+
+        double v = Math.sqrt(v2);
+        double rpm = v / EXIT_VEL_M_PER_RPM;
+
+        if (rpm > MAX_RPM) return Double.NaN;
+
+        return rpm;
+    }
+
     private double estimateFlightTimeSec(double distPoseUnits, double rpm, double hoodDegFromVertical) {
         double xMeters = distPoseUnits * POSE_UNITS_TO_METERS;
         double theta = hoodDegToThetaRadFromHorizontal(hoodDegFromVertical);
@@ -330,7 +362,8 @@ public class ShotPlanner {
     private Pose computeVirtualGoalIter(Pose robotPoseForPlanning,
                                         Pose realGoalPose,
                                         double launchVxFieldPosePerSec,
-                                        double launchVyFieldPosePerSec, double rpm) {
+                                        double launchVyFieldPosePerSec,
+                                        double rpm) {
         if (!MOVE_SHOT_ENABLED) return realGoalPose;
 
         Pose virtualGoal = realGoalPose;
@@ -339,13 +372,34 @@ public class ShotPlanner {
             double dx = virtualGoal.getX() - robotPoseForPlanning.getX();
             double dy = virtualGoal.getY() - robotPoseForPlanning.getY();
             double distPose = Math.hypot(dx, dy);
-
             double distClamped = clampDist(distPose);
-            double hood = solveHoodDeg(distClamped, rpm);
 
-            if (!Double.isFinite(hood)) return virtualGoal;
+            boolean isFarShot = (distClamped * POSE_UNITS_TO_METERS) > FAR_SHOT_THRESHOLD_M;
 
-            double t = estimateFlightTimeSec(distClamped, rpm, hood);
+            double rpmForFlightTime;
+            double hoodForFlightTime;
+
+            if (isFarShot) {
+                // Hood locked; solve RPM from physics for this iteration's distance
+                double solvedRpm = solveRpmForLockedHood(distClamped);
+                if (!Double.isFinite(solvedRpm)) return virtualGoal;
+                rpmForFlightTime = solvedRpm;
+                hoodForFlightTime = FAR_SHOT_HOOD_DEG_FROM_HORIZONTAL;
+            } else {
+                // RPM locked; solve hood from physics
+                double hood = solveHoodDeg(distClamped, rpm);
+                if (!Double.isFinite(hood)) return virtualGoal;
+                rpmForFlightTime = rpm;
+                hoodForFlightTime = hood;
+            }
+
+            // estimateFlightTimeSec expects hood deg from vertical, but FAR_SHOT_HOOD_DEG_FROM_HORIZONTAL
+            // is from horizontal, so convert: deg from vertical = 90 - deg from horizontal
+            double hoodDegFromVerticalForFlightTime = isFarShot
+                    ? (90.0 - FAR_SHOT_HOOD_DEG_FROM_HORIZONTAL)
+                    : hoodForFlightTime;
+
+            double t = estimateFlightTimeSec(distClamped, rpmForFlightTime, hoodDegFromVerticalForFlightTime);
             if (!Double.isFinite(t)) return virtualGoal;
 
             double leadX = launchVxFieldPosePerSec * t;
@@ -403,11 +457,33 @@ public class ShotPlanner {
         double dy = virtualGoal.getY() - predictedRobotPose.getY();
         double distPose = Math.hypot(dx, dy);
         double distClamped = clampDist(distPose);
-        double targetRPM = Range.clip(velocityLut.get(distClamped), 0.0, MAX_RPM);
-        double hood = solveHoodDeg(distClamped, rpm);
-        boolean possible = Double.isFinite(hood);
 
-        double flightTimeSec = possible ? estimateFlightTimeSec(distClamped, rpm, hood) : Double.NaN;
+        boolean isFarShot = (distClamped * POSE_UNITS_TO_METERS) > FAR_SHOT_THRESHOLD_M;
+
+        double targetRPM;
+        double hood;
+        boolean possible;
+
+        if (isFarShot) {
+            hood = 90.0 - FAR_SHOT_HOOD_DEG_FROM_HORIZONTAL; // convert to deg from vertical for ShotCommand
+            targetRPM = solveRpmForLockedHood(distClamped);
+            possible = Double.isFinite(targetRPM);
+            tel.addLine("[AUTO AIM] FAR SHOT");
+        } else {
+            targetRPM = Range.clip(velocityLut.get(distClamped), 0.0, MAX_RPM);
+            hood = solveHoodDeg(distClamped, rpm);
+            possible = Double.isFinite(hood);
+        }
+
+        double flightTimeSec = Double.NaN;
+        if (possible) {
+            // estimateFlightTimeSec takes hood deg from vertical
+            double hoodDegFromVerticalForFlight = isFarShot
+                    ? (90.0 - FAR_SHOT_HOOD_DEG_FROM_HORIZONTAL)
+                    : hood;
+            double rpmForFlight = isFarShot ? targetRPM : rpm;
+            flightTimeSec = estimateFlightTimeSec(distClamped, rpmForFlight, hoodDegFromVerticalForFlight);
+        }
 
         return new ShotCommand(
                 predictedRobotPose,
