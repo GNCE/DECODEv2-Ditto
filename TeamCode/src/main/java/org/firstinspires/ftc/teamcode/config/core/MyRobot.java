@@ -24,8 +24,6 @@ import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.teamcode.config.commands.LiftCommand;
-import org.firstinspires.ftc.teamcode.config.commands.LiftManualEngageCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand2;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand3;
@@ -100,7 +98,6 @@ public class MyRobot extends Robot {
                     new SAT2D.Point2(fieldSize/2 + 24, 0));
 
     ToggleButton autoFireButton, turretAlwaysReadyButton;
-    OuttakeCommand2 outtakeCommand;
     OuttakeCommand3 outtakeCommand3;
     List<SubsystemConfig> subsysList;
     ShotPlanner planner;
@@ -179,6 +176,7 @@ public class MyRobot extends Robot {
         this.lt = new LoopTimer();
         this.runtime = new Timer();
         this.planner = new ShotPlanner();
+        ShotPlanner.tel = this.t;
 
         if(hasSubsystem(SubsystemConfig.FOLLOWER)) {
             try {
@@ -270,20 +268,24 @@ public class MyRobot extends Robot {
                     f.getPose().getY() + TURRET_OFFSET_INCHES * Math.sin(f.getPose().getHeading()),
                     f.getPose().getHeading());
 
-            ShotPlanner.ShotCommand cmd = planner.plan(turretPose, f.getVelocity().getXComponent(), f.getVelocity().getYComponent(), goalPose);
+            if(hasSubsystem(SubsystemConfig.SHOOTER)) {
+                ShotPlanner.ShotCommand cmd = planner.plan(turretPose, f.getVelocity().getXComponent(), f.getVelocity().getYComponent(), f.getAngularVelocity(), goalPose, shooter.getVelocity());
 
-            // ---- SOTM DEBUG TELEMETRY (remove when done tuning) ----
-            t.addData("SOTM Virtual Goal X", cmd.virtualGoal.getX());
-            t.addData("SOTM Virtual Goal Y", cmd.virtualGoal.getY());
-            t.addData("SOTM Real Goal X", goalPose.getX());
-            t.addData("SOTM Real Goal Y", goalPose.getY());
-            t.addData("SOTM Flight Time (s)", String.format("%.3f", cmd.flightTimeSec));
-            t.addData("SOTM Lead X (in)", String.format("%.2f", cmd.virtualGoal.getX() - goalPose.getX()));
-            t.addData("SOTM Lead Y (in)", String.format("%.2f", cmd.virtualGoal.getY() - goalPose.getY()));
+                // ---- SOTM DEBUG TELEMETRY (remove when done tuning) ----
+                t.addData("SOTM Virtual Goal X", cmd.virtualGoal.getX());
+                t.addData("SOTM Virtual Goal Y", cmd.virtualGoal.getY());
+                t.addData("SOTM Real Goal X", goalPose.getX());
+                t.addData("SOTM Real Goal Y", goalPose.getY());
+                t.addData("SOTM Flight Time (s)", String.format("%.3f", cmd.flightTimeSec));
+                t.addData("SOTM Lead X (in)", String.format("%.2f", cmd.virtualGoal.getX() - goalPose.getX()));
+                t.addData("SOTM Lead Y (in)", String.format("%.2f", cmd.virtualGoal.getY() - goalPose.getY()));
 // ---- END SOTM DEBUG TELEMETRY ----
 
-            if(hasSubsystem(SubsystemConfig.TURRET)) turret.input(turretPose, cmd.virtualGoal);
-            if(hasSubsystem(SubsystemConfig.SHOOTER)) shooter.setPlannedShot(cmd.distancePoseUnits, cmd.targetRpm, cmd.hoodBaselineDegFromVertical);
+                if (hasSubsystem(SubsystemConfig.TURRET))
+                    turret.input(cmd.predictedRobotPose, cmd.virtualGoal);
+                if (hasSubsystem(SubsystemConfig.SHOOTER))
+                    shooter.setPlannedShot(cmd.distancePoseUnits, cmd.targetRpm, cmd.hoodBaselineDegFromVertical, cmd.possible);
+            }
 
             if(hasSubsystem(SubsystemConfig.LL)){
                 // TODO: make this local in ll class.
@@ -298,11 +300,11 @@ public class MyRobot extends Robot {
                     autoFireButton.input(g1.getButton(GamepadKeys.Button.CROSS));
                     String zone = launchZones.firstHitName(chassisBox());
                     if (autoFireButton.getVal()) {
-                        if (zone != null && !zone.equals(prevZone) && !outtakeCommand.isScheduled() && storage.getSize() > 0) {
-                            outtakeCommand.schedule();
+                        if (zone != null && !zone.equals(prevZone) && !outtakeCommand3.isScheduled() && storage.getSize() > 0) {
+                            outtakeCommand3.schedule();
                         }
-                        if (zone == null && outtakeCommand.isScheduled())
-                            CommandScheduler.getInstance().cancel(outtakeCommand);
+                        if (zone == null && outtakeCommand3.isScheduled())
+                            CommandScheduler.getInstance().cancel(outtakeCommand3);
                     }
                     t.addData("Current Zone", zone);
                     prevZone = zone;
@@ -379,9 +381,9 @@ public class MyRobot extends Robot {
             t.addData("Shoot Ready?", shooter.readyToShoot() && turret.reachedTarget() && door.isOpen());
             t.addLine();
         }
-        if(outtakeCommand != null){
-            t.addData("Outtake Command Scheduled", outtakeCommand.isScheduled());
-            t.addData("Outtake Command Done", outtakeCommand.isFinished());
+        if(outtakeCommand3 != null){
+            t.addData("Outtake Command Scheduled", outtakeCommand3.isScheduled());
+            t.addData("Outtake Command Done", outtakeCommand3.isFinished());
         }
         g1.readButtons();
         g2.readButtons();

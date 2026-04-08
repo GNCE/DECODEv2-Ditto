@@ -1,105 +1,134 @@
 package org.firstinspires.ftc.teamcode.config.core.util;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.bylazar.telemetry.JoinedTelemetry;
+import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 import com.seattlesolvers.solverslib.util.InterpLUT;
 import com.seattlesolvers.solverslib.util.MathUtils;
-import com.pedropathing.geometry.Pose;
 
-/**
- * Pure-math planner:
- *  - Uses LUT(distance)->RPM
- *  - Computes hood angle from physics (projectile lo-branch solution)
- *  - Guarantees ball clears front lip before reaching back wall
- *  - Computes virtual goal for shooting on the move (iterative lead)
- *  - Provides a single coherent "ShotCommand" to feed Turret + Shooter
- *
- * Pose units assumed inches by default (POSE_UNITS_TO_METERS = 0.0254).
- * Hood angle convention: degrees FROM VERTICAL (0 up, 90 horizontal).
- *
- * Goal geometry (like a basketball hoop):
- *   - Front lip at distance x_lip = x - GOAL_DEPTH_M, height GOAL_LIP_HEIGHT_M (0.98425m)
- *   - Back wall at distance x,                        height GOAL_HEIGHT_M     (1.14m)
- */
+import java.util.ArrayDeque;
+
 @Configurable
 public class ShotPlanner {
 
     public static class ShotCommand {
+        public final Pose predictedRobotPose;
         public final Pose virtualGoal;
         public final double distancePoseUnits;
         public final double targetRpm;
         public final double hoodBaselineDegFromVertical;
         public final double flightTimeSec;
+        public final boolean possible;
 
-        public ShotCommand(Pose virtualGoal,
+        public final double robotAxFieldPosePerSec2;
+        public final double robotAyFieldPosePerSec2;
+        public final double robotAlphaRadPerSec2;
+
+        public ShotCommand(Pose predictedRobotPose,
+                           Pose virtualGoal,
                            double distancePoseUnits,
                            double targetRpm,
                            double hoodBaselineDegFromVertical,
-                           double flightTimeSec) {
+                           double flightTimeSec,
+                           boolean possible,
+                           double robotAxFieldPosePerSec2,
+                           double robotAyFieldPosePerSec2,
+                           double robotAlphaRadPerSec2) {
+            this.predictedRobotPose = predictedRobotPose;
             this.virtualGoal = virtualGoal;
             this.distancePoseUnits = distancePoseUnits;
             this.targetRpm = targetRpm;
             this.hoodBaselineDegFromVertical = hoodBaselineDegFromVertical;
             this.flightTimeSec = flightTimeSec;
+            this.possible = possible;
+            this.robotAxFieldPosePerSec2 = robotAxFieldPosePerSec2;
+            this.robotAyFieldPosePerSec2 = robotAyFieldPosePerSec2;
+            this.robotAlphaRadPerSec2 = robotAlphaRadPerSec2;
         }
     }
 
-    // -------------------- Shared geometry / conversion --------------------
-    // Pedro Pose units are inches (typical). If meters, set to 1.0.
-    public static double POSE_UNITS_TO_METERS = 0.0254;
+    private static class MotionSample {
+        public final double timeSec;
+        public final double vx;
+        public final double vy;
+        public final double omega;
 
-    // Calibrated from your LUT + heights earlier:
-    // v_exit (m/s) ~= EXIT_VEL_M_PER_RPM * RPM
+        public MotionSample(double timeSec, double vx, double vy, double omega) {
+            this.timeSec = timeSec;
+            this.vx = vx;
+            this.vy = vy;
+            this.omega = omega;
+        }
+    }
+
+    private static class AccelSample {
+        public final double ax;
+        public final double ay;
+        public final double alpha;
+
+        public AccelSample(double ax, double ay, double alpha) {
+            this.ax = ax;
+            this.ay = ay;
+            this.alpha = alpha;
+        }
+    }
+
+    public static double POSE_UNITS_TO_METERS = 0.0254;
     public static double EXIT_VEL_M_PER_RPM = 0.00375;
 
-    // Lead tuning
+    public static double FUTURE_POSE_PREDICTION_SEC = 0.1;
+
+    public static int ACCEL_REGRESSION_WINDOW_SAMPLES = 10;
+    public static double MIN_SAMPLE_SPACING_SEC = 0.008;
+    public static double MAX_REGRESSION_HISTORY_SEC = 0.20;
+    public static double MAX_LINEAR_ACCEL_POSE_PER_SEC2 = 200.0;
+    public static double MAX_ANGULAR_ACCEL_RAD_PER_SEC2 = 20.0;
+
     public static boolean MOVE_SHOT_ENABLED = true;
     public static int MOVE_SHOT_ITERS = 2;
-    public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 30.0;
+    public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 100.0;
 
-    // Clamp output setpoints (match your Shooter constraints)
     public static double MAX_RPM = 2800.0;
-
-    // Hood clamp (keep in sync with Shooter)
     public static double MIN_HOOD_ANGLE_DEG = 30;
     public static double MAX_HOOD_ANGLE_DEG = 55;
 
-    // -------------------- Physics constants (for hood angle solver) --------------------
-    // Back wall of goal — where we want the ball to land
-    public static double GOAL_HEIGHT_M = 1.14;
-    // Front lip of goal — must be cleared (closer to robot, lower than back wall)
-    public static double GOAL_LIP_HEIGHT_M = 0.98425;
-    // Horizontal depth of goal: 12*sqrt(2) inches -> meters (~0.4311m)
-    public static double GOAL_DEPTH_M = 12 * Math.sqrt(2) * 0.0254;
+    public static double GOAL_HEIGHT_M = 1.25;
+    public static double GOAL_LIP_HEIGHT_M = 1.2;
+    public static double GOAL_DEPTH_M = 1 * 0.0254;
     public static double LAUNCHER_HEIGHT_ACTUAL_M = 0.38;
     public static double GRAVITY = 9.80665;
 
-    // -------------------- LUT data (from your latest Shooter) --------------------
     private final double[] distances = {
-            //120.99649140247442, 130.998778563601, 140.51913130739305
             50, 53, 57.777, 62.5, 67.5, 96.5, 121.59989031660349, 133.452, 137.83283020070846, 150, 170
     };
+
     private final double[] velocities = {
-            // 1900, 2000, 2100
             1160, 1240, 1360, 1380, 1460, 1520, 1700, 1840, 1800, 2000, 2400
     };
-    // Hood angle LUT commented out — replaced by physics solver
-    // private final double[] hoodAngles = {
-    //         // 49, 49, 50
-    //         30, 35, 38.5, 39, 41, 41, 43, 44, 44, 44, 47
-    // };
 
     private final InterpLUT velocityLut = new InterpLUT();
-    // Hood angle LUT commented out — replaced by physics solver
-    // private final InterpLUT hoodAngleLut = new InterpLUT();
+
+    private final ElapsedTime motionTimer = new ElapsedTime();
+    private final ArrayDeque<MotionSample> motionHistory = new ArrayDeque<>();
+    public static JoinedTelemetry tel;
 
     public ShotPlanner() {
         for (int i = 0; i < distances.length; i++) {
             velocityLut.add(distances[i], velocities[i]);
-            // hoodAngleLut.add(distances[i], hoodAngles[i]); // commented out — using physics now
         }
         velocityLut.createLUT();
-        // hoodAngleLut.createLUT(); // commented out — using physics now
+        motionTimer.reset();
+    }
+
+    private double finiteOrZero(double x) {
+        return Double.isFinite(x) ? x : 0.0;
+    }
+
+    private double wrapAngleRad(double angleRad) {
+        if (!Double.isFinite(angleRad)) return 0.0;
+        return Math.atan2(Math.sin(angleRad), Math.cos(angleRad));
     }
 
     private double clampDist(double distPoseUnits) {
@@ -114,112 +143,213 @@ public class ShotPlanner {
         return Math.toRadians(90.0 - hoodDegFromVertical);
     }
 
-    // -------------------- Physics hood solver --------------------
-    // Goal is like a basketball hoop:
-    //   - Front lip is CLOSER to robot at (x - GOAL_DEPTH_M), height GOAL_LIP_HEIGHT_M
-    //   - Back wall is FARTHER from robot at x,               height GOAL_HEIGHT_M
-    //
-    // Step 1: Solve lo-branch angle to land at back wall.
-    // Step 2: Check if that arc clears the front lip (skipped if x > 2.5m).
-    // Step 3: If it does clear, use it.
-    // Step 4: If it clips the lip, solve the minimum angle that just clears the lip instead.
-    private double solveHoodDeg(double distPoseUnits, double rpm) {
-        double x      = distPoseUnits * POSE_UNITS_TO_METERS;
-        double v      = Math.abs(rpm) * EXIT_VEL_M_PER_RPM;
-        double dhBack = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;     // height diff to back wall
-        double dhLip  = GOAL_LIP_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M; // height diff to front lip
-        double xLip   = x - GOAL_DEPTH_M;                             // horizontal dist to front lip
+    private void addMotionSample(double vx, double vy, double omega) {
+        vx = finiteOrZero(vx);
+        vy = finiteOrZero(vy);
+        omega = finiteOrZero(omega);
 
-        if (x <= 1e-6 || v <= 1e-6) return MIN_HOOD_ANGLE_DEG;
+        double nowSec = motionTimer.seconds();
+        if (!Double.isFinite(nowSec)) return;
 
-        double g  = GRAVITY;
+        MotionSample last = motionHistory.peekLast();
+        if (last != null && (nowSec - last.timeSec) < MIN_SAMPLE_SPACING_SEC) {
+            motionHistory.pollLast();
+        }
+
+        motionHistory.addLast(new MotionSample(nowSec, vx, vy, omega));
+
+        int maxSamples = Math.max(2, ACCEL_REGRESSION_WINDOW_SAMPLES);
+        while (motionHistory.size() > maxSamples) {
+            motionHistory.pollFirst();
+        }
+
+        while (motionHistory.size() >= 2) {
+            MotionSample first = motionHistory.peekFirst();
+            MotionSample newest = motionHistory.peekLast();
+            if (first == null || newest == null) break;
+            if ((newest.timeSec - first.timeSec) <= MAX_REGRESSION_HISTORY_SEC) break;
+            motionHistory.pollFirst();
+        }
+    }
+
+    private double regressionSlope(double[] t, double[] y, int n) {
+        if (n < 2) return 0.0;
+
+        double sumT = 0.0;
+        double sumY = 0.0;
+        for (int i = 0; i < n; i++) {
+            if (!Double.isFinite(t[i]) || !Double.isFinite(y[i])) return 0.0;
+            sumT += t[i];
+            sumY += y[i];
+        }
+
+        double meanT = sumT / n;
+        double meanY = sumY / n;
+
+        double sxx = 0.0;
+        double sxy = 0.0;
+        for (int i = 0; i < n; i++) {
+            double dt = t[i] - meanT;
+            double dy = y[i] - meanY;
+            sxx += dt * dt;
+            sxy += dt * dy;
+        }
+
+        if (!Double.isFinite(sxx) || !Double.isFinite(sxy) || Math.abs(sxx) < 1e-9) return 0.0;
+        return sxy / sxx;
+    }
+
+    private AccelSample computeAccelerationFromHistory() {
+        int n = motionHistory.size();
+        if (n < 2) return new AccelSample(0.0, 0.0, 0.0);
+
+        MotionSample first = motionHistory.peekFirst();
+        if (first == null) return new AccelSample(0.0, 0.0, 0.0);
+
+        double[] t = new double[n];
+        double[] vx = new double[n];
+        double[] vy = new double[n];
+        double[] omega = new double[n];
+
+        int i = 0;
+        for (MotionSample sample : motionHistory) {
+            t[i] = sample.timeSec - first.timeSec;
+            vx[i] = sample.vx;
+            vy[i] = sample.vy;
+            omega[i] = sample.omega;
+            i++;
+        }
+
+        double ax = regressionSlope(t, vx, n);
+        double ay = regressionSlope(t, vy, n);
+        double alpha = regressionSlope(t, omega, n);
+
+        ax = MathUtils.clamp(finiteOrZero(ax), -Math.abs(MAX_LINEAR_ACCEL_POSE_PER_SEC2), Math.abs(MAX_LINEAR_ACCEL_POSE_PER_SEC2));
+        ay = MathUtils.clamp(finiteOrZero(ay), -Math.abs(MAX_LINEAR_ACCEL_POSE_PER_SEC2), Math.abs(MAX_LINEAR_ACCEL_POSE_PER_SEC2));
+        alpha = MathUtils.clamp(finiteOrZero(alpha), -Math.abs(MAX_ANGULAR_ACCEL_RAD_PER_SEC2), Math.abs(MAX_ANGULAR_ACCEL_RAD_PER_SEC2));
+
+        return new AccelSample(ax, ay, alpha);
+    }
+
+    public void resetMotionHistory() {
+        motionHistory.clear();
+        motionTimer.reset();
+    }
+
+    private Pose predictFutureRobotPose(Pose robotPose,
+                                        double robotVxFieldPosePerSec,
+                                        double robotVyFieldPosePerSec,
+                                        double robotOmegaRadPerSec,
+                                        double robotAxFieldPosePerSec2,
+                                        double robotAyFieldPosePerSec2,
+                                        double robotAlphaRadPerSec2) {
+        double t = Math.max(0.0, finiteOrZero(FUTURE_POSE_PREDICTION_SEC));
+        double t2 = t * t;
+
+        double predictedX = robotPose.getX()
+                + robotVxFieldPosePerSec * t
+                + 0.5 * robotAxFieldPosePerSec2 * t2;
+
+        double predictedY = robotPose.getY()
+                + robotVyFieldPosePerSec * t
+                + 0.5 * robotAyFieldPosePerSec2 * t2;
+
+        double predictedHeading = wrapAngleRad(
+                robotPose.getHeading()
+                        + robotOmegaRadPerSec * t
+                        + 0.5 * robotAlphaRadPerSec2 * t2
+        );
+
+        return new Pose(predictedX, predictedY, predictedHeading);
+    }
+
+    private static boolean isValidArc(double theta, double xLip, double v2, double g) {
+        if (Double.isNaN(theta)) return false;
+
+        double hoodDeg = 90.0 - Math.toDegrees(theta);
+        if (hoodDeg < MIN_HOOD_ANGLE_DEG || hoodDeg > MAX_HOOD_ANGLE_DEG) return false;
+
+        if (xLip <= 0.0) return true;
+
+        double cos = Math.cos(theta);
+        if (Math.abs(cos) < 1e-6) return false;
+
+        double hAtLip = xLip * Math.tan(theta)
+                - (g * xLip * xLip) / (2.0 * v2 * cos * cos);
+
+        return (hAtLip + LAUNCHER_HEIGHT_ACTUAL_M) >= GOAL_LIP_HEIGHT_M;
+    }
+
+    public static double solveHoodDeg(double distPoseUnits, double rpm) {
+        double x = distPoseUnits * POSE_UNITS_TO_METERS;
+        double v = Math.abs(rpm) * EXIT_VEL_M_PER_RPM;
+        double dhBack = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;
+        double xLip = x - GOAL_DEPTH_M;
+
+        if (x <= 1e-6 || v <= 1e-6) return Double.NaN;
+
+        double g = GRAVITY;
         double v2 = v * v;
         double v4 = v2 * v2;
 
-        // --- Step 1: solve lo-branch angle to hit back wall ---
         double thetaLo = Double.NaN;
+        double thetaHi = Double.NaN;
+
         double discBack = v4 - g * (g * x * x + 2.0 * dhBack * v2);
         if (discBack >= 0.0) {
             double sqrtBack = Math.sqrt(discBack);
-            double tanLo = (v2 - sqrtBack) / (g * x); // lo branch = flatter trajectory
-            thetaLo = Math.atan(tanLo);
+            thetaLo = Math.atan((v2 - sqrtBack) / (g * x));
+            thetaHi = Math.atan((v2 + sqrtBack) / (g * x));
         }
 
-        // --- Step 2: check if lo-branch arc clears the front lip ---
-        // Skip lip check if robot is far (>2.14m) — at range the lo-branch reliably clears it.
-        if (x > 2.14 && !Double.isNaN(thetaLo)) {
-            double hoodDeg = 90.0 - Math.toDegrees(thetaLo);
-            return Range.clip(hoodDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
+        if (isValidArc(thetaLo, xLip, v2, g)) {
+            tel.addLine("[AUTO AIM] LOW ARC");
+            return 90.0 - Math.toDegrees(thetaLo);
         }
 
-        // Projectile height above launcher at horizontal distance xLip:
-        // h(xLip) = xLip * tan(theta) - g * xLip^2 / (2 * v^2 * cos^2(theta))
-        boolean loClipsLip = true;
-        if (!Double.isNaN(thetaLo) && xLip > 0) {
-            double cosLo  = Math.cos(thetaLo);
-            double hAtLip = xLip * Math.tan(thetaLo)
-                    - (g * xLip * xLip) / (2.0 * v2 * cosLo * cosLo);
-            // total height at lip = height gained above launcher + launcher height
-            loClipsLip = (hAtLip + LAUNCHER_HEIGHT_ACTUAL_M) < GOAL_LIP_HEIGHT_M;
-        } else if (!Double.isNaN(thetaLo)) {
-            // xLip <= 0: robot is closer than goal depth, lip is behind robot — ignore lip
-            loClipsLip = false;
+        if (isValidArc(thetaHi, xLip, v2, g)) {
+            tel.addLine("[AUTO AIM] HIGH ARC");
+            return 90.0 - Math.toDegrees(thetaHi);
         }
 
-        // --- Step 3: lo-branch clears the lip, use it ---
-        if (!Double.isNaN(thetaLo) && !loClipsLip) {
-            double hoodDeg = 90.0 - Math.toDegrees(thetaLo);
-            return Range.clip(hoodDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
-        }
-
-        // --- Step 4: lo-branch clips the lip (or no back-wall solution exists) ---
-        // Solve minimum angle that just clears the lip using lo-branch at (xLip, dhLip)
-        if (xLip > 1e-6) {
-            double discLip = v4 - g * (g * xLip * xLip + 2.0 * dhLip * v2);
-            if (discLip >= 0.0) {
-                double sqrtLip  = Math.sqrt(discLip);
-                double tanLipLo = (v2 - sqrtLip) / (g * xLip); // lo branch at lip
-                double thetaLipLo = Math.atan(tanLipLo);
-                double hoodDeg = 90.0 - Math.toDegrees(thetaLipLo);
-                return Range.clip(hoodDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
-            }
-        }
-
-        // --- Fallback: no valid solution, return MIN ---
-        return MIN_HOOD_ANGLE_DEG;
+        tel.addLine("[AUTO AIM] IMPOSSIBLE");
+        return Double.NaN;
     }
 
     private double estimateFlightTimeSec(double distPoseUnits, double rpm, double hoodDegFromVertical) {
         double xMeters = distPoseUnits * POSE_UNITS_TO_METERS;
         double theta = hoodDegToThetaRadFromHorizontal(hoodDegFromVertical);
 
-        double vExit = Math.abs(rpm) * EXIT_VEL_M_PER_RPM; // m/s
-        double vHoriz = vExit * Math.cos(theta);           // m/s
+        double vExit = Math.abs(rpm) * EXIT_VEL_M_PER_RPM;
+        double vHoriz = vExit * Math.cos(theta);
 
-        if (vHoriz < 1e-3) return 0.0;
+        if (vHoriz < 1e-3) return Double.NaN;
         return xMeters / vHoriz;
     }
 
-    private Pose computeVirtualGoalIter(Pose robotPose, Pose realGoalPose,
-                                        double robotVxFieldPosePerSec, double robotVyFieldPosePerSec) {
+    private Pose computeVirtualGoalIter(Pose robotPoseForPlanning,
+                                        Pose realGoalPose,
+                                        double launchVxFieldPosePerSec,
+                                        double launchVyFieldPosePerSec, double rpm) {
         if (!MOVE_SHOT_ENABLED) return realGoalPose;
 
         Pose virtualGoal = realGoalPose;
 
         for (int i = 0; i < MOVE_SHOT_ITERS; i++) {
-            double dx = virtualGoal.getX() - robotPose.getX();
-            double dy = virtualGoal.getY() - robotPose.getY();
+            double dx = virtualGoal.getX() - robotPoseForPlanning.getX();
+            double dy = virtualGoal.getY() - robotPoseForPlanning.getY();
             double distPose = Math.hypot(dx, dy);
 
             double distClamped = clampDist(distPose);
+            double hood = solveHoodDeg(distClamped, rpm);
 
-            double rpm = Range.clip(velocityLut.get(distClamped), 0.0, MAX_RPM);
-            double hood = solveHoodDeg(distClamped, rpm); // physics solver replaces hoodAngleLut.get()
+            if (!Double.isFinite(hood)) return virtualGoal;
 
             double t = estimateFlightTimeSec(distClamped, rpm, hood);
+            if (!Double.isFinite(t)) return virtualGoal;
 
-            double leadX = robotVxFieldPosePerSec * t;
-            double leadY = robotVyFieldPosePerSec * t;
+            double leadX = launchVxFieldPosePerSec * t;
+            double leadY = launchVyFieldPosePerSec * t;
 
             double leadMag = Math.hypot(leadX, leadY);
             if (leadMag > MOVE_SHOT_MAX_LEAD_POSE_UNITS && leadMag > 1e-6) {
@@ -238,46 +368,65 @@ public class ShotPlanner {
         return virtualGoal;
     }
 
-    /**
-     * Plan a shot from robot state.
-     *
-     * @param robotPose Field pose (Pose units, typically inches)
-     * @param robotVxFieldPosePerSec Field-relative vx (Pose units / sec)
-     * @param robotVyFieldPosePerSec Field-relative vy (Pose units / sec)
-     * @param realGoalPose Real goal field pose
-     */
     public ShotCommand plan(Pose robotPose,
                             double robotVxFieldPosePerSec,
                             double robotVyFieldPosePerSec,
-                            Pose realGoalPose) {
+                            double robotOmegaRadPerSec,
+                            Pose realGoalPose, double rpm) {
 
-        Pose virtualGoal = computeVirtualGoalIter(robotPose, realGoalPose, robotVxFieldPosePerSec, robotVyFieldPosePerSec);
+        addMotionSample(robotVxFieldPosePerSec, robotVyFieldPosePerSec, robotOmegaRadPerSec);
+        AccelSample accel = computeAccelerationFromHistory();
 
-        double dx = virtualGoal.getX() - robotPose.getX();
-        double dy = virtualGoal.getY() - robotPose.getY();
+        Pose predictedRobotPose = predictFutureRobotPose(
+                robotPose,
+                finiteOrZero(robotVxFieldPosePerSec),
+                finiteOrZero(robotVyFieldPosePerSec),
+                finiteOrZero(robotOmegaRadPerSec),
+                accel.ax,
+                accel.ay,
+                accel.alpha
+        );
+
+        double dt = Math.max(0.0, finiteOrZero(FUTURE_POSE_PREDICTION_SEC));
+        double predictedLaunchVx = finiteOrZero(robotVxFieldPosePerSec) + accel.ax * dt;
+        double predictedLaunchVy = finiteOrZero(robotVyFieldPosePerSec) + accel.ay * dt;
+
+        Pose virtualGoal = computeVirtualGoalIter(
+                predictedRobotPose,
+                realGoalPose,
+                predictedLaunchVx,
+                predictedLaunchVy,
+                rpm
+        );
+
+        double dx = virtualGoal.getX() - predictedRobotPose.getX();
+        double dy = virtualGoal.getY() - predictedRobotPose.getY();
         double distPose = Math.hypot(dx, dy);
-
         double distClamped = clampDist(distPose);
+        double targetRPM = Range.clip(velocityLut.get(distClamped), 0.0, MAX_RPM);
+        double hood = solveHoodDeg(distClamped, rpm);
+        boolean possible = Double.isFinite(hood);
 
-        double rpm = Range.clip(velocityLut.get(distClamped), 0.0, MAX_RPM);
-        double hood = solveHoodDeg(distClamped, rpm); // physics solver replaces hoodAngleLut.get()
+        double flightTimeSec = possible ? estimateFlightTimeSec(distClamped, rpm, hood) : Double.NaN;
 
-        double t = estimateFlightTimeSec(distClamped, rpm, hood);
-
-        return new ShotCommand(virtualGoal, distClamped, rpm, hood, t);
+        return new ShotCommand(
+                predictedRobotPose,
+                virtualGoal,
+                distClamped,
+                targetRPM,
+                hood,
+                flightTimeSec,
+                possible,
+                accel.ax,
+                accel.ay,
+                accel.alpha
+        );
     }
 
-    // Optional: expose raw LUT outputs (useful for debugging)
     public double getLutRpm(double distPoseUnits) {
         return Range.clip(velocityLut.get(clampDist(distPoseUnits)), 0.0, MAX_RPM);
     }
 
-    // Hood angle LUT helper commented out — replaced by physics solver
-    // public double getLutHoodDeg(double distPoseUnits) {
-    //     return Range.clip(hoodAngleLut.get(clampDist(distPoseUnits)), MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
-    // }
-
-    // Optional: expose physics hood angle directly (useful for debugging)
     public double getPhysicsHoodDeg(double distPoseUnits) {
         return solveHoodDeg(clampDist(distPoseUnits), getLutRpm(distPoseUnits));
     }
