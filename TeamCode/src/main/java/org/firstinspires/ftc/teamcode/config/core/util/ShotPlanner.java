@@ -95,7 +95,7 @@ public class ShotPlanner {
     public static double MAX_HOOD_ANGLE_DEG = 55;
 
     public static double GOAL_HEIGHT_M = 1.25;
-    public static double GOAL_LIP_HEIGHT_M = 1.2;
+    public static double GOAL_LIP_HEIGHT_M = 1.0;
     public static double GOAL_DEPTH_M = 1 * 0.0254;
     public static double LAUNCHER_HEIGHT_ACTUAL_M = 0.38;
     public static double GRAVITY = 9.80665;
