@@ -79,7 +79,7 @@ public class ShotPlanner {
 
     public static double FUTURE_POSE_PREDICTION_SEC = 0.1;
 
-    public static int ACCEL_REGRESSION_WINDOW_SAMPLES = 10;
+    public static int ACCEL_REGRESSION_WINDOW_SAMPLES = 6;
     public static double MIN_SAMPLE_SPACING_SEC = 0.008;
     public static double MAX_REGRESSION_HISTORY_SEC = 0.20;
     public static double MAX_LINEAR_ACCEL_POSE_PER_SEC2 = 200.0;
@@ -94,10 +94,10 @@ public class ShotPlanner {
     public static double MAX_HOOD_ANGLE_DEG = 55;
 
     public static double FAR_SHOT_THRESHOLD_M = 1.7;
-    public static double FAR_SHOT_MIN_HOOD_DEG = 38;
-    public static double FAR_SHOT_MAX_HOOD_DEG = 48;
+    public static double FAR_SHOT_MIN_HOOD_DEG = 30;
+    public static double FAR_SHOT_MAX_HOOD_DEG = 55;
 
-    public static int RPM_SMOOTHING_WINDOW_SAMPLES = 15;
+    public static int RPM_SMOOTHING_WINDOW_SAMPLES = 8;
 
     public static double GOAL_HEIGHT_M = 1.2575;
     public static double GOAL_LIP_HEIGHT_M = 1.0;
@@ -126,6 +126,15 @@ public class ShotPlanner {
         }
         velocityLut.createLUT();
         motionTimer.reset();
+        MOVE_SHOT_ENABLED = true;
+    }
+
+    public static void enableSOTM(){
+        MOVE_SHOT_ENABLED = true;
+    }
+
+    public static void disableSOTM(){
+        MOVE_SHOT_ENABLED = false;
     }
 
     private double finiteOrZero(double x) {

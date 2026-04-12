@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.config.subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.hardware.DigitalChannel;
 
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
@@ -22,13 +23,15 @@ public class Storage extends SubsysCore {
     private int assumeS2FaultLoops = 0;
 
     public static int beamSmoothWindow = 5;
-    public static int faultyBeamHoldLoops = 200;
+    public static int faultyBeamHoldLoops = 50;
 
     public static double currentLimit = 4;
     public static double veloLimit = 40;
 
     private double curAmps = 0;
     private double curVelo = 0;
+
+    Timer timer;
 
     public Storage() {
         s1 = h.get(DigitalChannel.class, "s1");
@@ -54,6 +57,11 @@ public class Storage extends SubsysCore {
         beam1Smoother = new ModeSmoother<>(beamSmoothWindow, 0);
         beam2Smoother = new ModeSmoother<>(beamSmoothWindow, 0);
         beam3Smoother = new ModeSmoother<>(beamSmoothWindow, 0);
+
+        storedCount = 0;
+        storageState = StorageState.WAIT_FOR_ST3;
+
+        timer = new Timer();
     }
 
     public void input(double curAmps, double curVelo) {
@@ -73,14 +81,6 @@ public class Storage extends SubsysCore {
 
     public boolean isFull() {
         return storedCount >= 3;
-    }
-
-    public boolean shouldStopIntake() {
-        return isFull();
-    }
-
-    public boolean shouldStopTransfer() {
-        return storedCount >= 1;
     }
 
     @Override
@@ -111,15 +111,59 @@ public class Storage extends SubsysCore {
         updateFaultFallbacks();
     }
 
+    enum StorageState {
+        WAIT_FOR_ST3,
+        DELAY_AFTER_ST3,
+        WAIT_FOR_ST2,
+        DELAY_AFTER_ST2,
+        WAIT_FOR_ST1,
+        DELAY_AFTER_ST1,
+        FULL
+    }
+
+    StorageState storageState;
+    public static double ST3_DELAY = 0.25, ST2_DELAY = 0.25, ST1_DELAY = 0.25;
+
     private void updateNormalTransitions() {
-        if (storedCount == 0 && st3) {
-            storedCount = 1;
-            assumeS3FaultLoops = 0;
-        } else if (storedCount == 1 && st2) {
-            storedCount = 2;
-            assumeS2FaultLoops = 0;
-        } else if (storedCount == 2 && st1) {
-            storedCount = 3;
+        switch(storageState) {
+            case WAIT_FOR_ST3:
+                if (st3) {
+                    timer.resetTimer();
+                    storageState = StorageState.DELAY_AFTER_ST3;
+                }
+                break;
+            case DELAY_AFTER_ST3:
+                if(timer.getElapsedTimeSeconds() > ST3_DELAY){
+                    storedCount = 1;
+                    storageState = StorageState.WAIT_FOR_ST2;
+                }
+                break;
+            case WAIT_FOR_ST2:
+                if (st2) {
+                    timer.resetTimer();
+                    storageState = StorageState.DELAY_AFTER_ST2;
+                }
+                break;
+            case DELAY_AFTER_ST2:
+                if(timer.getElapsedTimeSeconds() > ST2_DELAY){
+                    storedCount = 2;
+                    storageState = StorageState.WAIT_FOR_ST1;
+                }
+                break;
+            case WAIT_FOR_ST1:
+                if (st1) {
+                    timer.resetTimer();
+                    storageState = StorageState.DELAY_AFTER_ST1;
+                }
+                break;
+            case DELAY_AFTER_ST1:
+                if(timer.getElapsedTimeSeconds() > ST1_DELAY){
+                    storedCount = 3;
+                    storageState = StorageState.FULL;
+                }
+                break;
+            case FULL:
+                break;
         }
     }
 
@@ -132,7 +176,8 @@ public class Storage extends SubsysCore {
         if (storedCount == 0 && !st3 && (st2 || st1)) {
             assumeS3FaultLoops++;
             if (assumeS3FaultLoops >= faultyBeamHoldLoops) {
-                storedCount = 1;
+                storedCount = 2;
+                storageState = StorageState.WAIT_FOR_ST1;
                 assumeS3FaultLoops = 0;
             }
         } else {
@@ -141,10 +186,11 @@ public class Storage extends SubsysCore {
     }
 
     private void updateS2Fallback() {
-        if (storedCount == 1 && !st2 && st1) {
+        if (st3 && !st2 && st1) {
             assumeS2FaultLoops++;
             if (assumeS2FaultLoops >= faultyBeamHoldLoops) {
-                storedCount = 2;
+                storedCount = 3;
+                storageState = StorageState.FULL;
                 assumeS2FaultLoops = 0;
             }
         } else {

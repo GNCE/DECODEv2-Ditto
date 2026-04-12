@@ -50,20 +50,20 @@ public final class AutoPaths2 {
         SPIKE_MID_TRIPLE_END (new Pose(26.3+ X_OFFSET_FRONT, 62+Y_OFFSET_FRONT, Math.toRadians(270))),
         SPIKE_MID_THEN_GATE_OPEN (new Pose(24.8+ X_OFFSET_FRONT, 75.833+Y_OFFSET_FRONT, Math.toRadians(-145))),
         SPIKE_MID_THEN_SHOOT_FRONT (new Pose(59.82+ X_OFFSET_FRONT, 77.8+Y_OFFSET_FRONT, Math.toRadians(-142.34))),
-        GATE_INTAKE_TRIPLE (new Pose(18.5+ X_OFFSET_FRONT, 60.50+Y_OFFSET_FRONT, Math.toRadians(152))), // 12.3 56.66 150.14
-        GATE_INTAKE_SAFE_TRIPLE (new Pose(20.25+ X_OFFSET_FRONT, 56.25+Y_OFFSET_FRONT, Math.toRadians(151))),
-        GATE_INTAKE_SAFE_TRIPLE_SAFE (new Pose(18+ X_OFFSET_FRONT, 57+Y_OFFSET_FRONT, Math.toRadians(0))),
+        GATE_INTAKE_TRIPLE (new Pose(18.40+ X_OFFSET_FRONT, 60.15+Y_OFFSET_FRONT, Math.toRadians(152))), // 12.3 56.66 150.14
+        GATE_INTAKE_SAFE_TRIPLE (new Pose(20.25+ X_OFFSET_FRONT, 55.25+Y_OFFSET_FRONT, Math.toRadians(151))),
+        GATE_INTAKE_SAFE_TRIPLE_SAFE (new Pose(18+ X_OFFSET_FRONT, 57+Y_OFFSET_FRONT, Math.toRadians(180))),
         FRONT_SHOOT_AFTER_GATE (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(215))),
-        FRONT_SHOOT_AFTER_GATE_FINAL (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(240))),
-        FRONT_SHOOT_AFTER_GATE_FINAL_FINAL (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(175))),
+        FRONT_SHOOT_AFTER_GATE_FINAL (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(260))),
+        FRONT_SHOOT_AFTER_GATE_FINAL_FINAL (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(160))),
 
         // SINGLE AUTO CLOSE
         SINGLE_FRONT_START (new Pose(17, 111.64, Math.toRadians(180))),
         SINGLE_MID_SPIKE_START (new Pose(58, 83, Math.toRadians(206))),
         SINGLE_MID_SPIKE_CONTROL (new Pose(60, 55.5)),
-        SINGLE_MID_SPIKE_END(new Pose(9.5, 59, Math.toRadians(180))),
+        SINGLE_MID_SPIKE_END(new Pose(9, 59, Math.toRadians(180))),
         SINGLE_CLOSE_SPIKE_START (new Pose(42.578, 83.5327, Math.toRadians(180))),
-        SINGLE_CLOSE_SPIKE_END (new Pose(17.5, 84, Math.toRadians(180))),
+        SINGLE_CLOSE_SPIKE_END (new Pose(16.5, 84, Math.toRadians(180))),
         SINGLE_FINAL_SHOOT (new Pose(59, 100, Math.toRadians(200))),
 
 
