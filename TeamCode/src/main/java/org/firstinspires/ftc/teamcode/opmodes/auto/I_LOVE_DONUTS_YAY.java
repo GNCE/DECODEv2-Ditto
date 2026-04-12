@@ -18,8 +18,8 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 import java.util.List;
 
-@Autonomous(group="Close Auto", name="Donut - Solo")
-public class I_LOVE_DONUTS extends MyCommandOpMode {
+@Autonomous(group="Close Auto", name="Donut - Partner")
+public class I_LOVE_DONUTS_YAY extends MyCommandOpMode {
     AutoPathsForCloseAuto autoPaths2;
 
     @Override
@@ -41,63 +41,54 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
+
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
-                        new WaitCommand(100),
+                        new WaitCommand(75),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
+
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
-                        new WaitCommand(225),
+                        new WaitCommand(200),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE)),
                         new WaitCommand(725),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE)),
-                        new WaitCommand(100),
+                        new WaitCommand(75),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.GATE_INTAKE_SAFE_SAFE_TO_SHOOT)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
+
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
-                        new WaitCommand(500),
+                        new WaitCommand(350),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE)),
-                        new WaitCommand(800),
+                        new WaitCommand(750),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE)),
-                        new WaitCommand(100),
+                        new WaitCommand(90),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.GATE_INTAKE_SAFE_SAFE_TO_SHOOT_FINAl)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
-                        /*
-                        new RepeatCommand(
-                                new SequentialCommandGroup(
-                                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-                                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
-                                        new WaitCommand(450),
-                                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE)),
-                                        new WaitCommand(1000),
-                                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.TRIPLE_GATE_INTAKE_SAFE_TO_SHOOT)),
-                                        r.shootAll2(),
-                                        new InstantCommand(() -> r.door.setOpen(false))
-                                ),
-                                2
-                        ),
-
-                         */
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.SINGLE_SHOOT_AFTER_GATE_TO_FAR_SPIKE_END)),
-                        new WaitCommand(70),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.SINGLE_FAR_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
+                        new WaitCommand(350),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE)),
+                        new WaitCommand(750),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE)),
+                        new WaitCommand(90),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.GATE_INTAKE_SAFE_SAFE_TO_SHOOT_FINAl_FINAL)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END)),
-                        new WaitCommand(35),
+                        new WaitCommand(25),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPathsForCloseAuto.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false))
