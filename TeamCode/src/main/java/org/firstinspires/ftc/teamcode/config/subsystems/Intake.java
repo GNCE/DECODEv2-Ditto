@@ -87,7 +87,12 @@ public class Intake extends SubsysCore {
                 break;
             case INTAKE:
                 if (size <= 0) tr.setPower(0.5);
-                else tr.setPower(0);
+                else {
+                    if(prevsize != size) timer.resetTimer();
+                    if(timer.getElapsedTimeSeconds() > 0.2){
+                        tr.setPower(0);
+                    }
+                }
                 if (size >= 3){
                     if(prevsize != size) timer.resetTimer();
                     if(timer.getElapsedTimeSeconds() > 0.15){

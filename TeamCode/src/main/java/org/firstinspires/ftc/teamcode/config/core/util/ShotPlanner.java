@@ -94,8 +94,8 @@ public class ShotPlanner {
     public static double MAX_HOOD_ANGLE_DEG = 55;
 
     public static double FAR_SHOT_THRESHOLD_M = 1.7;
-    public static double FAR_SHOT_MIN_HOOD_DEG = 42.0;
-    public static double FAR_SHOT_MAX_HOOD_DEG = 46.0;
+    public static double FAR_SHOT_MIN_HOOD_DEG = 38;
+    public static double FAR_SHOT_MAX_HOOD_DEG = 48;
 
     public static int RPM_SMOOTHING_WINDOW_SAMPLES = 15;
 
@@ -106,11 +106,11 @@ public class ShotPlanner {
     public static double GRAVITY = 9.80665;
 
     private final double[] distances = {
-            50, 53, 57.777, 62.5, 67.5, 96.5, 121.59989031660349, 133.452, 137.83283020070846, 150, 170
+            50, 53, 57.777, 62.5, 67.5, 72.5, 99.2, 121.59989031660349, 133.5, 145.2, 150, 161.0177438683991
     };
 
     private final double[] velocities = {
-            1160, 1240, 1360, 1380, 1460, 1520, 1700, 1840, 1850, 2000, 2400
+            1240, 1300, 1440, 1540, 1560, 1580, 1680, 1700, 1830, 1875, 1900, 1950
     };
 
     private final InterpLUT velocityLut = new InterpLUT();

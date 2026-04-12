@@ -10,6 +10,7 @@ import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
 import com.seattlesolvers.solverslib.hardware.motors.MotorGroup;
 import com.seattlesolvers.solverslib.util.MathUtils;
 
+import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
 import org.firstinspires.ftc.teamcode.config.core.util.hardware.VoltageCompensatedMotorGroup;
@@ -48,6 +49,7 @@ public class Shooter extends SubsysCore {
     private double plannedTargetRpm = 0.0;            // rpm
     private double plannedHoodBaselineDeg = IDLE_HOOD_ANGLE_DEG; // hood deg (your convention)
     private boolean shotPossible = false;
+    MotorEx m1, m2;
 
     public void setPlannedShot(double distPoseUnits, double targetRpm, double hoodBaselineDegFromVertical, boolean plannedPossible) {
         plannedDistPoseUnits = distPoseUnits;
@@ -59,7 +61,8 @@ public class Shooter extends SubsysCore {
     public static double NOMINAL_VOLTAGE = 12.0;
 
     public Shooter() {
-        Motor m1 = new MotorEx(h, "shooter1", Motor.GoBILDA.BARE), m2 = new MotorEx(h, "shooter2", Motor.GoBILDA.BARE);
+        m1 = new MotorEx(h, "shooter1", Motor.GoBILDA.BARE);
+        m2 = new MotorEx(h, "shooter2", Motor.GoBILDA.BARE);
         m2.setInverted(true);
         flywheel = new VoltageCompensatedMotorGroup(h, 500L, NOMINAL_VOLTAGE, m1, m2);
         flywheel.setRunMode(Motor.RunMode.RawPower);
@@ -127,6 +130,8 @@ public class Shooter extends SubsysCore {
         hood.setPosition(shotPossible ? servoPos : IDLE_HOOD_ANGLE_DEG);
 
         t.addData("Shooter Cached Voltage", flywheel.getCachedVoltage());
+        t.addData("Flywheel 1 Current", m1.getCurrent(CurrentUnit.AMPS));
+        t.addData("Flywheel 2 Current", m2.getCurrent(CurrentUnit.AMPS));
         t.addData("Shooter Velocity Error", getTargetVelocity() - getVelocity());
         t.addData("Shooter Target Power", targetPower);
         t.addData("Shooter Velocity", getVelocity());
