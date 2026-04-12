@@ -25,8 +25,8 @@ import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
 
 import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
-import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand2;
-import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand3;
+import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommandAuto;
+import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommandTele;
 import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
 import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Motif;
@@ -98,7 +98,7 @@ public class MyRobot extends Robot {
                     new SAT2D.Point2(fieldSize/2 + 24, 0));
 
     ToggleButton autoFireButton, turretAlwaysReadyButton;
-    OuttakeCommand3 outtakeCommand3;
+    OuttakeCommandTele OuttakeCommandTele;
     List<SubsystemConfig> subsysList;
     ShotPlanner planner;
     boolean [] enabledSubsys = new boolean[SubsystemConfig.values().length];
@@ -169,7 +169,7 @@ public class MyRobot extends Robot {
         }
 
         if(hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SHOOTER, SubsystemConfig.TURRET))){
-            outtakeCommand3 = new OuttakeCommand3(intake, turret, shooter, door, storage);
+            OuttakeCommandTele = new OuttakeCommandTele(intake, turret, shooter, door, storage);
         }
 
         if(isRed == null) isRed = false;
@@ -300,11 +300,11 @@ public class MyRobot extends Robot {
                     autoFireButton.input(g1.getButton(GamepadKeys.Button.CROSS));
                     String zone = launchZones.firstHitName(chassisBox());
                     if (autoFireButton.getVal()) {
-                        if (zone != null && !zone.equals(prevZone) && !outtakeCommand3.isScheduled() && storage.getSize() > 0) {
-                            outtakeCommand3.schedule();
+                        if (zone != null && !zone.equals(prevZone) && !OuttakeCommandTele.isScheduled() && storage.getSize() > 0) {
+                            OuttakeCommandTele.schedule();
                         }
-                        if (zone == null && outtakeCommand3.isScheduled())
-                            CommandScheduler.getInstance().cancel(outtakeCommand3);
+                        if (zone == null && OuttakeCommandTele.isScheduled())
+                            CommandScheduler.getInstance().cancel(OuttakeCommandTele);
                     }
                     t.addData("Current Zone", zone);
                     prevZone = zone;
@@ -344,7 +344,7 @@ public class MyRobot extends Robot {
         if(lt > 0.1 || rt > 0.1) Turret.MANUAL_OFFSET += (rt - lt)/2;
 
         if (g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER) && storage.getSize() != 0)
-            schedule(outtakeCommand3);
+            schedule(OuttakeCommandTele);
     }
 
 
@@ -381,9 +381,9 @@ public class MyRobot extends Robot {
             t.addData("Shoot Ready?", shooter.readyToShoot() && turret.reachedTarget() && door.isOpen());
             t.addLine();
         }
-        if(outtakeCommand3 != null){
-            t.addData("Outtake Command Scheduled", outtakeCommand3.isScheduled());
-            t.addData("Outtake Command Done", outtakeCommand3.isFinished());
+        if(OuttakeCommandTele != null){
+            t.addData("Outtake Command Scheduled", OuttakeCommandTele.isScheduled());
+            t.addData("Outtake Command Done", OuttakeCommandTele.isFinished());
         }
         g1.readButtons();
         g2.readButtons();
@@ -465,7 +465,7 @@ public class MyRobot extends Robot {
     }
 
     public Command shootAll2(){
-        return new OuttakeCommand2(intake, turret, shooter, door, storage);
+        return new OuttakeCommandAuto(intake, turret, shooter, door, storage);
     }
 
     public Command goToLinear(Pose tar){

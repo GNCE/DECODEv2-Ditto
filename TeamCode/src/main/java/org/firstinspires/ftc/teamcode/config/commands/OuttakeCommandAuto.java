@@ -12,15 +12,15 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Shooter;
 import org.firstinspires.ftc.teamcode.config.subsystems.Storage;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
-public class OuttakeCommand3 extends SequentialCommandGroup {
-    public OuttakeCommand3(Intake intake, Turret turret, Shooter shooter, Door door, Storage storage){
+public class OuttakeCommandAuto extends SequentialCommandGroup {
+    public OuttakeCommandAuto(Intake intake, Turret turret, Shooter shooter, Door door, Storage storage){
         addCommands(
                 new ParallelCommandGroup(
                         new WaitUntilCommand(shooter::readyToShoot)
                 ),
                 door.setOpenCommand(true),
                 new InstantCommand(() -> intake.setMode(Intake.Mode.TRANSFER)),
-                new WaitCommand(220),
+                new WaitCommand(185),
                 new ParallelCommandGroup(
                         new InstantCommand(() -> intake.setMode(Intake.Mode.INTAKE)),
                         new InstantCommand(storage::clear)
