@@ -22,7 +22,7 @@ public class Storage extends SubsysCore {
     private int assumeS2FaultLoops = 0;
 
     public static int beamSmoothWindow = 5;
-    public static int faultyBeamHoldLoops = 40;
+    public static int faultyBeamHoldLoops = 200;
 
     public static double currentLimit = 4;
     public static double veloLimit = 40;
