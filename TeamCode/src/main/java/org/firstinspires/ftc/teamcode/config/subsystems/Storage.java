@@ -97,9 +97,9 @@ public class Storage extends SubsysCore {
     }
 
     private void readSmoothedBeams() {
-        beam1Smoother.add(!s1.getState() ? 1 : 0);
-        beam2Smoother.add(!s2.getState() ? 1 : 0);
-        beam3Smoother.add(!s3.getState() ? 1 : 0);
+        beam1Smoother.add(s1.getState() ? 0 : 1);
+        beam2Smoother.add(s2.getState() ? 0 : 1);
+        beam3Smoother.add(s3.getState() ? 0 : 1);
 
         st1 = beam1Smoother.mode() == 1;
         st2 = beam2Smoother.mode() == 1;
@@ -108,7 +108,7 @@ public class Storage extends SubsysCore {
 
     private void updateStoredCount() {
         updateNormalTransitions();
-        updateFaultFallbacks();
+        // updateFaultFallbacks();
     }
 
     enum StorageState {

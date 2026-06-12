@@ -4,7 +4,9 @@ import androidx.core.math.MathUtils;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.hardware.PwmControl;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.hardware.ServoImplEx;
 import com.seattlesolvers.solverslib.hardware.AbsoluteAnalogEncoder;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
@@ -12,17 +14,17 @@ import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 
 @Configurable
 public class Turret extends SubsysCore {
-    Servo s1, s2;
+    ServoImplEx s1, s2;
     AbsoluteAnalogEncoder e1, e2;
     Pose motifPose = new Pose(72, 150);
     public static double MANUAL_OFFSET = 0;
-    public static double ENCODER_TURRET_OFFSET = -181;
+    public static double ENCODER_TURRET_OFFSET = -163;
     final double GEAR_RATIO = (double) 99 / 24 * 20 / 96;
-    public static double SERVO_RANGE = 310;
+    public static double SERVO_RANGE = 348;
     public static double TURRET_OFFSET = -180;
     public static double TURRET_SECOND_OFFSET = 0;
-    public static double BOTH_SERVO_OFFSET = 0.00;
-    public static double SECOND_SERVO_OFFSET = 0;
+    public static double BOTH_SERVO_OFFSET = 0.01;
+    public static double SECOND_SERVO_OFFSET = 0.014;
     public static double POSITION_TOLERANCE = 10;
     boolean alwaysAtTarget;
 
@@ -56,10 +58,12 @@ public class Turret extends SubsysCore {
 
     public Turret(int initialWrap){ // %TODO: isRed should not be here. It should be able to change during initialization
         e1 = new AbsoluteAnalogEncoder(h, "te1", 3.3, AngleUnit.DEGREES);
-        s1 = h.get(Servo.class, "ts1");
-        s2 = h.get(Servo.class, "ts2");
+        s1 = h.get(ServoImplEx.class, "ts1");
+        s2 = h.get(ServoImplEx.class, "ts2");
         s1.setDirection(Servo.Direction.REVERSE);
         s2.setDirection(Servo.Direction.REVERSE);
+        s1.setPwmRange(new PwmControl.PwmRange(500, 2500));
+        s2.setPwmRange(new PwmControl.PwmRange(500, 2500));
 
         wrapCount = initialWrap;
         previousServoAngle = e1.getCurrentPosition();

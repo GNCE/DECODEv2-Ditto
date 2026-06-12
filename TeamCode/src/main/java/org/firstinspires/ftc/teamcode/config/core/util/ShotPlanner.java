@@ -100,6 +100,9 @@ public class ShotPlanner {
     public static int RPM_SMOOTHING_WINDOW_SAMPLES = 8;
 
     public static double GOAL_HEIGHT_M = 1.2575;
+    // Treat the goal as a vertical opening, not a single point: a shot counts if it crosses the
+    // goal plane anywhere within GOAL_HEIGHT_M +/- GOAL_ACCEPT_BAND_M. Widen for more RPM leniency.
+    public static double GOAL_ACCEPT_BAND_M = 0.06;
     public static double GOAL_LIP_HEIGHT_M = 1.0;
     public static double GOAL_DEPTH_M = 1 * 0.0254;
     public static double LAUNCHER_HEIGHT_ACTUAL_M = 0.38;
@@ -294,28 +297,42 @@ public class ShotPlanner {
         return new Pose(predictedX, predictedY, predictedHeading);
     }
 
-    private static boolean isValidArc(double theta, double xLip, double v2, double g,
-                                      double minHoodDeg, double maxHoodDeg) {
-        if (Double.isNaN(theta)) return false;
-
-        double hoodDeg = 90.0 - Math.toDegrees(theta);
-        if (hoodDeg < minHoodDeg || hoodDeg > maxHoodDeg) return false;
-
-        if (xLip <= 0.0) return true;
-
+    /** Trajectory height above the launcher at horizontal distance {@code d}, for launch angle theta. */
+    private static double trajHeightAboveLauncher(double theta, double d, double v2, double g) {
         double cos = Math.cos(theta);
-        if (Math.abs(cos) < 1e-6) return false;
+        if (Math.abs(cos) < 1e-6) return Double.NEGATIVE_INFINITY;
+        return d * Math.tan(theta) - (g * d * d) / (2.0 * v2 * cos * cos);
+    }
 
-        double hAtLip = xLip * Math.tan(theta)
-                - (g * xLip * xLip) / (2.0 * v2 * cos * cos);
+    /**
+     * Aim at the center of the opening, then clamp that ideal angle into the hood's mechanical
+     * range. The shot is accepted as long as the (possibly clamped) trajectory still crosses the
+     * goal plane inside the opening band [minDh, maxDh] and clears the front lip. Returns the hood
+     * angle (deg from vertical) if valid, else null.
+     */
+    private static Double tryArc(double thetaCenter,
+                                 double thetaFlatMech, double thetaSteepMech,
+                                 double x, double xLip, double v2, double g,
+                                 double minDh, double maxDh, String label) {
+        if (Double.isNaN(thetaCenter)) return null;
 
-        return (hAtLip + LAUNCHER_HEIGHT_ACTUAL_M) >= GOAL_LIP_HEIGHT_M;
+        double theta = MathUtils.clamp(thetaCenter, thetaFlatMech, thetaSteepMech);
+
+        double h = trajHeightAboveLauncher(theta, x, v2, g);
+        if (h < minDh || h > maxDh) return null;
+
+        if (xLip > 0.0) {
+            double hLip = trajHeightAboveLauncher(theta, xLip, v2, g);
+            if (hLip + LAUNCHER_HEIGHT_ACTUAL_M < GOAL_LIP_HEIGHT_M) return null;
+        }
+
+        tel.addLine(label);
+        return 90.0 - Math.toDegrees(theta);
     }
 
     public static double solveHoodDeg(double distPoseUnits, double rpm) {
         double x = distPoseUnits * POSE_UNITS_TO_METERS;
         double v = Math.abs(rpm) * EXIT_VEL_M_PER_RPM;
-        double dhBack = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;
         double xLip = x - GOAL_DEPTH_M;
 
         if (x <= 1e-6 || v <= 1e-6) return Double.NaN;
@@ -324,29 +341,34 @@ public class ShotPlanner {
         double v2 = v * v;
         double v4 = v2 * v2;
 
+        // Goal opening as a vertical band (heights above the launcher) instead of a single point.
+        double centerDh = GOAL_HEIGHT_M - LAUNCHER_HEIGHT_ACTUAL_M;
+        double minDh = (GOAL_HEIGHT_M - GOAL_ACCEPT_BAND_M) - LAUNCHER_HEIGHT_ACTUAL_M;
+        double maxDh = (GOAL_HEIGHT_M + GOAL_ACCEPT_BAND_M) - LAUNCHER_HEIGHT_ACTUAL_M;
+
         boolean isFarShot = x > FAR_SHOT_THRESHOLD_M;
         double minHood = isFarShot ? FAR_SHOT_MIN_HOOD_DEG : MIN_HOOD_ANGLE_DEG;
         double maxHood = isFarShot ? FAR_SHOT_MAX_HOOD_DEG : MAX_HOOD_ANGLE_DEG;
 
-        double thetaLo = Double.NaN;
-        double thetaHi = Double.NaN;
+        // Hood mechanical limits expressed as launch angle from horizontal.
+        double thetaFlatMech  = Math.toRadians(90.0 - maxHood); // flattest the hood allows
+        double thetaSteepMech = Math.toRadians(90.0 - minHood); // steepest the hood allows
 
-        double discBack = v4 - g * (g * x * x + 2.0 * dhBack * v2);
-        if (discBack >= 0.0) {
-            double sqrtBack = Math.sqrt(discBack);
-            thetaLo = Math.atan((v2 - sqrtBack) / (g * x));
-            thetaHi = Math.atan((v2 + sqrtBack) / (g * x));
+        // Ideal angles that pass exactly through the center of the opening.
+        double discBack = v4 - g * (g * x * x + 2.0 * centerDh * v2);
+        if (discBack < 0.0) {
+            tel.addLine("[AUTO AIM] IMPOSSIBLE (unreachable)");
+            return Double.NaN;
         }
+        double sqrtBack = Math.sqrt(discBack);
+        double thetaLo = Math.atan((v2 - sqrtBack) / (g * x));
+        double thetaHi = Math.atan((v2 + sqrtBack) / (g * x));
 
-        if (isValidArc(thetaLo, xLip, v2, g, minHood, maxHood)) {
-            tel.addLine("[AUTO AIM] LOW ARC");
-            return 90.0 - Math.toDegrees(thetaLo);
-        }
+        Double low = tryArc(thetaLo, thetaFlatMech, thetaSteepMech, x, xLip, v2, g, minDh, maxDh, "[AUTO AIM] LOW ARC");
+        if (low != null) return low;
 
-        if (isValidArc(thetaHi, xLip, v2, g, minHood, maxHood)) {
-            tel.addLine("[AUTO AIM] HIGH ARC");
-            return 90.0 - Math.toDegrees(thetaHi);
-        }
+        Double high = tryArc(thetaHi, thetaFlatMech, thetaSteepMech, x, xLip, v2, g, minDh, maxDh, "[AUTO AIM] HIGH ARC");
+        if (high != null) return high;
 
         tel.addLine("[AUTO AIM] IMPOSSIBLE");
         return Double.NaN;
