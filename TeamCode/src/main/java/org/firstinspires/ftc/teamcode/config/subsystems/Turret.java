@@ -24,7 +24,7 @@ public class Turret extends SubsysCore {
     public static double TURRET_OFFSET = -180;
     public static double TURRET_SECOND_OFFSET = 0;
     public static double BOTH_SERVO_OFFSET = 0.01;
-    public static double SECOND_SERVO_OFFSET = 0.014;
+    public static double SECOND_SERVO_OFFSET = 0.017; // 0.014
     public static double POSITION_TOLERANCE = 10;
     boolean alwaysAtTarget;
 
