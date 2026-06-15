@@ -53,16 +53,16 @@ public final class AutoPaths2 {
         GATE_INTAKE_TRIPLE (new Pose(18.75+ X_OFFSET_FRONT, 59.75+Y_OFFSET_FRONT, Math.toRadians(152))), // 12.3 56.66 150.14
         GATE_INTAKE_SAFE_TRIPLE (new Pose(20.25+ X_OFFSET_FRONT, 55.25+Y_OFFSET_FRONT, Math.toRadians(151))),
         GATE_INTAKE_SAFE_TRIPLE_SAFE (new Pose(18+ X_OFFSET_FRONT, 57+Y_OFFSET_FRONT, Math.toRadians(180))),
-        FRONT_SHOOT_AFTER_GATE (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(215))),
+        FRONT_SHOOT_AFTER_GATE (new Pose(62+ X_OFFSET_FRONT, 76+Y_OFFSET_FRONT, Math.toRadians(215))),
         FRONT_SHOOT_AFTER_GATE_FINAL (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(255
         ))),
         FRONT_SHOOT_AFTER_GATE_FINAL_FINAL (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(160))),
 
         // SINGLE AUTO CLOSE
         SINGLE_FRONT_START (new Pose(17, 111.64, Math.toRadians(180))),
-        SINGLE_MID_SPIKE_START (new Pose(61, 79, Math.toRadians(215))),
-        SINGLE_MID_SPIKE_CONTROL (new Pose(60, 56)),
-        SINGLE_MID_SPIKE_END(new Pose(10.75, 59, Math.toRadians(180))),
+        SINGLE_MID_SPIKE_START (new Pose(61, 78, Math.toRadians(220))),
+        SINGLE_MID_SPIKE_CONTROL (new Pose(60, 60)),
+        SINGLE_MID_SPIKE_END(new Pose(11, 59, Math.toRadians(180))),
         SINGLE_CLOSE_SPIKE_START (new Pose(42.578, 83.5327, Math.toRadians(180))),
         SINGLE_CLOSE_SPIKE_END (new Pose(16.5, 84, Math.toRadians(180))),
         SINGLE_FINAL_SHOOT (new Pose(57, 101, Math.toRadians(200))),
@@ -110,8 +110,8 @@ public final class AutoPaths2 {
         MID_SPIKE_START   (new Pose(48, 59, Math.toRadians(180))), // 58
         MID_SPIKE_END     (new Pose(22, 59, Math.toRadians(180))),
 
-        INTERMEDIATE_FAR_INTAKE_POSE   (new Pose(54.5, 29.5)),
-        FAR_SPIKE_END     (new Pose(13, 36, Math.toRadians(180)));
+        INTERMEDIATE_FAR_INTAKE_POSE   (new Pose(54, 31)),
+        FAR_SPIKE_END     (new Pose(13, 35, Math.toRadians(180)));
 
 
         private final Pose blue;
