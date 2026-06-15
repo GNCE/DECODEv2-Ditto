@@ -22,7 +22,7 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 import java.util.List;
 
-@Autonomous(group="Close Auto", name="Donut")
+@Autonomous(group="Close Auto", name="Donut Solo")
 public class I_LOVE_DONUTS extends MyCommandOpMode {
     AutoPaths2 autoPaths2;
 
