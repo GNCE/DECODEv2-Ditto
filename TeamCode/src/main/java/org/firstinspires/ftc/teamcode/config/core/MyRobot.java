@@ -305,7 +305,7 @@ public class MyRobot extends Robot {
                     ll.update(runtimeNow, Math.toDegrees(Constants.fusionLocalizer.getDeadReckoningPose().getHeading()));
                 } else if(ll.getMode() == Limelight.Mode.BALL_DETECTION && ballLocalizer != null) {
                     // Project this frame's detections to the field and update each ball's velocity.
-                    ballLocalizer.update(ll.getPythonOutput(), f.getPose(), runtimeNow);
+                    ballLocalizer.update(ll.getDetections(), f.getPose(), runtimeNow);
                     t.addData("Tracked Balls", ballLocalizer.getBalls().size());
                 }
             }

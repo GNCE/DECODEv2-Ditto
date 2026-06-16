@@ -59,13 +59,13 @@ public class Limelight extends SubsysCore {
 
     Mode mode;
 
-    // Limelight pipeline index running VisionPipeline.py (the ball detector).
-    public static int BALL_PIPELINE_INDEX = 2;
-    // Raw llpython array from the ball detector; layout is documented in VisionPipeline.py.
-    double[] latestPythonOutput = null;
+    // Limelight pipeline index running the neural ball detector.
+    public static int BALL_PIPELINE_INDEX = 3;
+    // Latest neural-detector results from the ball pipeline.
+    List<LLResultTypes.DetectorResult> latestDetections = null;
 
-    public double[] getPythonOutput() {
-        return latestPythonOutput;
+    public List<LLResultTypes.DetectorResult> getDetections() {
+        return latestDetections;
     }
 
     public void setMode(Mode mode) {
@@ -166,9 +166,8 @@ public class Limelight extends SubsysCore {
                     }
                     break;
                 case BALL_DETECTION:
-                    latestPythonOutput = llResult.getPythonOutput();
-                    t.addData("Balls Detected", latestPythonOutput != null && latestPythonOutput.length > 0
-                            ? (int) Math.round(latestPythonOutput[0]) : 0);
+                    latestDetections = llResult.getDetectorResults();
+                    t.addData("Balls Detected", latestDetections != null ? latestDetections.size() : 0);
                     break;
             }
         } else {

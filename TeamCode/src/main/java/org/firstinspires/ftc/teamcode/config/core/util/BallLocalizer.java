@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.config.core.util;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.pedropathing.geometry.Pose;
+import com.qualcomm.hardware.limelightvision.LLResultTypes;
 
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Artifact;
 
@@ -9,11 +10,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Turns the Limelight ball-detector output (see VisionPipeline.py) into tracked balls in
- * field (Pedro) coordinates, and estimates each ball's velocity.
+ * Turns the Limelight neural-detector output into tracked balls in field (Pedro)
+ * coordinates, and estimates each ball's velocity.
  *
- * <p><b>Why projection happens here and not in Python:</b> the pipeline only knows camera
- * angles. Converting those to a field position needs the robot's odometry pose, and
+ * <p><b>Why projection happens here and not on the Limelight:</b> the detector only knows
+ * camera angles. Converting those to a field position needs the robot's odometry pose, and
  * estimating ball velocity needs the robot's own motion removed — both of which live on
  * the robot. By projecting every frame to the field first and then differencing, the
  * robot's translation/rotation cancels out automatically.
@@ -31,9 +32,8 @@ import java.util.List;
  * <h3>Usage</h3>
  * <pre>{@code
  * BallLocalizer localizer = new BallLocalizer();
- * // each loop, after switching the Limelight to the ball pipeline:
- * double[] out = llResult.getPythonOutput();
- * localizer.update(out, follower.getPose(), runtimeNow);
+ * // each loop, after switching the Limelight to the neural detector pipeline:
+ * localizer.update(llResult.getDetectorResults(), follower.getPose(), runtimeNow);
  * List<Ball> balls = localizer.getBalls();   // field coords + velocity
  * }</pre>
  */
@@ -54,6 +54,13 @@ public class BallLocalizer {
     /** Physical ball radius, inches — the ball's center sits this high off the floor. */
     public static double BALL_RADIUS_IN = 2.45;
 
+    // ---- Detector classes ----
+    /** Detector class names are matched case-insensitively by "contains" against these. */
+    public static String PURPLE_CLASS = "purple";
+    public static String GREEN_CLASS = "green";
+    /** Ignore detections below this confidence (0..1). */
+    public static double MIN_CONFIDENCE = 0.5;
+
     // ---- Tracking / velocity ----
     /** A detection within this distance of an existing track (same color) updates it. */
     public static double MATCH_RADIUS_IN = 8.0;
@@ -73,28 +80,23 @@ public class BallLocalizer {
     private int nextId = 0;
 
     /**
-     * Feed one frame of pipeline output. {@code pythonOut} is the raw
-     * {@code LLResult.getPythonOutput()} array using the layout documented in
-     * VisionPipeline.py. Safe to call with {@code null} / short / all-zero arrays.
+     * Feed one frame of detector output, i.e. the list from
+     * {@code LLResult.getDetectorResults()}. Safe to call with {@code null} / empty lists.
      */
-    public void update(double[] pythonOut, Pose robotPose, double nowSec) {
-        if (pythonOut != null && pythonOut.length >= 1 && robotPose != null) {
-            int n = (int) Math.round(pythonOut[0]);
-            for (int i = 0; i < n; i++) {
-                int base = 1 + 4 * i;
-                if (base + 3 >= pythonOut.length) break;
+    public void update(List<LLResultTypes.DetectorResult> detections, Pose robotPose, double nowSec) {
+        if (detections != null && robotPose != null) {
+            for (LLResultTypes.DetectorResult d : detections) {
+                if (d.getConfidence() < MIN_CONFIDENCE) continue;
 
-                double angleXDeg = pythonOut[base];
-                double angleYDeg = pythonOut[base + 1];
-                double radiusPx = pythonOut[base + 2];
-                Artifact color = colorFromFlag(pythonOut[base + 3]);
+                Artifact color = colorFromClassName(d.getClassName());
                 if (color == Artifact.NONE) continue;
 
-                Pose field = projectToField(angleXDeg, angleYDeg, robotPose);
+                // Limelight tx/ty: + = right / + = up, which matches projectToField.
+                Pose field = projectToField(d.getTargetXDegrees(), d.getTargetYDegrees(), robotPose);
                 if (field == null) continue;
                 if (outOfField(field.getX(), field.getY())) continue;
 
-                associate(field, color, radiusPx, nowSec);
+                associate(field, color, d.getConfidence(), nowSec);
             }
         }
         pruneStale(nowSec);
@@ -136,7 +138,7 @@ public class BallLocalizer {
     }
 
     /** Match to the nearest same-color track within MATCH_RADIUS_IN, else start a new track. */
-    private void associate(Pose measured, Artifact color, double radiusPx, double nowSec) {
+    private void associate(Pose measured, Artifact color, double confidence, double nowSec) {
         Ball best = null;
         double bestDistSq = MATCH_RADIUS_IN * MATCH_RADIUS_IN;
         for (Ball b : tracks) {
@@ -149,7 +151,7 @@ public class BallLocalizer {
         }
 
         if (best == null) {
-            tracks.add(new Ball(nextId++, color, measured, nowSec, radiusPx));
+            tracks.add(new Ball(nextId++, color, measured, nowSec, confidence));
             return;
         }
 
@@ -164,7 +166,7 @@ public class BallLocalizer {
             }
         }
         best.position = best.position.plus(measured.minus(best.position).times(POSITION_ALPHA));
-        best.radiusPx = radiusPx;
+        best.confidence = confidence;
         best.lastSeenSec = nowSec;
     }
 
@@ -179,10 +181,11 @@ public class BallLocalizer {
                 || y < -FIELD_MARGIN_IN || y > FIELD_SIZE_IN + FIELD_MARGIN_IN;
     }
 
-    private static Artifact colorFromFlag(double flag) {
-        int f = (int) Math.round(flag);
-        if (f == 1) return Artifact.PURPLE;
-        if (f == 2) return Artifact.GREEN;
+    private static Artifact colorFromClassName(String className) {
+        if (className == null) return Artifact.NONE;
+        String c = className.toLowerCase();
+        if (c.contains(PURPLE_CLASS.toLowerCase())) return Artifact.PURPLE;
+        if (c.contains(GREEN_CLASS.toLowerCase())) return Artifact.GREEN;
         return Artifact.NONE;
     }
 
