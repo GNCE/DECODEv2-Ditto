@@ -35,7 +35,7 @@ public class SOTM_Test extends MyCommandOpMode {
     @Override
     public void atStart() {
         autoPaths2 = new AutoPaths2(r.f, MyRobot.isRed ? Alliance.RED : Alliance.BLUE);
-        r.overrideAutoEndPose(autoPaths2.getPose(AutoPaths2.PoseId.SINGLE_FRONT_START));
+        r.overrideAutoEndPose(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_START));
 
         schedule(
                 new SequentialCommandGroup(

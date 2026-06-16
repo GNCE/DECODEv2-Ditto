@@ -102,7 +102,7 @@ public class ShotPlanner {
     public static double GOAL_HEIGHT_M = 1.2575;
     // Treat the goal as a vertical opening, not a single point: a shot counts if it crosses the
     // goal plane anywhere within GOAL_HEIGHT_M +/- GOAL_ACCEPT_BAND_M. Widen for more RPM leniency.
-    public static double GOAL_ACCEPT_BAND_M = 0.06;
+    public static double GOAL_ACCEPT_BAND_M = 0.06; // 0.06
     public static double GOAL_LIP_HEIGHT_M = 1.0;
     public static double GOAL_DEPTH_M = 1 * 0.0254;
     public static double LAUNCHER_HEIGHT_ACTUAL_M = 0.38;

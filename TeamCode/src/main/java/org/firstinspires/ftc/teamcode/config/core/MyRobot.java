@@ -19,6 +19,7 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
+import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
@@ -28,7 +29,10 @@ import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommandAuto;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommandTele;
 import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
+import org.firstinspires.ftc.teamcode.config.core.util.BallLocalizer;
+import org.firstinspires.ftc.teamcode.config.core.util.BallPathPlanner;
 import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
+import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Artifact;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Motif;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.SAT2D;
@@ -101,6 +105,8 @@ public class MyRobot extends Robot {
     OuttakeCommandTele OuttakeCommandTele;
     List<SubsystemConfig> subsysList;
     ShotPlanner planner;
+    public BallLocalizer ballLocalizer;
+    public BallPathPlanner ballPathPlanner;
     boolean [] enabledSubsys = new boolean[SubsystemConfig.values().length];
     int slotSelect = 0;
     // 69.48147 26.4483666 123.989353
@@ -177,6 +183,11 @@ public class MyRobot extends Robot {
         this.runtime = new Timer();
         this.planner = new ShotPlanner();
         ShotPlanner.tel = this.t;
+
+        if(hasSubsystems(List.of(SubsystemConfig.LL, SubsystemConfig.FOLLOWER))){
+            this.ballLocalizer = new BallLocalizer();
+            this.ballPathPlanner = new BallPathPlanner();
+        }
 
         if(hasSubsystem(SubsystemConfig.FOLLOWER)) {
             try {
@@ -289,9 +300,13 @@ public class MyRobot extends Robot {
 
             if(hasSubsystem(SubsystemConfig.LL)){
                 // TODO: make this local in ll class.
+                runtimeNow = runtime.getElapsedTimeSeconds();
                 if(ll.getMode() == Limelight.Mode.LOCALIZATION) {
-                    runtimeNow = runtime.getElapsedTimeSeconds();
                     ll.update(runtimeNow, Math.toDegrees(Constants.fusionLocalizer.getDeadReckoningPose().getHeading()));
+                } else if(ll.getMode() == Limelight.Mode.BALL_DETECTION && ballLocalizer != null) {
+                    // Project this frame's detections to the field and update each ball's velocity.
+                    ballLocalizer.update(ll.getPythonOutput(), f.getPose(), runtimeNow);
+                    t.addData("Tracked Balls", ballLocalizer.getBalls().size());
                 }
             }
 
@@ -461,7 +476,7 @@ public class MyRobot extends Robot {
     /// Commands ///
 
     public Command shootAll(){
-        return new OuttakeCommand(intake, turret, shooter, door, storage);
+        return new OuttakeCommandTele(intake, turret, shooter, door, storage);
     }
 
     public Command shootAll2(){
@@ -479,6 +494,56 @@ public class MyRobot extends Robot {
                 new WaitUntilCommand(() -> !f.isBusy())
         );
     }
+    /** How long to watch the balls before planning, so positions and velocities settle. */
+    public static double BALL_SCAN_SECONDS = 0.5;
+
+    /**
+     * Scan for artifacts, plan the optimal route through three of them (accounting for their
+     * velocity), and drive it. Requires the LL and FOLLOWER subsystems.
+     *
+     * <p>Flow: aim the Limelight at the balls, watch for {@link #BALL_SCAN_SECONDS} (the
+     * localizer is fed every loop in {@code startPeriodic}), plan + follow the path, drive
+     * until it finishes, then hand the camera back to localization. If no usable balls are
+     * found the command simply returns without moving.
+     *
+     * @param color only target this artifact color; pass {@code null} or {@link Artifact#NONE} for any
+     */
+    public Command collectThreeBalls(Artifact color){
+        if(ballLocalizer == null || ballPathPlanner == null){
+            // Needs both LL and FOLLOWER; do nothing rather than NPE if they aren't enabled.
+            return new InstantCommand(() -> t.addLine("collectThreeBalls: LL + FOLLOWER required"));
+        }
+        return new SequentialCommandGroup(
+                // 1. Point the camera at the balls and clear any stale tracks.
+                new InstantCommand(() -> {
+                    ballLocalizer.reset();
+                    ll.setMode(Limelight.Mode.BALL_DETECTION);
+                }),
+                // 2. Watch for a moment so the tracker can settle positions + velocities.
+                new WaitCommand((long)(BALL_SCAN_SECONDS * 1000)),
+                // 3. Plan the cheapest 3-ball route and start following it.
+                new InstantCommand(() -> {
+                    BallPathPlanner.Plan plan = ballPathPlanner.plan(f, f.getPose(), ballLocalizer.getBalls(), color);
+                    if (plan != null) {
+                        t.addData("Ball Path Targets", plan.targets.size());
+                        t.addData("Ball Path Est Time (s)", String.format("%.2f", plan.estTimeSec));
+                        f.followPath(plan.path, true);
+                    } else {
+                        t.addLine("No balls found to collect");
+                    }
+                }),
+                // 4. Drive until the path finishes (returns immediately if no path was set).
+                new WaitUntilCommand(() -> !f.isBusy()),
+                // 5. Give the camera back to localization.
+                new InstantCommand(() -> ll.setMode(Limelight.Mode.LOCALIZATION))
+        );
+    }
+
+    /** Collect three balls of any color. */
+    public Command collectThreeBalls(){
+        return collectThreeBalls(null);
+    }
+
     public Command goToTangential(Pose tar){
         return new SequentialCommandGroup(
                 new InstantCommand(() -> f.followPath(

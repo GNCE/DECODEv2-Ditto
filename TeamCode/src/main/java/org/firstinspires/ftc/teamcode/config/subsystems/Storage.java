@@ -23,7 +23,7 @@ public class Storage extends SubsysCore {
     private int assumeS2FaultLoops = 0;
 
     public static int beamSmoothWindow = 5;
-    public static int faultyBeamHoldLoops = 60;
+    public static int faultyBeamHoldLoops = 100;
 
     public static double currentLimit = 4;
     public static double veloLimit = 40;
@@ -123,7 +123,7 @@ public class Storage extends SubsysCore {
     }
 
     StorageState storageState;
-    public static double ST3_DELAY = 0.4, ST2_DELAY = 0.5, ST1_DELAY = 0.2; // TODO: KEEP TUNING
+    public static double ST3_DELAY = 1, ST2_DELAY = 1, ST1_DELAY = 1; // TODO: KEEP TUNING
 
     private void updateNormalTransitions() {
         switch(storageState) {

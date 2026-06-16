@@ -3,11 +3,8 @@ package org.firstinspires.ftc.teamcode.opmodes.auto;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
-import com.seattlesolvers.solverslib.command.ParallelDeadlineGroup;
-import com.seattlesolvers.solverslib.command.RepeatCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitCommand;
-import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.config.commands.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
@@ -34,7 +31,7 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
     @Override
     public void atStart() {
         autoPaths2 = new AutoPaths2(r.f, MyRobot.isRed ? Alliance.RED : Alliance.BLUE);
-        r.overrideAutoEndPose(autoPaths2.getPose(AutoPaths2.PoseId.SINGLE_FRONT_START));
+        r.overrideAutoEndPose(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_START));
         schedule(
                 new SequentialCommandGroup(
                         new ParallelCommandGroup(
@@ -46,17 +43,14 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
 
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.shooter.setActive(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
                         new WaitCommand(75),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                        new InstantCommand(() -> r.shooter.setActive(true)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.shooter.setActive(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
@@ -66,11 +60,9 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE)),
                         new WaitCommand(75),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                        new InstantCommand(() -> r.shooter.setActive(true)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_SAFE_SAFE_TO_SHOOT)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.shooter.setActive(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
@@ -80,27 +72,22 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE)),
                         new WaitCommand(100),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                        new InstantCommand(() -> r.shooter.setActive(true)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_SAFE_SAFE_TO_SHOOT_FINAl)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.shooter.setActive(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_FAR_SPIKE_END)),
                         new WaitCommand(70),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                        new InstantCommand(() -> r.shooter.setActive(true)),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_FAR_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_FAR_SPIKE_END_TO_FRONT_SHOOT_FOR_CLOSE_PREP)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.shooter.setActive(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END)),
                         new WaitCommand(25),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                        new InstantCommand(() -> r.shooter.setActive(true)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),

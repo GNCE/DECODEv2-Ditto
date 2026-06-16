@@ -34,7 +34,7 @@ public class Limelight extends SubsysCore {
         ll = h.get(Limelight3A.class, "Limelight");
         ll.setPollRateHz(50);
         ll.start();
-        setMode(Mode.LOCALIZATION);
+        setMode(Mode.BALL_DETECTION);
     }
 
     public static double LIMELIGHT_HEIGHT = 16.5; // Inches
@@ -53,10 +53,20 @@ public class Limelight extends SubsysCore {
 
     public enum Mode {
         LOCALIZATION,
-        MOTIF_DETECTION
+        MOTIF_DETECTION,
+        BALL_DETECTION
     }
 
     Mode mode;
+
+    // Limelight pipeline index running VisionPipeline.py (the ball detector).
+    public static int BALL_PIPELINE_INDEX = 2;
+    // Raw llpython array from the ball detector; layout is documented in VisionPipeline.py.
+    double[] latestPythonOutput = null;
+
+    public double[] getPythonOutput() {
+        return latestPythonOutput;
+    }
 
     public void setMode(Mode mode) {
         this.mode = mode;
@@ -86,6 +96,9 @@ public class Limelight extends SubsysCore {
                 break;
             case MOTIF_DETECTION:
                 ll.pipelineSwitch(0);
+                break;
+            case BALL_DETECTION:
+                ll.pipelineSwitch(BALL_PIPELINE_INDEX);
                 break;
         }
 
@@ -151,6 +164,11 @@ public class Limelight extends SubsysCore {
                             MyRobot.currentMotif = Motif.getMotif(id);
                         }
                     }
+                    break;
+                case BALL_DETECTION:
+                    latestPythonOutput = llResult.getPythonOutput();
+                    t.addData("Balls Detected", latestPythonOutput != null && latestPythonOutput.length > 0
+                            ? (int) Math.round(latestPythonOutput[0]) : 0);
                     break;
             }
         } else {

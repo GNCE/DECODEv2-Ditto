@@ -4,7 +4,6 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
-import com.seattlesolvers.solverslib.command.WaitCommand;
 
 import org.firstinspires.ftc.teamcode.config.commands.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
@@ -32,7 +31,7 @@ public class RapidShootTest extends MyCommandOpMode {
     @Override
     public void atStart() {
         autoPaths2 = new AutoPaths2(r.f, MyRobot.isRed ? Alliance.RED : Alliance.BLUE);
-        r.overrideAutoEndPose(autoPaths2.getPose(AutoPaths2.PoseId.SINGLE_FRONT_START));
+        r.overrideAutoEndPose(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_START));
         schedule(
                 new SequentialCommandGroup(
                         new ParallelCommandGroup(
