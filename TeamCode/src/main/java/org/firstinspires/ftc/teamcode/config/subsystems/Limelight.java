@@ -41,6 +41,13 @@ public class Limelight extends SubsysCore {
     public static double APRILTAG_HEIGHT = 0;
     public static double CAMERA_PITCH = 15; // degrees from vertical
 
+    public void turnOn(){
+        ll.start();
+    }
+    public void turnOff(){
+        ll.pause();
+    }
+    
     public boolean isDataValid(){
         return llResult != null && llResult.isValid();
     }

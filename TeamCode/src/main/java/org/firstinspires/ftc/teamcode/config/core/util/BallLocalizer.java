@@ -44,7 +44,7 @@ public class BallLocalizer {
     /** Camera lens height above the floor, inches. */
     public static double CAMERA_HEIGHT_IN = 8.56;
     /** Downward tilt of the optical axis from horizontal, degrees. */
-    public static double CAMERA_PITCH_DEG_DOWN = 20.0;
+    public static double CAMERA_PITCH_DEG_DOWN = 9.193077;
     /** Yaw of the camera relative to robot forward, degrees (+ = aimed to robot's right). */
     public static double CAMERA_YAW_OFFSET_DEG = 0.0;
     /** Camera position ahead of the robot's rotation center, inches (+ = forward). */
@@ -64,13 +64,16 @@ public class BallLocalizer {
     // ---- Tracking / velocity ----
     /** A detection within this distance of an existing track (same color) updates it. */
     public static double MATCH_RADIUS_IN = 8.0;
-    /** Velocity EMA smoothing in [0,1]; higher = trust the newest sample more. */
-    public static double VELOCITY_ALPHA = 0.4;
     /** Position EMA smoothing in [0,1]; higher = snappier, lower = steadier. */
     public static double POSITION_ALPHA = 0.6;
+    /** Velocity is least-squares fit over measurements within this time window, seconds.
+     *  Longer = smoother but laggier. This is the main knob for spiky velocity. */
+    public static double VELOCITY_WINDOW_SEC = 0.35;
+    /** Hard cap on samples kept for the velocity fit. */
+    public static int VELOCITY_MAX_SAMPLES = 15;
     /** Drop tracks not seen for this long, seconds. */
     public static double STALE_SEC = 0.4;
-    /** Ignore implausible jumps that imply faster-than-this ball speed, inches/sec. */
+    /** Clamp fitted ball speed to at most this, inches/sec. */
     public static double MAX_BALL_SPEED_IN_S = 120.0;
     /** Reject detections projected outside the field (with this margin), inches. */
     public static double FIELD_SIZE_IN = 141.5;
@@ -114,8 +117,8 @@ public class BallLocalizer {
         double[] forward = {Math.cos(h) * Math.cos(pitch), Math.sin(h) * Math.cos(pitch), -Math.sin(pitch)};
         // Image +x (right of the camera) is horizontal, 90 deg clockwise from heading.
         double[] right = {Math.sin(h), -Math.cos(h), 0.0};
-        // Image +y (up) completes the right-handed set: up = forward x right.
-        double[] up = cross(forward, right);
+        // Image +y (up) completes the right-handed set (x=right, y=up, z=forward): up = right x forward.
+        double[] up = cross(right, forward);
 
         // Ray direction for a detection at (az, el): forward + tan(az)*right + tan(el)*up.
         double tx = Math.tan(az);
@@ -137,6 +140,17 @@ public class BallLocalizer {
         return new Pose(camX + t * dx, camY + t * dy, 0);
     }
 
+    /**
+     * The camera lens position in field coordinates for a given robot pose (heading stored is
+     * the camera's, ignore Z). Useful for reading off camera-to-ball distance when calibrating.
+     */
+    public Pose cameraOrigin(Pose robotPose) {
+        double h = robotPose.getHeading() - Math.toRadians(CAMERA_YAW_OFFSET_DEG);
+        double camX = robotPose.getX() + CAMERA_FORWARD_OFFSET_IN * Math.cos(h) - CAMERA_LEFT_OFFSET_IN * Math.sin(h);
+        double camY = robotPose.getY() + CAMERA_FORWARD_OFFSET_IN * Math.sin(h) + CAMERA_LEFT_OFFSET_IN * Math.cos(h);
+        return new Pose(camX, camY, h);
+    }
+
     /** Match to the nearest same-color track within MATCH_RADIUS_IN, else start a new track. */
     private void associate(Pose measured, Artifact color, double confidence, double nowSec) {
         Ball best = null;
@@ -151,23 +165,53 @@ public class BallLocalizer {
         }
 
         if (best == null) {
-            tracks.add(new Ball(nextId++, color, measured, nowSec, confidence));
+            Ball nb = new Ball(nextId++, color, measured, nowSec, confidence);
+            nb.pushSample(nowSec, measured.getX(), measured.getY());
+            tracks.add(nb);
             return;
         }
 
-        double dt = nowSec - best.lastSeenSec;
-        if (dt > 1e-3) {
-            // velocity = (measured - last position) / dt
-            Pose vRaw = measured.minus(best.position).div(dt);
-            // Reject teleporting matches (occlusion swap, bad projection) — keep old velocity.
-            if (Math.hypot(vRaw.getX(), vRaw.getY()) <= MAX_BALL_SPEED_IN_S) {
-                // EMA: v += alpha * (vRaw - v)
-                best.velocity = best.velocity.plus(vRaw.minus(best.velocity).times(VELOCITY_ALPHA));
-            }
-        }
         best.position = best.position.plus(measured.minus(best.position).times(POSITION_ALPHA));
         best.confidence = confidence;
         best.lastSeenSec = nowSec;
+
+        // Velocity from a least-squares line fit over recent raw measurements (smooth, not
+        // a noisy single-frame difference).
+        best.pushSample(nowSec, measured.getX(), measured.getY());
+        best.velocity = fitVelocity(best, nowSec);
+    }
+
+    /** Least-squares slope of x-vs-t and y-vs-t over the recent sample window. */
+    private Pose fitVelocity(Ball b, double nowSec) {
+        while (b.history.size() > VELOCITY_MAX_SAMPLES) b.history.pollFirst();
+        while (b.history.size() > 2 && nowSec - b.history.peekFirst()[0] > VELOCITY_WINDOW_SEC) {
+            b.history.pollFirst();
+        }
+
+        int n = b.history.size();
+        if (n < 2) return new Pose(0, 0, 0);
+
+        double t0 = b.history.peekFirst()[0];
+        double sumT = 0, sumX = 0, sumY = 0;
+        for (double[] s : b.history) { sumT += s[0] - t0; sumX += s[1]; sumY += s[2]; }
+        double meanT = sumT / n, meanX = sumX / n, meanY = sumY / n;
+
+        double sxx = 0, sxX = 0, sxY = 0;
+        for (double[] s : b.history) {
+            double dt = (s[0] - t0) - meanT;
+            sxx += dt * dt;
+            sxX += dt * (s[1] - meanX);
+            sxY += dt * (s[2] - meanY);
+        }
+        if (sxx < 1e-9) return new Pose(0, 0, 0);
+
+        double vx = sxX / sxx, vy = sxY / sxx;
+        double sp = Math.hypot(vx, vy);
+        if (sp > MAX_BALL_SPEED_IN_S && sp > 1e-9) {
+            double s = MAX_BALL_SPEED_IN_S / sp;
+            vx *= s; vy *= s;
+        }
+        return new Pose(vx, vy, 0);
     }
 
     private void pruneStale(double nowSec) {

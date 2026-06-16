@@ -79,6 +79,14 @@ public final class AutoPaths {
         TRIPLE_FAR_SPIKE_END(new Pose(10, 35.8, Math.toRadians(180))),
         SHOOT_BACK_2 (new Pose(50, 8.969, Math.toRadians(180))),
         SHOOT_BACK_3 (new Pose(50.386, 13.819, Math.toRadians(151.526))),
+        SHOOT_BACK_SCAN (new Pose(50.386, 13.819, Math.toRadians(160))),
+
+        SHOOT_BACK_HP_PREP (new Pose(51.16, 10.6, Math.toRadians(180))),
+
+        SHOOT_BACK_GATHER_PREP (new Pose(54.1, 12.4, Math.toRadians(141))),
+        GATHER_CONTROL (new Pose(11.55140186915888, 46.666221628838464)),
+        GATHER_END(new Pose(10.627503337783713, 16, Math.toRadians(270))),
+
         SHOOT_FINAL (new Pose(53, 16, Math.toRadians(180))),
         PARK_FINAL (new Pose(46, 16, Math.toRadians(180))),
         TRIPLE_GATE_SWEEP_END(new Pose(11, 36, Math.toRadians(103.421))),
@@ -169,6 +177,8 @@ public final class AutoPaths {
         SHOOT_BACK_2_ALT_GATE_SWEEP_END,
         ALT_GATE_SWEEP_MID_TO_GATE_SWEEP_END,
         ALT_GATE_SWEEP_END_TO_SHOOT_BACK_2,
+
+        GATHER_PREP_TO_GATHER_END
     }
 
     // ====== INSTANCE STATE ======
@@ -350,6 +360,13 @@ public final class AutoPaths {
                 f.pathBuilder()
                         .addPath(new BezierCurve(getPose(PoseId.GATE_INTAKE_SAFE), getPose(PoseId.GATE_INTAKE_SAFE_TO_SHOOT_FRONT_CONTROL), getPose(PoseId.SHOOT_FRONT_GATE_CYCLE)))
                         .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_SAFE).getHeading(), getPose(PoseId.GATE_INTAKE_SAFE_TO_SHOOT_FRONT_CONTROL).getHeading())
+                        .build()
+        );
+
+        paths.put(PathId.GATHER_PREP_TO_GATHER_END,
+                f.pathBuilder()
+                        .addPath(new BezierCurve(getPose(PoseId.SHOOT_BACK_GATHER_PREP), getPose(PoseId.GATHER_CONTROL), getPose(PoseId.GATHER_END)))
+                        .setTangentHeadingInterpolation()
                         .build()
         );
     }
