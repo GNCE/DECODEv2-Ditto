@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.config.subsystems;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.qualcomm.robotcore.util.Range;
 import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.controller.PIDFController;
@@ -29,6 +30,15 @@ public class Shooter extends SubsysCore {
     public static double kd = 0;
     public static double kV = 0.000455;
 
+    // Flywheel anticipation: feedforward proportional to how fast the *target* RPM is changing
+    // (because the robot is moving toward/away from the goal), so the slow wheel tracks the moving
+    // target instead of lagging behind it. It is added to the control output, not the setpoint, so
+    // it is exactly zero at steady state and never biases a held shot. Tune FLYWHEEL_ACCEL_KFF up
+    // from 0 on the field until the wheel follows distance changes without overshoot/oscillation.
+    public static double FLYWHEEL_ACCEL_KFF = 0.0;       // motor power per (rpm/sec) of target change
+    public static double FLYWHEEL_RATE_SMOOTHING = 0.3;  // EMA alpha for the target-rate estimate
+    public static double FLYWHEEL_MAX_TARGET_RATE = 8000.0; // rpm/sec clamp on the rate estimate
+
     private double currentTargetVelocity = 0.0;
     private double currentTargetHoodAngle = 30;
 
@@ -42,6 +52,10 @@ public class Shooter extends SubsysCore {
 
     PIDFController pidfController;
     boolean active = false;
+
+    private final ElapsedTime ffTimer = new ElapsedTime();
+    private double prevTargetVelocity = 0.0;
+    private double filteredTargetRate = 0.0;
 
     public static boolean testModeOnly = false;
 
@@ -117,7 +131,21 @@ public class Shooter extends SubsysCore {
             currentTargetHoodAngle = plannedHoodBaselineDeg;
         }
 
-        double targetPower = MathUtils.clamp(pidfController.calculate(getVelocity(), getTargetVelocity()), -1, 1);
+        // Anticipation feedforward: power proportional to the rate of change of the target RPM, so
+        // the wheel pre-spins along distance changes. Zero at steady state -> no bias on a held shot.
+        double dt = ffTimer.seconds();
+        ffTimer.reset();
+        double accelFF = 0.0;
+        if (dt > 1e-3 && dt < 0.1) {
+            double rawRate = (currentTargetVelocity - prevTargetVelocity) / dt;
+            rawRate = Range.clip(rawRate, -FLYWHEEL_MAX_TARGET_RATE, FLYWHEEL_MAX_TARGET_RATE);
+            filteredTargetRate += FLYWHEEL_RATE_SMOOTHING * (rawRate - filteredTargetRate);
+            accelFF = FLYWHEEL_ACCEL_KFF * filteredTargetRate;
+        }
+        prevTargetVelocity = currentTargetVelocity;
+
+        double targetPower = MathUtils.clamp(
+                pidfController.calculate(getVelocity(), getTargetVelocity()) + accelFF, -1, 1);
         flywheel.set(targetPower);
 
         // Physics comp removed — hood angle from ShotPlanner is already physics-correct
@@ -127,13 +155,15 @@ public class Shooter extends SubsysCore {
         double hoodCmdDeg = currentTargetHoodAngle;
 
         double servoPos = hoodAngleToServoPos(hoodCmdDeg);
-        hood.setPosition(shotPossible ? servoPos : IDLE_HOOD_ANGLE_DEG);
+        hood.setPosition(shotPossible ? servoPos : hoodAngleToServoPos(IDLE_HOOD_ANGLE_DEG));
 
         t.addData("Shooter Cached Voltage", flywheel.getCachedVoltage());
         t.addData("Flywheel 1 Current", m1.getCurrent(CurrentUnit.AMPS));
         t.addData("Flywheel 2 Current", m2.getCurrent(CurrentUnit.AMPS));
         t.addData("Shooter Velocity Error", getTargetVelocity() - getVelocity());
         t.addData("Shooter Target Power", targetPower);
+        t.addData("Shooter Accel FF", accelFF);
+        t.addData("Shooter Target Rate (rpm/s)", filteredTargetRate);
         t.addData("Shooter Velocity", getVelocity());
         t.addData("Shooter Target Velocity", getTargetVelocity());
         t.addData("Shooter Ready", readyToShoot());

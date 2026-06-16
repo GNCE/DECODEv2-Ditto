@@ -77,7 +77,16 @@ public class ShotPlanner {
     public static double POSE_UNITS_TO_METERS = 0.0254;
     public static double EXIT_VEL_M_PER_RPM = 0.00365;
 
-    public static double FUTURE_POSE_PREDICTION_SEC = 0.1;
+    // Predict the robot pose ahead so each actuator is already tracking where the robot WILL be.
+    // This is an actuator-responsiveness lead, not the shot-accuracy horizon: the SOTM virtual-goal
+    // lead still derives from velocity * flight time regardless of this toggle.
+    public static boolean ENABLE_FUTURE_POSE_PREDICTION = true;
+    // Predict the robot pose to the instant the ball leaves the shooter (release latency). ALL
+    // auto-targeting below — turret aim, SOTM virtual goal, and shooter range -> RPM/hood — derives
+    // from this single predicted pose, so the whole solve describes the robot at one consistent
+    // instant. Flywheel responsiveness is handled separately by a dRPM/dt feedforward in Shooter,
+    // not by predicting the pose further ahead (which would bias the shot distance).
+    public static double SHOT_PREDICTION_SEC = 0.15;
 
     public static int ACCEL_REGRESSION_WINDOW_SAMPLES = 6;
     public static double MIN_SAMPLE_SPACING_SEC = 0.008;
@@ -270,14 +279,20 @@ public class ShotPlanner {
         motionTimer.reset();
     }
 
+    private double effectiveHorizon(double configuredSec) {
+        if (!ENABLE_FUTURE_POSE_PREDICTION) return 0.0;
+        return Math.max(0.0, finiteOrZero(configuredSec));
+    }
+
     private Pose predictFutureRobotPose(Pose robotPose,
                                         double robotVxFieldPosePerSec,
                                         double robotVyFieldPosePerSec,
                                         double robotOmegaRadPerSec,
                                         double robotAxFieldPosePerSec2,
                                         double robotAyFieldPosePerSec2,
-                                        double robotAlphaRadPerSec2) {
-        double t = Math.max(0.0, finiteOrZero(FUTURE_POSE_PREDICTION_SEC));
+                                        double robotAlphaRadPerSec2,
+                                        double horizonSec) {
+        double t = Math.max(0.0, finiteOrZero(horizonSec));
         double t2 = t * t;
 
         double predictedX = robotPose.getX()
@@ -437,30 +452,30 @@ public class ShotPlanner {
         addMotionSample(robotVxFieldPosePerSec, robotVyFieldPosePerSec, robotOmegaRadPerSec);
         AccelSample accel = computeAccelerationFromHistory();
 
-        Pose predictedRobotPose = predictFutureRobotPose(
-                robotPose,
-                finiteOrZero(robotVxFieldPosePerSec),
-                finiteOrZero(robotVyFieldPosePerSec),
-                finiteOrZero(robotOmegaRadPerSec),
-                accel.ax,
-                accel.ay,
-                accel.alpha
-        );
+        double vx = finiteOrZero(robotVxFieldPosePerSec);
+        double vy = finiteOrZero(robotVyFieldPosePerSec);
+        double omega = finiteOrZero(robotOmegaRadPerSec);
 
-        double dt = Math.max(0.0, finiteOrZero(FUTURE_POSE_PREDICTION_SEC));
-        double predictedLaunchVx = finiteOrZero(robotVxFieldPosePerSec) + accel.ax * dt;
-        double predictedLaunchVy = finiteOrZero(robotVyFieldPosePerSec) + accel.ay * dt;
+        double shotHorizon = effectiveHorizon(SHOT_PREDICTION_SEC);
+
+        // One predicted pose at the release instant; every targeting function below reads it.
+        Pose predictedPose = predictFutureRobotPose(
+                robotPose, vx, vy, omega, accel.ax, accel.ay, accel.alpha, shotHorizon);
+
+        // SOTM lead is about where the ball lands, so use the velocity at the same release instant.
+        double predictedLaunchVx = vx + accel.ax * shotHorizon;
+        double predictedLaunchVy = vy + accel.ay * shotHorizon;
 
         Pose virtualGoal = computeVirtualGoalIter(
-                predictedRobotPose,
+                predictedPose,
                 realGoalPose,
                 predictedLaunchVx,
                 predictedLaunchVy,
                 smoothedRpm
         );
 
-        double dx = virtualGoal.getX() - predictedRobotPose.getX();
-        double dy = virtualGoal.getY() - predictedRobotPose.getY();
+        double dx = virtualGoal.getX() - predictedPose.getX();
+        double dy = virtualGoal.getY() - predictedPose.getY();
         double distPose = Math.hypot(dx, dy);
         double distClamped = clampDist(distPose);
 
@@ -471,7 +486,7 @@ public class ShotPlanner {
         double flightTimeSec = possible ? estimateFlightTimeSec(distClamped, smoothedRpm, hood) : Double.NaN;
 
         return new ShotCommand(
-                predictedRobotPose,
+                predictedPose,
                 virtualGoal,
                 distClamped,
                 targetRPM,
