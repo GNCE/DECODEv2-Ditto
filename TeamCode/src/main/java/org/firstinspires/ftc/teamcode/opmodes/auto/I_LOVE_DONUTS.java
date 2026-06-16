@@ -37,8 +37,7 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
                         new ParallelCommandGroup(
                                 new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                                new InstantCommand(() -> r.shooter.setActive(true)),
-                                new InstantCommand(ShotPlanner::disableSOTM)
+                                new InstantCommand(() -> r.shooter.setActive(true))
                         ),
 
                         r.shootAll2(),

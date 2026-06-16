@@ -281,8 +281,13 @@ public class MyRobot extends Robot {
             if(hasSubsystem(SubsystemConfig.SHOOTER)) {
                 // SOTM only while g1 holds the left trigger (teleop only); off otherwise.
                 if(opModeType == OpModeType.TELEOP){
-                    if(g1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER) > 0.5) ShotPlanner.enableSOTM();
-                    else ShotPlanner.disableSOTM();
+                    if(g1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER) > 0.5){
+                        ShotPlanner.enableSOTM();
+                        ShotPlanner.enableFPP();
+                    } else {
+                        ShotPlanner.disableSOTM();
+                        ShotPlanner.disableFPP();
+                    }
                 }
                 ShotPlanner.ShotCommand cmd = planner.plan(turretPose, f.getVelocity().getXComponent(), f.getVelocity().getYComponent(), f.getAngularVelocity(), goalPose, shooter.getVelocity());
 

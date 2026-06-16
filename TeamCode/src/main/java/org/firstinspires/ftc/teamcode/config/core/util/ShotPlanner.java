@@ -80,7 +80,7 @@ public class ShotPlanner {
     // Predict the robot pose ahead so each actuator is already tracking where the robot WILL be.
     // This is an actuator-responsiveness lead, not the shot-accuracy horizon: the SOTM virtual-goal
     // lead still derives from velocity * flight time regardless of this toggle.
-    public static boolean ENABLE_FUTURE_POSE_PREDICTION = true;
+    public static boolean ENABLE_FUTURE_POSE_PREDICTION = false;
     // Predict the robot pose to the instant the ball leaves the shooter (release latency). ALL
     // auto-targeting below — turret aim, SOTM virtual goal, and shooter range -> RPM/hood — derives
     // from this single predicted pose, so the whole solve describes the robot at one consistent
@@ -94,7 +94,7 @@ public class ShotPlanner {
     public static double MAX_LINEAR_ACCEL_POSE_PER_SEC2 = 200.0;
     public static double MAX_ANGULAR_ACCEL_RAD_PER_SEC2 = 20.0;
 
-    public static boolean MOVE_SHOT_ENABLED = true;
+    public static boolean MOVE_SHOT_ENABLED = false;
     public static int MOVE_SHOT_ITERS = 2;
     public static double MOVE_SHOT_MAX_LEAD_POSE_UNITS = 100.0;
 
@@ -138,7 +138,8 @@ public class ShotPlanner {
         }
         velocityLut.createLUT();
         motionTimer.reset();
-        MOVE_SHOT_ENABLED = true;
+        MOVE_SHOT_ENABLED = false;
+        ENABLE_FUTURE_POSE_PREDICTION = false;
     }
 
     public static void enableSOTM(){
@@ -147,6 +148,14 @@ public class ShotPlanner {
 
     public static void disableSOTM(){
         MOVE_SHOT_ENABLED = false;
+    }
+
+    public static void enableFPP(){
+        ENABLE_FUTURE_POSE_PREDICTION = true;
+    }
+
+    public static void disableFPP() {
+        ENABLE_FUTURE_POSE_PREDICTION = false;
     }
 
     private double finiteOrZero(double x) {

@@ -46,9 +46,9 @@ public final class AutoPaths2 {
         FRONT_START(new Pose(17, 111.64, Math.toRadians(180))),
         MID_SPIKE_START(new Pose(59, 71.5, Math.toRadians(220))),
         MID_SPIKE_CONTROL(new Pose(60, 61)),
-        MID_SPIKE_END(new Pose(19.5, 59, Math.toRadians(180))),
+        MID_SPIKE_END(new Pose(20, 59, Math.toRadians(180))),
         CLOSE_SPIKE_START(new Pose(42.578, 83.5327, Math.toRadians(180))),
-        CLOSE_SPIKE_END(new Pose(17, 84, Math.toRadians(180))),
+        CLOSE_SPIKE_END(new Pose(18.5, 84, Math.toRadians(180))),
         FINAL_SHOOT(new Pose(57, 101, Math.toRadians(200))),
 
         SHOOT_BACK_1 (new Pose(57.3185, 20.1238, Math.toRadians(155))),
@@ -56,7 +56,7 @@ public final class AutoPaths2 {
         TRIPLE_FAR_SPIKE_END(new Pose(10, 35.8, Math.toRadians(180))),
 
         INTERMEDIATE_FAR_INTAKE_POSE   (new Pose(54.5, 33.5)),
-        FAR_SPIKE_END     (new Pose(17, 36, Math.toRadians(180)));
+        FAR_SPIKE_END     (new Pose(18, 36, Math.toRadians(180)));
 
 
         private final Pose blue;
