@@ -220,8 +220,7 @@ public class MyRobot extends Robot {
 
     public void driveControls(){
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
-            if(g1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER)>0.8) f.setTeleOpDrive(g1.getLeftY()*0.3, -g1.getLeftX()*0.3, -g1.getRightX()*0.3, true);
-            else f.setTeleOpDrive(g1.getLeftY(), -g1.getLeftX(), -g1.getRightX(), true);
+            f.setTeleOpDrive(g1.getLeftY(), -g1.getLeftX(), -g1.getRightX(), true);
         }
 
         if(g1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.8) cornerSquare();
@@ -280,6 +279,11 @@ public class MyRobot extends Robot {
                     f.getPose().getHeading());
 
             if(hasSubsystem(SubsystemConfig.SHOOTER)) {
+                // SOTM only while g1 holds the left trigger (teleop only); off otherwise.
+                if(opModeType == OpModeType.TELEOP){
+                    if(g1.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER) > 0.5) ShotPlanner.enableSOTM();
+                    else ShotPlanner.disableSOTM();
+                }
                 ShotPlanner.ShotCommand cmd = planner.plan(turretPose, f.getVelocity().getXComponent(), f.getVelocity().getYComponent(), f.getAngularVelocity(), goalPose, shooter.getVelocity());
 
                 // ---- SOTM DEBUG TELEMETRY (remove when done tuning) ----
