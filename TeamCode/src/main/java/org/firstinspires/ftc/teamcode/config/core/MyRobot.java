@@ -19,7 +19,6 @@ import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
-import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 import com.seattlesolvers.solverslib.gamepad.GamepadEx;
 import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
@@ -29,6 +28,7 @@ import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommand;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommandAuto;
 import org.firstinspires.ftc.teamcode.config.commands.OuttakeCommandTele;
 import org.firstinspires.ftc.teamcode.config.commands.TransferCommand;
+import org.firstinspires.ftc.teamcode.config.core.util.Ball;
 import org.firstinspires.ftc.teamcode.config.core.util.BallLocalizer;
 import org.firstinspires.ftc.teamcode.config.core.util.BallPathPlanner;
 import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
@@ -503,52 +503,172 @@ public class MyRobot extends Robot {
                 new WaitUntilCommand(() -> !f.isBusy())
         );
     }
-    /** How long to watch the balls before planning, so positions and velocities settle. */
-    public static double BALL_SCAN_SECONDS = 0.5;
+    /** Put the Limelight into neural ball-detection mode (so the localizer gets fed). */
+    public void enableBallDetection(){
+        if(hasSubsystem(SubsystemConfig.LL)) ll.setMode(Limelight.Mode.BALL_DETECTION);
+    }
 
     /**
-     * Scan for artifacts, plan the optimal route through three of them (accounting for their
-     * velocity), and drive it. Requires the LL and FOLLOWER subsystems.
-     *
-     * <p>Flow: aim the Limelight at the balls, watch for {@link #BALL_SCAN_SECONDS} (the
-     * localizer is fed every loop in {@code startPeriodic}), plan + follow the path, drive
-     * until it finishes, then hand the camera back to localization. If no usable balls are
-     * found the command simply returns without moving.
+     * Dump every tracked ball (field position, velocity, confidence) to telemetry, and plot
+     * each one on the Panels field. Call from an OpMode's {@code run()}; the localizer is
+     * already updated each loop in {@code startPeriodic} when the LL is in ball-detection mode.
+     */
+    public void ballTelemetry(){
+        if(ballLocalizer == null){
+            t.addLine("Ball telemetry needs LL + FOLLOWER subsystems");
+            return;
+        }
+        List<Ball> balls = ballLocalizer.getBalls();
+        Pose camPose = hasSubsystem(SubsystemConfig.FOLLOWER) ? ballLocalizer.cameraOrigin(f.getPose()) : null;
+        t.addLine();
+        t.addData("Tracked Ball Count", balls.size());
+        for(Ball b : balls){
+            // camDist is the field distance from the lens to the ball — compare to a tape
+            // measure to calibrate CAMERA_HEIGHT_IN / CAMERA_PITCH_DEG_DOWN.
+            String camDist = camPose != null ? String.format(" | camDist %.1f in", camPose.distanceFrom(b.position)) : "";
+            t.addData("Ball " + b.id + " (" + b.color + ")",
+                    String.format("pos (%.1f, %.1f) in | vel (%.1f, %.1f) = %.1f in/s | conf %.2f%s",
+                            b.position.getX(), b.position.getY(),
+                            b.velocity.getX(), b.velocity.getY(), b.speed(), b.confidence, camDist));
+            if(hasSubsystem(SubsystemConfig.FOLLOWER)){
+                // Drawn into the same field buffer endPeriodic() flushes with update().
+                PanelsField.INSTANCE.getField().moveCursor(b.position.getX(), b.position.getY());
+                PanelsField.INSTANCE.getField().circle(2);
+            }
+        }
+    }
+
+    // Where to drive when no balls are detected: the human player end, where artifacts get
+    // fed in. BLUE values matching AutoPaths' HP_END; mirrored for RED the same way AutoPaths
+    // mirrors (blue.mirror()), so it lines up with the Far Vision + Far Spike auto.
+    public static double fallbackCollectX = 11;
+    public static double fallbackCollectY = 8.969;
+    public static double fallbackCollectHeadingDeg = 180;
+    /** If the robot is already within this x-distance of the human player end, skip the top-up
+     *  trip there — it effectively drove to that wall while collecting and should just head back
+     *  to shoot. */
+    public static double SKIP_TOPUP_X_DIST_IN = 5.0;
+
+    /** Fallback ball-collection pose (human player end) for the current alliance. */
+    public Pose fallbackCollectPose(){
+        Pose blue = new Pose(fallbackCollectX, fallbackCollectY, Math.toRadians(fallbackCollectHeadingDeg));
+        return (isRed != null && isRed) ? blue.mirror() : blue;
+    }
+
+    /** Flywheel RPM needed to shoot from {@code shootPose} (distance to the current goal). */
+    public double shooterRpmForPose(Pose shootPose){
+        Pose g = goalPose != null ? goalPose : blueGoalPose;
+        return planner.getLutRpm(shootPose.distanceFrom(g));
+    }
+
+    /**
+     * Hold the flywheel at the RPM for {@code shootPose} so it does not slow down while driving in
+     * to collect (which moves closer to the goal and would otherwise drop the target RPM and force
+     * a re-spin at the shot). While held this is the target outright, until {@link #clearShooterSpinUp()}.
+     * Set it to the pose you will shoot from next.
+     */
+    public Command spinUpShooterFor(Pose shootPose){
+        return new InstantCommand(() -> {
+            if(hasSubsystem(SubsystemConfig.SHOOTER)) shooter.setSpinUpRpm(shooterRpmForPose(shootPose));
+        });
+    }
+
+    /** Release the spin-up hold (let the flywheel follow the live distance target again). */
+    public Command clearShooterSpinUp(){
+        return new InstantCommand(() -> {
+            if(hasSubsystem(SubsystemConfig.SHOOTER)) shooter.clearSpinUp();
+        });
+    }
+
+    /**
+     * Scan only (instant): turn the Limelight on, aim it at the balls, and clear stale
+     * tracks. The localizer then accumulates detections every loop in {@code startPeriodic}
+     * for as long as the LL stays in ball-detection mode. Schedule this when you START a shot
+     * so detections pile up <i>during</i> the shot, then call {@link #collectThreeBallsNoScan}.
+     */
+    public Command scanForBalls(){
+        if(ballLocalizer == null){
+            return new InstantCommand(() -> t.addLine("scanForBalls: LL + FOLLOWER required"));
+        }
+        return new InstantCommand(() -> {
+            ballLocalizer.reset();
+            ll.turnOn();
+            ll.setMode(Limelight.Mode.BALL_DETECTION);
+        });
+    }
+
+    /**
+     * Plan the optimal route through three balls (accounting for velocity) and drive it,
+     * using whatever the localizer has already gathered — <b>no scan wait</b>. Pair with a
+     * prior {@link #scanForBalls()} (e.g. run during your shot). If fewer than
+     * {@link BallPathPlanner#MAX_BALLS_IN_PATH} balls are seen (including none), it drives the
+     * partial ball path and then continues straight to the HP-end wall (the x of
+     * {@link #fallbackCollectPose()}, keeping the current y) to top up, in case vision missed
+     * some — unless it is already at that wall. Turns the Limelight off when done.
      *
      * @param color only target this artifact color; pass {@code null} or {@link Artifact#NONE} for any
      */
-    public Command collectThreeBalls(Artifact color){
+    public Command collectThreeBallsNoScan(Artifact color){
         if(ballLocalizer == null || ballPathPlanner == null){
             // Needs both LL and FOLLOWER; do nothing rather than NPE if they aren't enabled.
             return new InstantCommand(() -> t.addLine("collectThreeBalls: LL + FOLLOWER required"));
         }
+        final int[] expected = {0}; // balls the planned route expects to collect
         return new SequentialCommandGroup(
-                // 1. Point the camera at the balls and clear any stale tracks.
-                new InstantCommand(() -> {
-                    ballLocalizer.reset();
-                    ll.setMode(Limelight.Mode.BALL_DETECTION);
-                }),
-                // 2. Watch for a moment so the tracker can settle positions + velocities.
-                new WaitCommand((long)(BALL_SCAN_SECONDS * 1000)),
-                // 3. Plan the cheapest 3-ball route and start following it.
+                // 1. Plan the route through the visible balls and start following it (if any).
                 new InstantCommand(() -> {
                     BallPathPlanner.Plan plan = ballPathPlanner.plan(f, f.getPose(), ballLocalizer.getBalls(), color);
                     if (plan != null) {
-                        t.addData("Ball Path Targets", plan.targets.size());
+                        expected[0] = plan.targets.size();
+                        t.addData("Ball Path Targets", expected[0]);
                         t.addData("Ball Path Est Time (s)", String.format("%.2f", plan.estTimeSec));
                         f.followPath(plan.path, true);
                     } else {
-                        t.addLine("No balls found to collect");
+                        expected[0] = 0;
+                        t.addLine("No balls found");
                     }
                 }),
-                // 4. Drive until the path finishes (returns immediately if no path was set).
+                // 2. Drive the ball path (if one was set).
                 new WaitUntilCommand(() -> !f.isBusy()),
-                // 5. Give the camera back to localization.
-                new InstantCommand(() -> ll.setMode(Limelight.Mode.LOCALIZATION))
+                // 3. If fewer than a full load was visible, top up at the human player end --
+                //    unless we already drove to the far end of the field (then just come back).
+                new InstantCommand(() -> {
+                    if (expected[0] >= BallPathPlanner.MAX_BALLS_IN_PATH) return;
+                    Pose fb = fallbackCollectPose();
+                    if (Math.abs(f.getPose().getX() - fb.getX()) < SKIP_TOPUP_X_DIST_IN) {
+                        // Already at the HP-end wall; the explicit top-up drive would be redundant.
+                        // TODO: a blind horizontal sweep here could still scoop nearby missed balls.
+                        t.addData("Saw " + expected[0] + " and already at HP-end wall - skipping top-up", f.getPose());
+                        return;
+                    }
+                    // Drive straight to the HP-end wall (its x) while staying at the current y.
+                    Pose target = new Pose(fb.getX(), f.getPose().getY(), fb.getHeading());
+                    t.addData("Only saw " + expected[0] + " - driving to wall to top up", target);
+                    f.followPath(
+                            f.pathBuilder()
+                                    .addPath(new BezierLine(f.getPose(), target))
+                                    .setLinearHeadingInterpolation(f.getHeading(), target.getHeading())
+                                    .build(),
+                            true);
+                }),
+                // 4. Drive the top-up path (immediate if none was set).
+                new WaitUntilCommand(() -> !f.isBusy()),
+                // 5. Turn the Limelight off until the next scan.
+                new InstantCommand(() -> ll.turnOff())
         );
     }
 
-    /** Collect three balls of any color. */
+    /** Plan + drive through three balls of any color, no scan wait. */
+    public Command collectThreeBallsNoScan(){
+        return collectThreeBallsNoScan(null);
+    }
+
+    /** Convenience: scan then collect, all in one (scan time is NOT hidden). */
+    public Command collectThreeBalls(Artifact color){
+        return new SequentialCommandGroup(scanForBalls(), collectThreeBallsNoScan(color));
+    }
+
+    /** Collect three balls of any color (scan + collect). */
     public Command collectThreeBalls(){
         return collectThreeBalls(null);
     }

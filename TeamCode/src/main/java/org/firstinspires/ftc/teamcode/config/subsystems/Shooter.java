@@ -63,7 +63,26 @@ public class Shooter extends SubsysCore {
     private double plannedTargetRpm = 0.0;            // rpm
     private double plannedHoodBaselineDeg = IDLE_HOOD_ANGLE_DEG; // hood deg (your convention)
     private boolean shotPossible = false;
+
+    // Spin-up override: when held (>= 0), the flywheel targets exactly this RPM instead of the
+    // live distance-based target, so it stays at shot speed while driving in to collect (rather
+    // than slowing as the robot nears the goal and re-spinning at the shot). Cleared (-1) means
+    // follow the planned target. Set it to the RPM of the pose you'll shoot from.
+    private double spinUpTargetRpm = -1.0;
+
     MotorEx m1, m2;
+
+    public void setSpinUpRpm(double rpm) {
+        spinUpTargetRpm = Math.max(0.0, rpm);
+    }
+
+    public void clearSpinUp() {
+        spinUpTargetRpm = -1.0;
+    }
+
+    public boolean isSpinUpHeld() {
+        return spinUpTargetRpm >= 0.0;
+    }
 
     public void setPlannedShot(double distPoseUnits, double targetRpm, double hoodBaselineDegFromVertical, boolean plannedPossible) {
         plannedDistPoseUnits = distPoseUnits;
@@ -89,6 +108,7 @@ public class Shooter extends SubsysCore {
         pidfController = new PIDFController(kp, ki, kd, kV);
 
         testModeOnly = false;
+        spinUpTargetRpm = -1.0; // always start with no spin-up hold
         setDefaultCommand(new RunCommand(() -> active = true, this));
     }
 
@@ -124,7 +144,10 @@ public class Shooter extends SubsysCore {
         pidfController.setPIDF(kp, ki, kd, kV);
 
         if (active && !testModeOnly) {
-            currentTargetVelocity = Range.clip(plannedTargetRpm, 0.0, 2800);
+            // While held, target the spin-up RPM exactly (keeps the wheel at shot speed while
+            // driving to collect); otherwise follow the live distance-based target.
+            double target = isSpinUpHeld() ? spinUpTargetRpm : plannedTargetRpm;
+            currentTargetVelocity = Range.clip(target, 0.0, 2800);
             currentTargetHoodAngle = Range.clip(plannedHoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
         } else {
             currentTargetVelocity = INACTIVE_VELOCITY;
@@ -166,6 +189,7 @@ public class Shooter extends SubsysCore {
         t.addData("Shooter Target Rate (rpm/s)", filteredTargetRate);
         t.addData("Shooter Velocity", getVelocity());
         t.addData("Shooter Target Velocity", getTargetVelocity());
+        t.addData("Shooter Spin-Up Target", isSpinUpHeld() ? spinUpTargetRpm : -1);
         t.addData("Shooter Ready", readyToShoot());
         t.addData("Shooter testModeOnly", testModeOnly);
         t.addData("Shooter Planned Dist (in)", plannedDistPoseUnits);

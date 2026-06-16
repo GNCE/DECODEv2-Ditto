@@ -4,6 +4,8 @@ import com.pedropathing.geometry.Pose;
 
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Artifact;
 
+import java.util.ArrayDeque;
+
 /**
  * A single tracked artifact (ball) in field (Pedro) coordinates. Produced and updated by
  * {@link BallLocalizer}; consumed by {@link BallPathPlanner}.
@@ -24,6 +26,9 @@ public class Ball {
     public double lastSeenSec;  // robot clock time of the most recent update
     public double confidence;   // detector confidence of the most recent detection, 0..1
 
+    // Recent raw (time, x, y) measurements, used to fit a smooth velocity by regression.
+    public final ArrayDeque<double[]> history = new ArrayDeque<>();
+
     public Ball(int id, Artifact color, Pose position, double nowSec, double confidence) {
         this.id = id;
         this.color = color;
@@ -31,6 +36,11 @@ public class Ball {
         this.velocity = new Pose(0, 0, 0);
         this.lastSeenSec = nowSec;
         this.confidence = confidence;
+    }
+
+    /** Record a raw measurement for velocity fitting. */
+    public void pushSample(double t, double x, double y) {
+        history.addLast(new double[]{t, x, y});
     }
 
     /** Predicted position {@code dtSec} into the future, assuming constant velocity. */
