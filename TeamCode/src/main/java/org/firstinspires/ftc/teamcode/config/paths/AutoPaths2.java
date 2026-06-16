@@ -36,27 +36,37 @@ public final class AutoPaths2 {
     static double SINGLE_X_OFFSET = -1.5;
 
     public enum PoseId {
-        GATE_INTAKE_TRIPLE (new Pose(18.75+ X_OFFSET_FRONT, 60+Y_OFFSET_FRONT, Math.toRadians(152))), // 12.3 56.66 150.14
+        GATE_INTAKE_TRIPLE (new Pose(18.25+ X_OFFSET_FRONT, 60+Y_OFFSET_FRONT, Math.toRadians(152))), // 12.3 56.66 150.14
         GATE_INTAKE_SAFE_TRIPLE (new Pose(19+ X_OFFSET_FRONT, 55.75+Y_OFFSET_FRONT, Math.toRadians(160))),
-        GATE_INTAKE_SAFE_TRIPLE_SAFE (new Pose(20+ X_OFFSET_FRONT, 57+Y_OFFSET_FRONT, Math.toRadians(180))),
+        GATE_INTAKE_SAFE_TRIPLE_SAFE (new Pose(19+ X_OFFSET_FRONT, 57+Y_OFFSET_FRONT, Math.toRadians(180))),
+
+        // SINGLE GATE CYCLE (Van_K)
+        GATE_INTAKE_ONLY_ONE (new Pose(10.5, 55.65, Math.toRadians(154))),
+        // Near-identical to GATE_INTAKE_ONLY_ONE (y - 1 so the robot actually moves) but rotatedzfy8
+        // to the shoot heading, so it turns in place before driving straight back to shoot.
+        GATE_INTAKE_ONLY_ONE_SAFE (new Pose(10.5, 55.15, Math.toRadians(205))),
+
         FRONT_SHOOT_AFTER_GATE (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(215))),
         FRONT_SHOOT_AFTER_GATE_FINAL (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(255))),
         FRONT_SHOOT_AFTER_GATE_FINAL_FINAL (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(210))),
 
-        FRONT_START(new Pose(17, 111.64, Math.toRadians(180))),
+        FRONT_SHOOT_AFTER_GATE_NEW (new Pose(63.268+ X_OFFSET_FRONT, 77.5655+Y_OFFSET_FRONT, Math.toRadians(215))),
+
+        FRONT_START(new Pose(19, 110.74, Math.toRadians(180))),
         MID_SPIKE_START(new Pose(59, 71.5, Math.toRadians(220))),
-        MID_SPIKE_CONTROL(new Pose(60, 61)),
-        MID_SPIKE_END(new Pose(20, 59, Math.toRadians(180))),
+        MID_SPIKE_CONTROL(new Pose(60, 60)),
+        MID_SPIKE_CONTROL_BACK(new Pose(60, 65)),
+        MID_SPIKE_END(new Pose(19.5, 56, Math.toRadians(180))),
         CLOSE_SPIKE_START(new Pose(42.578, 83.5327, Math.toRadians(180))),
-        CLOSE_SPIKE_END(new Pose(18.5, 84, Math.toRadians(180))),
-        FINAL_SHOOT(new Pose(57, 101, Math.toRadians(200))),
+        CLOSE_SPIKE_END(new Pose(20, 84, Math.toRadians(180))),
+        FINAL_SHOOT(new Pose(54.5, 101, Math.toRadians(200))),
 
         SHOOT_BACK_1 (new Pose(57.3185, 20.1238, Math.toRadians(155))),
         TRIPLE_FAR_SPIKE_CONTROL (new Pose(57, 37)),
         TRIPLE_FAR_SPIKE_END(new Pose(10, 35.8, Math.toRadians(180))),
 
-        INTERMEDIATE_FAR_INTAKE_POSE   (new Pose(54.5, 33.5)),
-        FAR_SPIKE_END     (new Pose(18, 36, Math.toRadians(180)));
+        INTERMEDIATE_FAR_INTAKE_POSE   (new Pose(54.5, 32.5)),
+        FAR_SPIKE_END     (new Pose(17, 36, Math.toRadians(180)));
 
 
         private final Pose blue;
@@ -83,6 +93,8 @@ public final class AutoPaths2 {
         TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE,
         GATE_INTAKE_SAFE_SAFE_TO_SHOOT,
         GATE_INTAKE_SAFE_SAFE_TO_SHOOT_FINAl,
+        SHOOT_TO_GATE_INTAKE_ONLY_ONE,
+        GATE_INTAKE_ONLY_ONE_TO_SHOOT,
     }
 
     // ====== INSTANCE STATE ======
@@ -128,7 +140,7 @@ public final class AutoPaths2 {
 
         paths.put(PathId.SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE,
                 f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.MID_SPIKE_END), getPose(PoseId.MID_SPIKE_CONTROL), getPose(PoseId.FRONT_SHOOT_AFTER_GATE)))
+                        .addPath(new BezierLine(getPose(PoseId.MID_SPIKE_END), getPose(PoseId.FRONT_SHOOT_AFTER_GATE)))
                         .setLinearHeadingInterpolation(getPose(PoseId.MID_SPIKE_END).getHeading(), getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading())
                         .build()
         );
@@ -137,8 +149,8 @@ public final class AutoPaths2 {
 
         paths.put(PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END,
                 f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_FINAL_FINAL), getPose(PoseId.CLOSE_SPIKE_START), getPose(PoseId.CLOSE_SPIKE_END)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_FINAL_FINAL).getHeading(), getPose(PoseId.CLOSE_SPIKE_END).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW), getPose(PoseId.CLOSE_SPIKE_END)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW).getHeading(), getPose(PoseId.CLOSE_SPIKE_END).getHeading())
                         .build()
         );
 
@@ -202,6 +214,31 @@ public final class AutoPaths2 {
                                 HeadingInterpolator.PiecewiseNode.linear(0.0, 0.3, getPose(PoseId.GATE_INTAKE_SAFE_TRIPLE_SAFE).getHeading(), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_FINAL).getHeading()),
                                 HeadingInterpolator.PiecewiseNode.linear(0.3, 1, getPose(PoseId.FRONT_SHOOT_AFTER_GATE_FINAL).getHeading(), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_FINAL).getHeading())
                         ))
+                        .build()
+        );
+
+        // ====== SINGLE GATE CYCLE (Van_K) ======
+        // Shoot position -> single gate intake. Mirrors SHOOT_TO_GATE_INTAKE_NORMAL: reach the
+        // gate heading by the halfway point, then hold it for the intake.
+        paths.put(PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW), getPose(PoseId.GATE_INTAKE_ONLY_ONE)))
+                        .setHeadingInterpolation(HeadingInterpolator.piecewise(
+                                HeadingInterpolator.PiecewiseNode.linear(0.0, 0.5, getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading()),
+                                HeadingInterpolator.PiecewiseNode.linear(0.5, 1, getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading())
+                        ))
+                        .build()
+        );
+
+        // Single gate intake -> shoot, in two steps:
+        //   1) Turn in place to the shoot heading (tiny y move so the follower actually runs).
+        //   2) Drive straight back to the shoot pose at a constant heading (no strafing).
+        paths.put(PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW)))
+                        .setConstantHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading())
                         .build()
         );
     }

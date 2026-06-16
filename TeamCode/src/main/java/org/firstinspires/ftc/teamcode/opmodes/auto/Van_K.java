@@ -34,16 +34,17 @@ public class Van_K extends MyCommandOpMode {
         r.overrideAutoEndPose(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_START));
         schedule(
                 new SequentialCommandGroup(
+                        // STARTING
                         new ParallelCommandGroup(
                                 new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                                new InstantCommand(() -> r.shooter.setActive(true)),
-                                new InstantCommand(ShotPlanner::disableSOTM)
+                                new InstantCommand(() -> r.shooter.setActive(true))
                         ),
 
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
+                        // MID SPIKE CYCLE
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
                         new WaitCommand(25),
@@ -52,17 +53,41 @@ public class Van_K extends MyCommandOpMode {
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
+                        // GATE CYCLE 1
+
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
-                        new WaitCommand(200),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE)),
-                        new WaitCommand(500),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE)),
-                        new WaitCommand(25),
-                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_SAFE_SAFE_TO_SHOOT)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE)),
+                        new WaitCommand(1350),
+
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
+                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
+
+                        // GATE CYCLE 2
+
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE)),
+                        new WaitCommand(1450),
+
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT)),
+                        r.shootAll2(),
+                        new InstantCommand(() -> r.door.setOpen(false)),
+                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
+
+                        // GATE CYCLE 3
+
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE)),
+                        new WaitCommand(1450),
+
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT)),
+                        r.shootAll2(),
+                        new InstantCommand(() -> r.door.setOpen(false)),
+                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
+
+
+                        // CLOSE CYCLE
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END)),
