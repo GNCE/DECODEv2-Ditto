@@ -75,7 +75,9 @@ public class ShotPlanner {
     }
 
     public static double POSE_UNITS_TO_METERS = 0.0254;
-    public static double EXIT_VEL_M_PER_RPM = 0.00365;
+    public static double EXIT_VEL_M_PER_RPM_CLOSE = 0.00365;       // NEAR coefficient (your tuned value)
+    public static double EXIT_VEL_M_PER_RPM_FAR = 0.00342;   // FAR coefficient (tune this)
+    public static double EXIT_VEL_SPLIT_THRESHOLD_M = 2.97;   // distance (m) at/above which FAR is used
 
     // Predict the robot pose ahead so each actuator is already tracking where the robot WILL be.
     // This is an actuator-responsiveness lead, not the shot-accuracy horizon: the SOTM virtual-goal
@@ -108,10 +110,16 @@ public class ShotPlanner {
 
     public static int RPM_SMOOTHING_WINDOW_SAMPLES = 8;
 
-    public static double GOAL_HEIGHT_M = 1.2575;
+    public static double GOAL_HEIGHT_M = 1.2615; // 1.2575
     // Treat the goal as a vertical opening, not a single point: a shot counts if it crosses the
     // goal plane anywhere within GOAL_HEIGHT_M +/- GOAL_ACCEPT_BAND_M. Widen for more RPM leniency.
     public static double GOAL_ACCEPT_BAND_M = 0.06; // 0.06
+    // How many candidate crossing heights to test across the opening band, from the center outward
+    // to both edges. 1 = center only (original behavior); higher = more intermediate points are
+    // checked, which lets the solver find a valid hood angle in more borderline geometries instead
+    // of giving up when only the exact-center angle is tried. Odd values keep the sampling
+    // symmetric about the center.
+    public static int GOAL_HEIGHT_SAMPLES = 7;
     public static double GOAL_LIP_HEIGHT_M = 1.0;
     public static double GOAL_DEPTH_M = 1 * 0.0254;
     public static double LAUNCHER_HEIGHT_ACTUAL_M = 0.38;
@@ -122,8 +130,13 @@ public class ShotPlanner {
     };
 
     private final double[] velocities = {
-            1240, 1300, 1440, 1540, 1560, 1580, 1680, 1700, 1830, 1875, 1900, 1950
+            1240, 1300, 1440, 1540, 1560, 1580, 1680, 1775, 1950, 2000, 2050, 2100
     };
+
+    /** Exit-velocity-per-RPM coefficient, switched by horizontal shot distance (meters). */
+    private static double exitVelPerRpm(double xMeters) {
+        return xMeters > EXIT_VEL_SPLIT_THRESHOLD_M ? EXIT_VEL_M_PER_RPM_FAR : EXIT_VEL_M_PER_RPM_CLOSE;
+    }
 
     private final InterpLUT velocityLut = new InterpLUT();
 
@@ -354,9 +367,35 @@ public class ShotPlanner {
         return 90.0 - Math.toDegrees(theta);
     }
 
+    /**
+     * Candidate crossing heights (above the launcher) to try, ordered center-first and then
+     * expanding outward toward both edges of the opening band. Testing several heights — not just
+     * the exact center — lets the solver accept a shot whenever ANY height within the opening is
+     * reachable with a mechanically-valid hood angle, instead of giving up when the center-aimed
+     * angle alone clamps out of range. The band edges (minDh / maxDh) are the outermost samples.
+     */
+    private static double[] sampledHeights(double centerDh, double minDh, double maxDh, int samples) {
+        if (samples <= 1) return new double[]{centerDh};
+
+        double[] out = new double[samples];
+        out[0] = centerDh;
+
+        int pairs = samples / 2;             // how many heights to place on each side of center
+        double upSpan = maxDh - centerDh;
+        double downSpan = centerDh - minDh;
+
+        int idx = 1;
+        for (int k = 1; k <= pairs && idx < samples; k++) {
+            double frac = (double) k / pairs; // reaches 1.0 (the band edge) at k == pairs
+            if (idx < samples) out[idx++] = centerDh + upSpan * frac;
+            if (idx < samples) out[idx++] = centerDh - downSpan * frac;
+        }
+        return out;
+    }
+
     public static double solveHoodDeg(double distPoseUnits, double rpm) {
         double x = distPoseUnits * POSE_UNITS_TO_METERS;
-        double v = Math.abs(rpm) * EXIT_VEL_M_PER_RPM;
+        double v = Math.abs(rpm) * exitVelPerRpm(x);
         double xLip = x - GOAL_DEPTH_M;
 
         if (x <= 1e-6 || v <= 1e-6) return Double.NaN;
@@ -378,23 +417,31 @@ public class ShotPlanner {
         double thetaFlatMech  = Math.toRadians(90.0 - maxHood); // flattest the hood allows
         double thetaSteepMech = Math.toRadians(90.0 - minHood); // steepest the hood allows
 
-        // Ideal angles that pass exactly through the center of the opening.
-        double discBack = v4 - g * (g * x * x + 2.0 * centerDh * v2);
-        if (discBack < 0.0) {
-            tel.addLine("[AUTO AIM] IMPOSSIBLE (unreachable)");
-            return Double.NaN;
+        // Walk candidate crossing heights from the center outward to both edges of the opening. For
+        // each, solve the two launch angles (low / high arc) that pass through it exactly, then let
+        // tryArc clamp into the hood range and confirm the shot still crosses inside the band and
+        // clears the lip. The first valid candidate wins, and the center is tried first, so the
+        // most forgiving shot is always preferred. anyReachable distinguishes "no height in the
+        // opening is physically reachable at this speed/distance" from "reachable but no valid hood
+        // angle within mechanical limits."
+        boolean anyReachable = false;
+        for (double targetDh : sampledHeights(centerDh, minDh, maxDh, Math.max(1, GOAL_HEIGHT_SAMPLES))) {
+            double disc = v4 - g * (g * x * x + 2.0 * targetDh * v2);
+            if (disc < 0.0) continue; // this height isn't reachable at this speed + distance
+            anyReachable = true;
+
+            double sqrtDisc = Math.sqrt(disc);
+            double thetaLo = Math.atan((v2 - sqrtDisc) / (g * x));
+            double thetaHi = Math.atan((v2 + sqrtDisc) / (g * x));
+
+            Double low = tryArc(thetaLo, thetaFlatMech, thetaSteepMech, x, xLip, v2, g, minDh, maxDh, "[AUTO AIM] LOW ARC");
+            if (low != null) return low;
+
+            Double high = tryArc(thetaHi, thetaFlatMech, thetaSteepMech, x, xLip, v2, g, minDh, maxDh, "[AUTO AIM] HIGH ARC");
+            if (high != null) return high;
         }
-        double sqrtBack = Math.sqrt(discBack);
-        double thetaLo = Math.atan((v2 - sqrtBack) / (g * x));
-        double thetaHi = Math.atan((v2 + sqrtBack) / (g * x));
 
-        Double low = tryArc(thetaLo, thetaFlatMech, thetaSteepMech, x, xLip, v2, g, minDh, maxDh, "[AUTO AIM] LOW ARC");
-        if (low != null) return low;
-
-        Double high = tryArc(thetaHi, thetaFlatMech, thetaSteepMech, x, xLip, v2, g, minDh, maxDh, "[AUTO AIM] HIGH ARC");
-        if (high != null) return high;
-
-        tel.addLine("[AUTO AIM] IMPOSSIBLE");
+        tel.addLine(anyReachable ? "[AUTO AIM] IMPOSSIBLE" : "[AUTO AIM] IMPOSSIBLE (unreachable)");
         return Double.NaN;
     }
 
@@ -402,7 +449,7 @@ public class ShotPlanner {
         double xMeters = distPoseUnits * POSE_UNITS_TO_METERS;
         double theta = hoodDegToThetaRadFromHorizontal(hoodDegFromVertical);
 
-        double vExit = Math.abs(rpm) * EXIT_VEL_M_PER_RPM;
+        double vExit = Math.abs(rpm) * exitVelPerRpm(xMeters);
         double vHoriz = vExit * Math.cos(theta);
 
         if (vHoriz < 1e-3) return Double.NaN;

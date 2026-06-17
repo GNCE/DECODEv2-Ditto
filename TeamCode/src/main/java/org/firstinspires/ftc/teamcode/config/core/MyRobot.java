@@ -224,7 +224,7 @@ public class MyRobot extends Robot {
         }
 
         if(g1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.8) cornerSquare();
-        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) closeWallSquare();
+        if(g1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) alignPreset();
         if(g1.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) farWallSquare();
         if(g1.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) allianceWallSquare();
     }
@@ -453,6 +453,19 @@ public class MyRobot extends Robot {
 
     public void closeWallSquare(){
         setPose(new Pose(f.getPose().getX(), f.getPose().getY(), Math.toRadians(-90)));
+    }
+
+    // DPAD_UP alignment preset (blue-alliance coordinates). For RED, x mirrors to 144 - x.
+    public static double alignPresetX = 18.415;
+    public static double alignPresetY = 119.101;
+    public static double alignPresetHeadingDeg = 141.21;
+
+    /** Snap the robot pose to the fixed alignment preset above (bound to DPAD_UP in teleop).
+     *  RED mirrors x across the field (144 - x); y and heading are left as-is. */
+    public void alignPreset(){
+        boolean red = isRed != null && isRed;
+        double x = red ? 144.0 - alignPresetX : alignPresetX;
+        setPose(new Pose(x, alignPresetY, Math.toRadians(alignPresetHeadingDeg)));
     }
 
     private SAT2D.ConvexPolygon chassisBox(){
