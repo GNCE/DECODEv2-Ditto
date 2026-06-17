@@ -40,17 +40,21 @@ public class CloseSoloAuto extends MyCommandOpMode {
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                                 new InstantCommand(() -> r.shooter.setActive(true))
                         ),
+                        // Hold the flywheel at each upcoming shot pose's RPM while driving/collecting.
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SINGLE_MID_SPIKE_START)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.FRONT_SHOOT_AFTER_GATE)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
                         new WaitCommand(100),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE)),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.FRONT_SHOOT_AFTER_GATE)),
                         new RepeatCommand(
                                 new SequentialCommandGroup(
                                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
@@ -65,13 +69,15 @@ public class CloseSoloAuto extends MyCommandOpMode {
                                 2
                         ),
 
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SINGLE_FINAL_SHOOT)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_START)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_CLOSE_SPIKE_START_TO_CLOSE_SPIKE_END)),
                         new WaitCommand(100),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT)),
                         r.shootAll(),
-                        new InstantCommand(() -> r.door.setOpen(false))
+                        new InstantCommand(() -> r.door.setOpen(false)),
+                        r.clearShooterSpinUp()
                 )
         );
     }

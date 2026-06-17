@@ -34,6 +34,8 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
         r.overrideAutoEndPose(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_START));
         schedule(
                 new SequentialCommandGroup(
+                        // Hold the flywheel at each upcoming shot pose's RPM while driving/collecting.
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.MID_SPIKE_START)),
                         new ParallelCommandGroup(
                                 new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
@@ -44,6 +46,7 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
                         new WaitCommand(25),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
@@ -52,6 +55,7 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
                         new WaitCommand(200),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE)),
@@ -64,6 +68,7 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_FINAL)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_NORMAL)),
                         new WaitCommand(700),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE)),
@@ -76,6 +81,7 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_FINAL_FINAL)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_FAR_SPIKE_END)),
                         new WaitCommand(30),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
@@ -84,12 +90,14 @@ public class I_LOVE_DONUTS extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FINAL_SHOOT)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END)),
                         new WaitCommand(25),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
+                        r.clearShooterSpinUp(),
                         new InstantCommand(() -> r.shooter.setActive(false))
                 )
         );

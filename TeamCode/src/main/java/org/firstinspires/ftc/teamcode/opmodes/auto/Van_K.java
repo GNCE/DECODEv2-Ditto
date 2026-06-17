@@ -35,6 +35,8 @@ public class Van_K extends MyCommandOpMode {
         schedule(
                 new SequentialCommandGroup(
                         // STARTING
+                        // Hold the flywheel at each upcoming shot pose's RPM while driving/collecting.
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.MID_SPIKE_START)),
                         new ParallelCommandGroup(
                                 new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
@@ -46,6 +48,7 @@ public class Van_K extends MyCommandOpMode {
 
                         // MID SPIKE CYCLE
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
                         new WaitCommand(25),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
@@ -56,6 +59,7 @@ public class Van_K extends MyCommandOpMode {
                         // GATE CYCLE 1
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE)),
                         new WaitCommand(1350),
 
@@ -67,6 +71,7 @@ public class Van_K extends MyCommandOpMode {
                         // GATE CYCLE 2
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE)),
                         new WaitCommand(1450),
 
@@ -78,6 +83,7 @@ public class Van_K extends MyCommandOpMode {
                         // GATE CYCLE 3
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE)),
                         new WaitCommand(1450),
 
@@ -90,12 +96,14 @@ public class Van_K extends MyCommandOpMode {
                         // CLOSE CYCLE
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FINAL_SHOOT)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END)),
                         new WaitCommand(25),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
+                        r.clearShooterSpinUp(),
                         new InstantCommand(() -> r.shooter.setActive(false))
                 )
         );

@@ -45,6 +45,8 @@ public class FarWithFarSpikeAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
+                        // Hold the flywheel at the next shot pose's RPM while collecting near the goal.
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_1)),
                         new ParallelRaceGroup(
                                 new SequentialCommandGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_BACK_TO_HUMAN_PLAYER_END)),
@@ -58,6 +60,7 @@ public class FarWithFarSpikeAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_3)),
                         new ParallelRaceGroup(
                                 new SequentialCommandGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_1_TO_FAR_SPIKE_END)),
@@ -70,6 +73,7 @@ public class FarWithFarSpikeAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_2)),
                         new SequentialCommandGroup(
                                 new ParallelRaceGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_3_TO_GATE_SWEEP_END)),
@@ -82,6 +86,7 @@ public class FarWithFarSpikeAuto extends MyCommandOpMode {
                         ),
 
 
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_2)),
                         new SequentialCommandGroup(
                                 new ParallelRaceGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_2_ALT_GATE_SWEEP_END)),
@@ -93,6 +98,7 @@ public class FarWithFarSpikeAuto extends MyCommandOpMode {
                                 new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                         ),
 
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_2)),
                         new SequentialCommandGroup(
                                 new ParallelRaceGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_2_ALT_GATE_SWEEP_END)),
@@ -104,6 +110,7 @@ public class FarWithFarSpikeAuto extends MyCommandOpMode {
                                 new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                         ),
 
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_FINAL)),
                         new SequentialCommandGroup(
                                 new ParallelRaceGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_2_ALT_GATE_SWEEP_END)),
@@ -116,6 +123,7 @@ public class FarWithFarSpikeAuto extends MyCommandOpMode {
                         )
                 )
                         .raceWith(new WaitCommand(29500))
+                        .andThen(r.clearShooterSpinUp())
                         .andThen(r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.PARK_FINAL)))
         );
     }
