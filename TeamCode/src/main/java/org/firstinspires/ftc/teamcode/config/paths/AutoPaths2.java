@@ -20,6 +20,8 @@ public final class AutoPaths2 {
 
     static final double X_OFFSET_FRONT = -7.414;
     static final double Y_OFFSET_FRONT = -1.617463638;
+
+    static final double GATE_INTAKE_Y_OFFSET = 0.175;
     // 5.78, 9.23
     // 5.45, 9.485
     // 133.95 6.866
@@ -41,7 +43,10 @@ public final class AutoPaths2 {
         GATE_INTAKE_SAFE_TRIPLE_SAFE (new Pose(19+ X_OFFSET_FRONT, 57+Y_OFFSET_FRONT, Math.toRadians(180))),
 
         // SINGLE GATE CYCLE (Van_K)
-        GATE_INTAKE_ONLY_ONE (new Pose(10.5, 55.65, Math.toRadians(154))),
+        GATE_INTAKE_ONLY_ONE_1 (new Pose(10.5, 58.5, Math.toRadians(158))),
+        GATE_INTAKE_ONLY_ONE_2 (new Pose(10.5, 58.5 + GATE_INTAKE_Y_OFFSET, Math.toRadians(158))),
+        GATE_INTAKE_ONLY_ONE_3 (new Pose(10.5, 58.5 + GATE_INTAKE_Y_OFFSET*2, Math.toRadians(158))),
+        GATE_INTAKE_ONLY_ONE_4 (new Pose(10.5, 58.5 + GATE_INTAKE_Y_OFFSET*3, Math.toRadians(158))),
         // Near-identical to GATE_INTAKE_ONLY_ONE (y - 1 so the robot actually moves) but rotatedzfy8
         // to the shoot heading, so it turns in place before driving straight back to shoot.
         GATE_INTAKE_ONLY_ONE_SAFE (new Pose(10.5, 55.15, Math.toRadians(205))),
@@ -60,6 +65,9 @@ public final class AutoPaths2 {
         CLOSE_SPIKE_START(new Pose(42.578, 83.5327, Math.toRadians(180))),
         CLOSE_SPIKE_END(new Pose(20, 84, Math.toRadians(180))),
         FINAL_SHOOT(new Pose(54.5, 101, Math.toRadians(200))),
+        FINAL_SHOOT_BRUNSON(new Pose(40, 84, Math.toRadians(180))),
+
+        BRUNSON_FINAL_PARK_POS(new Pose(38, 84, Math.toRadians(180))),
 
         SHOOT_BACK_1 (new Pose(57.3185, 20.1238, Math.toRadians(155))),
         TRIPLE_FAR_SPIKE_CONTROL (new Pose(57, 37)),
@@ -81,11 +89,13 @@ public final class AutoPaths2 {
     }
     public enum PathId {
         SINGLE_CLOSE_START_TO_MID_SPIKE_START,
+        BRUNSON_FINAL_PARK,
         SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END,
         SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE,
         SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END,
         SINGLE_SHOOT_AFTER_GATE_TO_FAR_SPIKE_END,
         SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT,
+        SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT_BRUNSON,
         SINGLE_FAR_SPIKE_END_TO_FRONT_SHOOT_FOR_CLOSE_PREP,
         SHOOT_TO_GATE_INTAKE_NORMAL,
         TRIPLE_GATE_INTAKE_TO_GATE_INTAKE_SAFE,
@@ -93,8 +103,14 @@ public final class AutoPaths2 {
         TRIPLE_GATE_SAFE_TO_GATE_INTAKE_SAFE_SAFE,
         GATE_INTAKE_SAFE_SAFE_TO_SHOOT,
         GATE_INTAKE_SAFE_SAFE_TO_SHOOT_FINAl,
-        SHOOT_TO_GATE_INTAKE_ONLY_ONE,
-        GATE_INTAKE_ONLY_ONE_TO_SHOOT,
+        SHOOT_TO_GATE_INTAKE_ONLY_ONE_1,
+        SHOOT_TO_GATE_INTAKE_ONLY_ONE_2,
+        SHOOT_TO_GATE_INTAKE_ONLY_ONE_3,
+        SHOOT_TO_GATE_INTAKE_ONLY_ONE_4,
+        GATE_INTAKE_ONLY_ONE_TO_SHOOT_1,
+        GATE_INTAKE_ONLY_ONE_TO_SHOOT_2,
+        GATE_INTAKE_ONLY_ONE_TO_SHOOT_3,
+        GATE_INTAKE_ONLY_ONE_TO_SHOOT_4,
         GATE_INTAKE_ONLY_ONE_TO_SHOOT_PARTNER,
     }
 
@@ -147,6 +163,10 @@ public final class AutoPaths2 {
         );
 
         put(PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT, PoseId.CLOSE_SPIKE_END, PoseId.FINAL_SHOOT);
+
+        put(PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT_BRUNSON, PoseId.CLOSE_SPIKE_END, PoseId.FINAL_SHOOT_BRUNSON);
+
+        put(PathId.BRUNSON_FINAL_PARK, PoseId.FINAL_SHOOT_BRUNSON, PoseId.BRUNSON_FINAL_PARK_POS);
 
         paths.put(PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END,
                 f.pathBuilder()
@@ -221,12 +241,42 @@ public final class AutoPaths2 {
         // ====== SINGLE GATE CYCLE (Van_K) ======
         // Shoot position -> single gate intake. Mirrors SHOOT_TO_GATE_INTAKE_NORMAL: reach the
         // gate heading by the halfway point, then hold it for the intake.
-        paths.put(PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE,
+        paths.put(PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_1,
                 f.pathBuilder()
-                        .addPath(new BezierLine(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW), getPose(PoseId.GATE_INTAKE_ONLY_ONE)))
+                        .addPath(new BezierLine(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW), getPose(PoseId.GATE_INTAKE_ONLY_ONE_1)))
                         .setHeadingInterpolation(HeadingInterpolator.piecewise(
-                                HeadingInterpolator.PiecewiseNode.linear(0.0, 0.5, getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading()),
-                                HeadingInterpolator.PiecewiseNode.linear(0.5, 1, getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading())
+                                HeadingInterpolator.PiecewiseNode.linear(0.0, 0.5, getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_1).getHeading()),
+                                HeadingInterpolator.PiecewiseNode.linear(0.5, 1, getPose(PoseId.GATE_INTAKE_ONLY_ONE_1).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_1).getHeading())
+                        ))
+                        .build()
+        );
+
+        paths.put(PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_2,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW), getPose(PoseId.GATE_INTAKE_ONLY_ONE_2)))
+                        .setHeadingInterpolation(HeadingInterpolator.piecewise(
+                                HeadingInterpolator.PiecewiseNode.linear(0.0, 0.5, getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_2).getHeading()),
+                                HeadingInterpolator.PiecewiseNode.linear(0.5, 1, getPose(PoseId.GATE_INTAKE_ONLY_ONE_2).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_2).getHeading())
+                        ))
+                        .build()
+        );
+
+        paths.put(PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_3,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW), getPose(PoseId.GATE_INTAKE_ONLY_ONE_3)))
+                        .setHeadingInterpolation(HeadingInterpolator.piecewise(
+                                HeadingInterpolator.PiecewiseNode.linear(0.0, 0.5, getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_3).getHeading()),
+                                HeadingInterpolator.PiecewiseNode.linear(0.5, 1, getPose(PoseId.GATE_INTAKE_ONLY_ONE_3).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_3).getHeading())
+                        ))
+                        .build()
+        );
+
+        paths.put(PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_4,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW), getPose(PoseId.GATE_INTAKE_ONLY_ONE_4)))
+                        .setHeadingInterpolation(HeadingInterpolator.piecewise(
+                                HeadingInterpolator.PiecewiseNode.linear(0.0, 0.5, getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_4).getHeading()),
+                                HeadingInterpolator.PiecewiseNode.linear(0.5, 1, getPose(PoseId.GATE_INTAKE_ONLY_ONE_4).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_4).getHeading())
                         ))
                         .build()
         );
@@ -234,10 +284,37 @@ public final class AutoPaths2 {
         // Single gate intake -> shoot, in two steps:
         //   1) Turn in place to the shoot heading (tiny y move so the follower actually runs).
         //   2) Drive straight back to the shoot pose at a constant heading (no strafing).
-        paths.put(PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT,
+        paths.put(PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_1,
                 f.pathBuilder()
-                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_1), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE_1).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW)))
+                        .setConstantHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading())
+                        .build()
+        );
+
+        paths.put(PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_2,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_2), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE_2).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW)))
+                        .setConstantHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading())
+                        .build()
+        );
+
+        paths.put(PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_3,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_3), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE_3).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW)))
+                        .setConstantHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading())
+                        .build()
+        );
+
+        paths.put(PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_4,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_4), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE_4).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
                         .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW)))
                         .setConstantHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading())
                         .build()
@@ -245,8 +322,8 @@ public final class AutoPaths2 {
 
         paths.put(PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_PARTNER,
                 f.pathBuilder()
-                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE)))
-                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_1), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE_1).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
                         .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_FINAL)))
                         .setConstantHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_FINAL).getHeading())
                         .build()

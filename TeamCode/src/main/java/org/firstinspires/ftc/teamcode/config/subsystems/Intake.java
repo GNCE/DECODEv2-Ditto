@@ -27,6 +27,8 @@ public class Intake extends SubsysCore {
     public static double TRANSFER_T_POWER = 1;
     public static double ONE_TRANSFER_T_POWER = 1;
 
+    public static double TRANSFER_POWER_WHEN_INTAKE = 0.36;
+
     Timer timer;
 
     public Intake(){
@@ -86,7 +88,7 @@ public class Intake extends SubsysCore {
                 tr.setPower(-1);
                 break;
             case INTAKE:
-                if (size <= 0) tr.setPower(0.5);
+                if (size <= 1) tr.setPower(TRANSFER_POWER_WHEN_INTAKE);
                 else tr.setPower(0);
                 if (size >= 3){
                     im.setPower(0);

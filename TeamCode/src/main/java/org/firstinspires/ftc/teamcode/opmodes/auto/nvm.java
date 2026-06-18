@@ -60,10 +60,10 @@ public class nvm extends MyCommandOpMode {
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_1)),
                         new WaitCommand(850),
 
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_1)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
@@ -72,10 +72,10 @@ public class nvm extends MyCommandOpMode {
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_2)),
                         new WaitCommand(950),
 
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_2)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
@@ -84,7 +84,7 @@ public class nvm extends MyCommandOpMode {
 
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_3)),
                         new WaitCommand(950),
 
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_PARTNER)),

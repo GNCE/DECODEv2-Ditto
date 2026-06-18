@@ -130,7 +130,7 @@ public class ShotPlanner {
     };
 
     private final double[] velocities = {
-            1240, 1300, 1440, 1540, 1560, 1580, 1680, 1775, 1950, 2000, 2050, 2100
+            1240, 1300, 1440, 1540, 1560, 1580, 1680, 1785, 1960, 2010, 2050, 2100
     };
 
     /** Exit-velocity-per-RPM coefficient, switched by horizontal shot distance (meters). */
