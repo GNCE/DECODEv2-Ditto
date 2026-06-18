@@ -95,6 +95,7 @@ public final class AutoPaths2 {
         GATE_INTAKE_SAFE_SAFE_TO_SHOOT_FINAl,
         SHOOT_TO_GATE_INTAKE_ONLY_ONE,
         GATE_INTAKE_ONLY_ONE_TO_SHOOT,
+        GATE_INTAKE_ONLY_ONE_TO_SHOOT_PARTNER,
     }
 
     // ====== INSTANCE STATE ======
@@ -239,6 +240,15 @@ public final class AutoPaths2 {
                         .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
                         .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_NEW)))
                         .setConstantHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE).getHeading())
+                        .build()
+        );
+
+        paths.put(PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_PARTNER,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.GATE_INTAKE_ONLY_ONE).getHeading(), getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE).getHeading())
+                        .addPath(new BezierLine(getPose(PoseId.GATE_INTAKE_ONLY_ONE_SAFE), getPose(PoseId.FRONT_SHOOT_AFTER_GATE_FINAL)))
+                        .setConstantHeadingInterpolation(getPose(PoseId.FRONT_SHOOT_AFTER_GATE_FINAL).getHeading())
                         .build()
         );
     }
