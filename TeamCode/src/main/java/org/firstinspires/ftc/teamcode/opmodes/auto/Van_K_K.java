@@ -79,7 +79,7 @@ public class Van_K_K extends MyCommandOpMode {
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_2)),
                         new ParallelRaceGroup(
-                                new WaitCommand(825),
+                                new WaitCommand(810),
                                 new WaitUntilCommand(r.storage::isFull)
                         ),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_2)),
@@ -93,7 +93,7 @@ public class Van_K_K extends MyCommandOpMode {
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_3)),
                         new ParallelRaceGroup(
-                                new WaitCommand(850),
+                                new WaitCommand(820),
                                 new WaitUntilCommand(r.storage::isFull)
                         ),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_3)),
@@ -107,7 +107,7 @@ public class Van_K_K extends MyCommandOpMode {
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_4)),
                         new ParallelRaceGroup(
-                                new WaitCommand(875),
+                                new WaitCommand(830),
                                 new WaitUntilCommand(r.storage::isFull)
                         ),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_4)),
@@ -127,7 +127,7 @@ public class Van_K_K extends MyCommandOpMode {
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
-                        new FollowPathCommand(r.f, autoPaths2.getPath(BRUNSON_FINAL_PARK)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.BRUNSON_FINAL_PARK)),
 
 
                         r.clearShooterSpinUp(),

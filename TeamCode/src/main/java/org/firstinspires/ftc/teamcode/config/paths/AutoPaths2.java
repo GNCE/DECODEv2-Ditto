@@ -21,7 +21,7 @@ public final class AutoPaths2 {
     static final double X_OFFSET_FRONT = -7.414;
     static final double Y_OFFSET_FRONT = -1.617463638;
 
-    static final double GATE_INTAKE_Y_OFFSET = 0.175;
+    static final double GATE_INTAKE_Y_OFFSET = 0.1725;
     // 5.78, 9.23
     // 5.45, 9.485
     // 133.95 6.866
@@ -65,9 +65,9 @@ public final class AutoPaths2 {
         CLOSE_SPIKE_START(new Pose(42.578, 83.5327, Math.toRadians(180))),
         CLOSE_SPIKE_END(new Pose(20, 84, Math.toRadians(180))),
         FINAL_SHOOT(new Pose(54.5, 101, Math.toRadians(200))),
-        FINAL_SHOOT_BRUNSON(new Pose(40, 84, Math.toRadians(180))),
+        FINAL_SHOOT_BRUNSON(new Pose(44, 84, Math.toRadians(180))),
 
-        BRUNSON_FINAL_PARK_POS(new Pose(38, 84, Math.toRadians(180))),
+        BRUNSON_FINAL_PARK_POS(new Pose(41, 84, Math.toRadians(180))),
 
         SHOOT_BACK_1 (new Pose(57.3185, 20.1238, Math.toRadians(155))),
         TRIPLE_FAR_SPIKE_CONTROL (new Pose(57, 37)),
