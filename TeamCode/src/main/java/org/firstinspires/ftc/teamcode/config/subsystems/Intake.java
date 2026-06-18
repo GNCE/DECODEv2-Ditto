@@ -87,6 +87,7 @@ public class Intake extends SubsysCore {
                 break;
             case INTAKE:
                 if (size <= 0) tr.setPower(0.5);
+                else tr.setPower(0);
                 if (size >= 3){
                     im.setPower(0);
                     setIntakePitch(INTAKE_UP);
