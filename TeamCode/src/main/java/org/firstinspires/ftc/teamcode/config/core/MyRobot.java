@@ -432,6 +432,7 @@ public class MyRobot extends Robot {
     }
 
     public void setPose(Pose pose){
+        Turret.MANUAL_OFFSET = 0;
         f.setPose(pose);
         f.update();
     }
