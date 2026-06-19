@@ -127,6 +127,8 @@ public class Van_K_K extends MyCommandOpMode {
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 
+
+                        // PARK
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.BRUNSON_FINAL_PARK)),
 
 
