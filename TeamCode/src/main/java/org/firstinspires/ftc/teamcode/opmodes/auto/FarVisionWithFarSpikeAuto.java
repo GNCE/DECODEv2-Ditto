@@ -27,6 +27,12 @@ import java.util.List;
 public class FarVisionWithFarSpikeAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
+    // Hard safety ceiling on the robot's field y. If y ever exceeds this, the routine aborts and
+    // the drivetrain brakes. NOTE: this triggers AFTER y crosses the line, so the robot will
+    // overshoot slightly while braking -- set this a touch below the true hard limit if you need
+    // to guarantee y never physically passes 36.
+    public static double MAX_Y = 36;
+
     @Override
     public void initialize() {
         r = new MyRobot(hardwareMap, telemetry, gamepad1, gamepad2, List.of(SubsystemConfig.INTAKE, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER, SubsystemConfig.DOOR, SubsystemConfig.FOLLOWER, SubsystemConfig.LL), OpModeType.AUTO);
@@ -54,9 +60,9 @@ public class FarVisionWithFarSpikeAuto extends MyCommandOpMode {
                                 new SequentialCommandGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_BACK_TO_HUMAN_PLAYER_END)),
                                         new WaitCommand(500)
-                                        ),
-                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
                                 ),
+                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
+                        ),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_1)),
                         new WaitCommand(100),
                         r.shootAll(),
@@ -101,8 +107,19 @@ public class FarVisionWithFarSpikeAuto extends MyCommandOpMode {
                         )
                 )
                         .raceWith(new WaitCommand(29500))
+                        // Y-LIMIT SAFETY: abort the whole routine the instant the robot's y exceeds MAX_Y.
+                        .raceWith(new WaitUntilCommand(() -> r.f.getPose().getY() > MAX_Y))
                         .andThen(r.clearShooterSpinUp())
-                        .andThen(r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.PARK_FINAL)))
+                        // If we exited because of the y-limit, brake + hold instead of driving to park
+                        // (so we don't drive back across the line). Otherwise park as normal.
+                        .andThen(new ConditionalCommand(
+                                new InstantCommand(() -> {
+                                    r.f.startTeleopDrive();
+                                    r.f.setTeleOpDrive(0, 0, 0, true);
+                                }),
+                                r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.PARK_FINAL)),
+                                () -> r.f.getPose().getY() > MAX_Y
+                        ))
         );
     }
 }
