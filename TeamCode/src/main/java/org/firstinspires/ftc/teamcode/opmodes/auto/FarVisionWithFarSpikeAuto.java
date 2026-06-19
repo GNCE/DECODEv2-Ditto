@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.seattlesolvers.solverslib.command.ConditionalCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.ParallelRaceGroup;
@@ -27,10 +26,14 @@ import java.util.List;
 public class FarVisionWithFarSpikeAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
-    // Hard safety ceiling on the robot's field y. If y ever exceeds this, the routine aborts and
-    // the drivetrain brakes. NOTE: this triggers AFTER y crosses the line, so the robot will
-    // overshoot slightly while braking -- set this a touch below the true hard limit if you need
-    // to guarantee y never physically passes 36.
+    // Soft field-y guard. We never want the robot to wander far past this line during a collect
+    // (e.g. chasing a ball or a path going long). Instead of a hard abort, crossing MAX_Y now just
+    // cuts the current collect short -- the robot drives back to its shoot pose, fires whatever it
+    // has, and the cycle continues. Because this fires AFTER y crosses the line and braking/turning
+    // isn't instant, the robot will overshoot slightly before goToLinear curls it back, so set this
+    // a touch below the true hard limit if you must guarantee y never physically passes it.
+    // NOTE: this guard is only active during collect phases. The shoot poses below are assumed to be
+    // safely under MAX_Y (goToLinear drives straight to them, bringing y back under the line).
     public static double MAX_Y = 36;
 
     @Override
@@ -61,7 +64,10 @@ public class FarVisionWithFarSpikeAuto extends MyCommandOpMode {
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_BACK_TO_HUMAN_PLAYER_END)),
                                         new WaitCommand(500)
                                 ),
-                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
+                                new WaitUntilCommand(() -> r.storage.getSize() == 3),
+                                // Y-LIMIT RECOVERY: bail out of the collect early if we drift over MAX_Y,
+                                // then fall through to the shoot pose + shootAll below.
+                                new WaitUntilCommand(() -> r.f.getPose().getY() > MAX_Y)
                         ),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_1)),
                         new WaitCommand(100),
@@ -75,7 +81,8 @@ public class FarVisionWithFarSpikeAuto extends MyCommandOpMode {
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_1_TO_FAR_SPIKE_END)),
                                         new WaitCommand(300)
                                 ),
-                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
+                                new WaitUntilCommand(() -> r.storage.getSize() == 3),
+                                new WaitUntilCommand(() -> r.f.getPose().getY() > MAX_Y)
                         ),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_3)),
                         // Scan for balls during this shot so the collect that follows needs no scan wait.
@@ -92,7 +99,11 @@ public class FarVisionWithFarSpikeAuto extends MyCommandOpMode {
                                 new SequentialCommandGroup(
                                         new ParallelRaceGroup(
                                                 r.collectThreeBallsNoScan(),
-                                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
+                                                new WaitUntilCommand(() -> r.storage.getSize() == 3),
+                                                // Y-LIMIT RECOVERY: same as above -- crossing MAX_Y ends the
+                                                // collect, then we go back to SHOOT_BACK_SCAN, shoot what we
+                                                // have, and the RepeatCommand carries on with the next loop.
+                                                new WaitUntilCommand(() -> r.f.getPose().getY() > MAX_Y)
                                         ),
                                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_SCAN)),
                                         // Shoot and re-scan at the same time, so the next loop's collect is ready immediately.
@@ -107,19 +118,8 @@ public class FarVisionWithFarSpikeAuto extends MyCommandOpMode {
                         )
                 )
                         .raceWith(new WaitCommand(29500))
-                        // Y-LIMIT SAFETY: abort the whole routine the instant the robot's y exceeds MAX_Y.
-                        .raceWith(new WaitUntilCommand(() -> r.f.getPose().getY() > MAX_Y))
                         .andThen(r.clearShooterSpinUp())
-                        // If we exited because of the y-limit, brake + hold instead of driving to park
-                        // (so we don't drive back across the line). Otherwise park as normal.
-                        .andThen(new ConditionalCommand(
-                                new InstantCommand(() -> {
-                                    r.f.startTeleopDrive();
-                                    r.f.setTeleOpDrive(0, 0, 0, true);
-                                }),
-                                r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.PARK_FINAL)),
-                                () -> r.f.getPose().getY() > MAX_Y
-                        ))
+                        .andThen(r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.PARK_FINAL)))
         );
     }
 }
