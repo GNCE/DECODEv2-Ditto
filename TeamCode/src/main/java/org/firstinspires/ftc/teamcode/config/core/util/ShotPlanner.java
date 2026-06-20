@@ -75,9 +75,73 @@ public class ShotPlanner {
     }
 
     public static double POSE_UNITS_TO_METERS = 0.0254;
-    public static double EXIT_VEL_M_PER_RPM_CLOSE = 0.00365;       // NEAR coefficient (your tuned value)
-    public static double EXIT_VEL_M_PER_RPM_FAR = 0.00342;   // FAR coefficient (tune this)
-    public static double EXIT_VEL_SPLIT_THRESHOLD_M = 2.97;   // distance (m) at/above which FAR is used
+    public static double EXIT_VEL_M_PER_RPM_CLOSE = 0.00365;       // held flat for shots closer than the cutoff
+    public static double EXIT_VEL_SPLIT_THRESHOLD_M = 2.97;        // distance (m) at/below which CLOSE is held flat
+
+    public static double EXIT_VEL_PER_RPM_FAR_1 = 0.00352;
+
+    public static double EXIT_VEL_PER_RPM_FAR_2 = 0.0035;
+
+    public static double EXIT_VEL_PER_RPM_FAR_3 = 0.00342;
+
+    public static double EXIT_VEL_PER_RPM_FAR_4 = 0.00334;
+
+    public static double EXIT_VEL_PER_RPM_FAR_5 = 0.003;
+
+    public static double EXIT_VEL_PER_RPM_FAR_Distance_1 = 121.59989031660349;
+    public static double EXIT_VEL_PER_RPM_FAR_Distance_2 = 133.5;
+    public static double EXIT_VEL_PER_RPM_FAR_Distance_3 = 145.2;
+    public static double EXIT_VEL_PER_RPM_FAR_Distance_4 = 150.0
+            ;
+    public static double EXIT_VEL_PER_RPM_FAR_Distance_5 = 161.0177438683991;
+
+    // Beyond EXIT_VEL_SPLIT_THRESHOLD_M the exit-vel-per-RPM coefficient is interpolated against
+    // horizontal shot distance instead of stepped between fixed bands. The distance breakpoints are
+    // the same ones used by the range->RPM LUT, starting at 121.59989031660349 pose units (~3.09 m).
+    // The LUT is keyed in meters (distance_pose * POSE_UNITS_TO_METERS) and the lookup is clamped to
+    // the table's range at both ends.
+    //
+    // IMPORTANT: this LUT is rebuilt from the live EXIT_VEL_PER_RPM_FAR_* / _Distance_* values every
+    // loop (rebuildExitVelLut, called from plan()), so editing those points from the dashboard takes
+    // effect immediately. These fields are intentionally NOT final and must never be read before the
+    // first rebuild — exitVelPerRpm builds the LUT lazily as a safety net.
+    private static InterpLUT exitVelPerRpmLut = null;
+    private static double exitVelLutMinM = 0.0;
+    private static double exitVelLutMaxM = 0.0;
+
+    /**
+     * Rebuilds the distance->exit-vel-per-RPM LUT from the current (live-configurable) FAR points.
+     * Called once per loop from plan() and from getPhysicsHoodDeg(), so dashboard edits to the
+     * points or their distances take effect without a redeploy. A fresh InterpLUT is created each
+     * time so changing a distance (not just a value) is handled cleanly. Min/max are taken from the
+     * actual point set rather than assuming the points stay sorted.
+     */
+    private static void rebuildExitVelLut() {
+        double[] distPose = {
+                EXIT_VEL_PER_RPM_FAR_Distance_1, EXIT_VEL_PER_RPM_FAR_Distance_2,
+                EXIT_VEL_PER_RPM_FAR_Distance_3, EXIT_VEL_PER_RPM_FAR_Distance_4,
+                EXIT_VEL_PER_RPM_FAR_Distance_5
+        };
+        double[] vals = {
+                EXIT_VEL_PER_RPM_FAR_1, EXIT_VEL_PER_RPM_FAR_2, EXIT_VEL_PER_RPM_FAR_3,
+                EXIT_VEL_PER_RPM_FAR_4, EXIT_VEL_PER_RPM_FAR_5
+        };
+
+        InterpLUT lut = new InterpLUT();
+        double minM = Double.POSITIVE_INFINITY;
+        double maxM = Double.NEGATIVE_INFINITY;
+        for (int i = 0; i < distPose.length; i++) {
+            double m = distPose[i] * POSE_UNITS_TO_METERS;
+            lut.add(m, vals[i]);
+            if (m < minM) minM = m;
+            if (m > maxM) maxM = m;
+        }
+        lut.createLUT();
+
+        exitVelPerRpmLut = lut;
+        exitVelLutMinM = minM;
+        exitVelLutMaxM = maxM;
+    }
 
     // Predict the robot pose ahead so each actuator is already tracking where the robot WILL be.
     // This is an actuator-responsiveness lead, not the shot-accuracy horizon: the SOTM virtual-goal
@@ -130,12 +194,22 @@ public class ShotPlanner {
     };
 
     private final double[] velocities = {
-            1240, 1300, 1440, 1540, 1560, 1580, 1680, 1785, 1960, 2010, 2050, 2100
+            1240, 1300, 1440, 1540, 1560, 1580, 1680, 1785, 1980, 2040, 2080, 2125
     };
 
-    /** Exit-velocity-per-RPM coefficient, switched by horizontal shot distance (meters). */
+    /**
+     * Exit-velocity-per-RPM coefficient as a function of horizontal shot distance (meters).
+     * At or below EXIT_VEL_SPLIT_THRESHOLD_M (2.97 m) it is held flat at EXIT_VEL_M_PER_RPM_CLOSE
+     * (0.00365); beyond the cutoff it is interpolated from the distance table, clamped to the
+     * table's range at both ends.
+     */
     private static double exitVelPerRpm(double xMeters) {
-        return xMeters > EXIT_VEL_SPLIT_THRESHOLD_M ? EXIT_VEL_M_PER_RPM_FAR : EXIT_VEL_M_PER_RPM_CLOSE;
+        if (!Double.isFinite(xMeters) || xMeters <= EXIT_VEL_SPLIT_THRESHOLD_M) {
+            return EXIT_VEL_M_PER_RPM_CLOSE;
+        }
+        if (exitVelPerRpmLut == null) rebuildExitVelLut(); // safety: first use before any loop
+        double clamped = MathUtils.clamp(xMeters, exitVelLutMinM, exitVelLutMaxM);
+        return exitVelPerRpmLut.get(clamped);
     }
 
     private final InterpLUT velocityLut = new InterpLUT();
@@ -503,6 +577,9 @@ public class ShotPlanner {
                             double robotOmegaRadPerSec,
                             Pose realGoalPose, double rpm) {
 
+        // Pick up any live edits to the exit-vel-per-RPM points before this loop's solve uses them.
+        rebuildExitVelLut();
+
         double smoothedRpm = addRpmSample(rpm);
 
         addMotionSample(robotVxFieldPosePerSec, robotVyFieldPosePerSec, robotOmegaRadPerSec);
@@ -560,6 +637,7 @@ public class ShotPlanner {
     }
 
     public double getPhysicsHoodDeg(double distPoseUnits) {
+        rebuildExitVelLut();
         return solveHoodDeg(clampDist(distPoseUnits), getLutRpm(distPoseUnits));
     }
 }
