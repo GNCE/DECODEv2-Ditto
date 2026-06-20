@@ -35,8 +35,11 @@ import java.util.List;
 public class MyRobot_ManualRPM extends MyRobot {
 
     // Two manual flywheel RPM presets. Toggled with g1 DPAD_RIGHT; defaults to CLOSE at startup.
-    public static double CLOSE_PRESPIN_RPM = 1600;
-    public static double FAR_PRESPIN_RPM = 2000;
+    public static double CLOSE_MIN_RPM = 1400;
+    public static double CLOSE_MAX_RPM = 1900;
+
+    public static double FAR_MIN_RPM = 2000;
+    public static double FAR_MAX_RPM = 2200;
 
     private boolean farMode = false; // false = CLOSE (default at init), true = FAR
     private boolean seeded  = false; // apply the selected baseline on the first teleop loop
@@ -55,7 +58,9 @@ public class MyRobot_ManualRPM extends MyRobot {
     }
 
     private String modeLabel(){
-        return farMode ? ("FAR (" + FAR_PRESPIN_RPM + ")") : ("CLOSE (" + CLOSE_PRESPIN_RPM + ")");
+        return farMode
+                ? ("FAR [" + FAR_MIN_RPM + "-" + FAR_MAX_RPM + "]")
+                : ("CLOSE [" + CLOSE_MIN_RPM + "-" + CLOSE_MAX_RPM + "]");
     }
 
     /**
@@ -89,8 +94,12 @@ public class MyRobot_ManualRPM extends MyRobot {
             if(toggled) farMode = !farMode;
 
             // Seed the selected preset on the first loop, then re-apply only when it flips.
-            if(toggled || !seeded){
-                shooter.setSpinUpRpm(farMode ? FAR_PRESPIN_RPM : CLOSE_PRESPIN_RPM);
+            if (toggled || !seeded) {
+                if (farMode) {
+                    shooter.setRpmClamp(FAR_MIN_RPM, FAR_MAX_RPM);
+                } else {
+                    shooter.setRpmClamp(CLOSE_MIN_RPM, CLOSE_MAX_RPM);
+                }
                 seeded = true;
             }
         }

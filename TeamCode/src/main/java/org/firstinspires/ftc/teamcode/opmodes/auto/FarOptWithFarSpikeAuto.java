@@ -42,7 +42,7 @@ public class FarOptWithFarSpikeAuto extends MyCommandOpMode {
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                                 new InstantCommand(() -> r.shooter.setActive(true))
                         ),
-                        new WaitCommand(250),
+                        new WaitCommand(350),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
@@ -58,7 +58,7 @@ public class FarOptWithFarSpikeAuto extends MyCommandOpMode {
                                 new WaitUntilCommand(() -> r.storage.getSize() == 3)
                                 ),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_1)),
-                        new WaitCommand(125),
+                        new WaitCommand(225),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
@@ -73,7 +73,7 @@ public class FarOptWithFarSpikeAuto extends MyCommandOpMode {
                                 new WaitUntilCommand(() -> r.storage.getSize() == 3)
                         ),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
-                        new WaitCommand(100),
+                        new WaitCommand(200),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
@@ -88,7 +88,7 @@ public class FarOptWithFarSpikeAuto extends MyCommandOpMode {
                                 new WaitUntilCommand(() -> r.storage.getSize() == 3)
                         ),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_GATHER_PREP)),
-                        new WaitCommand(100),
+                        new WaitCommand(200),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
@@ -97,7 +97,7 @@ public class FarOptWithFarSpikeAuto extends MyCommandOpMode {
                         r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.GATHER_PREP_TO_GATHER_END)),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
-                        new WaitCommand(100),
+                        new WaitCommand(200),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
@@ -114,6 +114,7 @@ public class FarOptWithFarSpikeAuto extends MyCommandOpMode {
                                             new WaitUntilCommand(() -> r.storage.getSize() == 3)
                                     ),
                                     r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
+                                    new WaitCommand(200),
                                     r.shootAll(),
                                     new InstantCommand(() -> r.door.setOpen(false)),
                                     new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))

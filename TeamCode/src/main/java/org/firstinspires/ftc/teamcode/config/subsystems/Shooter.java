@@ -70,10 +70,24 @@ public class Shooter extends SubsysCore {
     // follow the planned target. Set it to the RPM of the pose you'll shoot from.
     private double spinUpTargetRpm = -1.0;
 
+    private boolean rpmClampEnabled = false;
+    private double minClampedRpm = 0.0;
+    private double maxClampedRpm = 2800.0;
+
     MotorEx m1, m2;
 
     public void setSpinUpRpm(double rpm) {
         spinUpTargetRpm = Math.max(0.0, rpm);
+    }
+
+    public void setRpmClamp(double minRpm, double maxRpm) {
+        rpmClampEnabled = true;
+        minClampedRpm = minRpm;
+        maxClampedRpm = maxRpm;
+    }
+
+    public void clearRpmClamp() {
+        rpmClampEnabled = false;
     }
 
     public void clearSpinUp() {
@@ -147,6 +161,11 @@ public class Shooter extends SubsysCore {
             // While held, target the spin-up RPM exactly (keeps the wheel at shot speed while
             // driving to collect); otherwise follow the live distance-based target.
             double target = isSpinUpHeld() ? spinUpTargetRpm : plannedTargetRpm;
+
+            if (rpmClampEnabled) {
+                target = Range.clip(target, minClampedRpm, maxClampedRpm);
+            }
+
             currentTargetVelocity = Range.clip(target, 0.0, 2800);
             currentTargetHoodAngle = Range.clip(plannedHoodBaselineDeg, MIN_HOOD_ANGLE_DEG, MAX_HOOD_ANGLE_DEG);
         } else {
