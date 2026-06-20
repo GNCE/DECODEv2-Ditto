@@ -87,7 +87,7 @@ public final class AutoPaths {
         GATHER_CONTROL (new Pose(11.55140186915888, 46.666221628838464)),
         GATHER_CONTROL_SL (new Pose(11.55140186915888, 50)),
 
-        GATHER_CONTROL_SL_CURVE2 (new Pose(11.55140186915888, 32)),
+        GATHER_CONTROL_SL_CURVE2 (new Pose(11.55140186915888, 32, Math.toRadians(45))),
         GATHER_END(new Pose(10.627503337783713, 14.5, Math.toRadians(270))),
         GATHER_END_SL(new Pose(10, 14, Math.toRadians(270))),
 

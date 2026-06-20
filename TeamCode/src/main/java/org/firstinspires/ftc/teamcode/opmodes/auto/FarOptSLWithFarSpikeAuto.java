@@ -22,7 +22,7 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 import java.util.List;
 
-@Autonomous(group="Far Auto", name="Far + Far Spike Opt Auto")
+@Autonomous(group="Far Auto", name="Far + Far Spike Opt Auto SL")
 public class FarOptSLWithFarSpikeAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
