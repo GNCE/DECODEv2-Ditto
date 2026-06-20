@@ -13,20 +13,29 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 import java.util.List;
 
 /**
- * Identical to {@link MyRobot} in every way EXCEPT it adds manual flywheel pre-spin on the
- * gamepad-2 bumpers: LB pre-spins to {@link #CLOSE_PRESPIN_RPM}, RB to {@link #FAR_PRESPIN_RPM}.
- * Because it extends MyRobot, it drops straight into any field typed {@code MyRobot r;}:
+ * Identical to {@link MyRobot} in every way EXCEPT it adds a manual flywheel pre-spin mode with
+ * two presets, toggled by gamepad-2 RIGHT STICK BUTTON (R3):
+ * <ul>
+ *   <li>CLOSE = {@link #CLOSE_PRESPIN_RPM} (the default at startup)</li>
+ *   <li>FAR   = {@link #FAR_PRESPIN_RPM}</li>
+ * </ul>
+ * The selected RPM is applied via the shooter's spin-up hold, which holds it outright (so it
+ * overrides the inherited live distance target) until you toggle to the other preset. R3 flips
+ * between the two at any time during the match.
+ *
+ * <p>Because it extends MyRobot, it drops straight into any field typed {@code MyRobot r;}:
  * <pre>r = new MyRobot_ManualRPM(hardwareMap, telemetry, gamepad1, gamepad2, ...);</pre>
- * Everything else (drive, intake, auto-fire, lift, the per-loop distance RPM/hood solve, etc.)
- * is inherited unchanged.
+ * Everything else (drive, intake, auto-fire, lift, etc.) is inherited unchanged.
  */
 @Configurable
 public class MyRobot_ManualRPM extends MyRobot {
 
-    // Manual flywheel pre-spin baselines (g2 bumpers). LB = close, RB = far. Releasing the bumper
-    // hands the flywheel back to the live distance target, which then fine-tunes the final RPM.
+    // Two manual flywheel RPM presets. Toggled with g2 R3; defaults to CLOSE at startup.
     public static double CLOSE_PRESPIN_RPM = 1500;
     public static double FAR_PRESPIN_RPM = 2000;
+
+    private boolean farMode = false; // false = CLOSE (default at init), true = FAR
+    private boolean seeded  = false; // apply the default CLOSE baseline on the first teleop loop
 
     // --- Constructors just forward to MyRobot; all real init happens in the superclass. ---
     public MyRobot_ManualRPM(HardwareMap h, Telemetry t, Gamepad g1, Gamepad g2, List<SubsystemConfig> subsysList, OpModeType opModeType){
@@ -42,11 +51,9 @@ public class MyRobot_ManualRPM extends MyRobot {
     }
 
     /**
-     * Same as {@link MyRobot#runShootTeleop()} plus manual RPM pre-spin on the g2 bumpers.
-     * Hold g2 LEFT BUMPER to spin the flywheel up to the CLOSE baseline, g2 RIGHT BUMPER for the
-     * FAR baseline. From there the inherited per-loop distance logic still runs, so the wheel only
-     * fine-tunes around the baseline instead of ramping from idle. Releasing either bumper (when
-     * neither is held) clears the hold and hands the wheel back to the live distance target.
+     * Same as {@link MyRobot#runShootTeleop()} plus the CLOSE/FAR manual RPM toggle on g2 R3.
+     * Starts in CLOSE; each R3 press flips to the other preset and (re)applies that RPM as the
+     * shooter's spin-up hold. setSpinUpRpm is a latching hold, so one call per change is enough.
      * Firing is still gated on shooter.readyToShoot() via OuttakeCommandTele.
      */
     @Override
@@ -57,14 +64,19 @@ public class MyRobot_ManualRPM extends MyRobot {
         if(lt > 0.1 || rt > 0.1) Turret.MANUAL_OFFSET += (rt - lt)/2;
 
         if(hasSubsystem(SubsystemConfig.SHOOTER)){
-            if(g2.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) shooter.setSpinUpRpm(CLOSE_PRESPIN_RPM);
-            else if(g2.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) shooter.setSpinUpRpm(FAR_PRESPIN_RPM);
-            else if((g2.wasJustReleased(GamepadKeys.Button.LEFT_BUMPER) || g2.wasJustReleased(GamepadKeys.Button.RIGHT_BUMPER))
-                    && !g2.getButton(GamepadKeys.Button.LEFT_BUMPER) && !g2.getButton(GamepadKeys.Button.RIGHT_BUMPER))
-                shooter.clearSpinUp();
+            boolean toggled = g2.wasJustPressed(GamepadKeys.Button.RIGHT_STICK_BUTTON);
+            if(toggled) farMode = !farMode;
+
+            // Seed CLOSE on the first loop, then re-apply only when the mode actually flips.
+            if(toggled || !seeded){
+                shooter.setSpinUpRpm(farMode ? FAR_PRESPIN_RPM : CLOSE_PRESPIN_RPM);
+                seeded = true;
+            }
         }
 
         if (g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) //  && storage.getSize() != 0
             schedule(OuttakeCommandTele);
+
+        t.addData("Manual RPM Mode", farMode ? ("FAR (" + FAR_PRESPIN_RPM + ")") : ("CLOSE (" + CLOSE_PRESPIN_RPM + ")"));
     }
 }

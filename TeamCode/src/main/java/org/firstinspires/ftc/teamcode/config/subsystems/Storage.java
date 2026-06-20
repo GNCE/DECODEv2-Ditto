@@ -165,7 +165,7 @@ public class Storage extends SubsysCore {
     }
 
     StorageState storageState;
-    public static double ST1_DELAY = 0.125, ST2_DELAY = 0.15, ST3_DELAY = 0; // 1, 0.8, 0.8 // TODO: KEEP TUNING
+    public static double ST1_DELAY = 0.125, ST2_DELAY = 0.25, ST3_DELAY = 0; // 1, 0.8, 0.8 // TODO: KEEP TUNING
 
     private void updateNormalTransitions() {
         switch(storageState) {

@@ -23,7 +23,7 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 import java.util.List;
 
 @Autonomous(group="Far Auto", name="Far + Far Spike Opt Auto")
-public class FarOptWithFarSpikeAuto extends MyCommandOpMode {
+public class FarOptSLWithFarSpikeAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
     @Override
@@ -54,9 +54,9 @@ public class FarOptWithFarSpikeAuto extends MyCommandOpMode {
                                 new SequentialCommandGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_BACK_TO_HUMAN_PLAYER_END)),
                                         new WaitCommand(500)
-                                        ),
-                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
                                 ),
+                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
+                        ),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_1)),
                         new WaitCommand(125),
                         r.shootAll(),
@@ -102,24 +102,33 @@ public class FarOptWithFarSpikeAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
-                        // STRAIGHT CYCLE 2 + 3
+                        // STRAIGHT CYCLE 2
                         r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
                         new RepeatCommand(
                                 new SequentialCommandGroup(
-                                    new ParallelRaceGroup(
-                                            new SequentialCommandGroup(
-                                                    r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.HP_END)),
-                                                    new WaitCommand(300)
-                                            ),
-                                            new WaitUntilCommand(() -> r.storage.getSize() == 3)
-                                    ),
-                                    r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
-                                    r.shootAll(),
-                                    new InstantCommand(() -> r.door.setOpen(false)),
-                                    new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
+                                        new ParallelRaceGroup(
+                                                new SequentialCommandGroup(
+                                                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.HP_END)),
+                                                        new WaitCommand(300)
+                                                ),
+                                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
+                                        ),
+                                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
+                                        r.shootAll(),
+                                        new InstantCommand(() -> r.door.setOpen(false)),
+                                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                                 ),
-                                2
-                        )
+                                1
+                        ),
+
+                        // CURVE CYCLE 2
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.GATHER_PREP_TO_GATHER_END_SL)),
+                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
+                        new WaitCommand(100),
+                        r.shootAll(),
+                        new InstantCommand(() -> r.door.setOpen(false)),
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                 )
                         .raceWith(new WaitCommand(29500))
                         .andThen(r.clearShooterSpinUp())

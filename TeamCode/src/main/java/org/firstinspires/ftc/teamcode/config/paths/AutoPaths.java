@@ -74,7 +74,7 @@ public final class AutoPaths {
         // BACK AUTO POSES
         START_BACK  (new Pose(53.825, 7.984, Math.toRadians(180))), // TODO
         HP_END (new Pose(10.5, 8.969, Math.toRadians(180))),
-        SHOOT_BACK_1 (new Pose(57.3185, 20.1238, Math.toRadians(165))),
+        SHOOT_BACK_1 (new Pose(57.3185, 20.1238, Math.toRadians(160))),
         TRIPLE_FAR_SPIKE_CONTROL (new Pose(57, 37)),
         TRIPLE_FAR_SPIKE_END(new Pose(10, 35.8, Math.toRadians(180))),
         SHOOT_BACK_2 (new Pose(50, 8.969, Math.toRadians(180))),
@@ -85,7 +85,11 @@ public final class AutoPaths {
 
         SHOOT_BACK_GATHER_PREP (new Pose(54.1, 12.4, Math.toRadians(141))),
         GATHER_CONTROL (new Pose(11.55140186915888, 46.666221628838464)),
+        GATHER_CONTROL_SL (new Pose(11.55140186915888, 50)),
+
+        GATHER_CONTROL_SL_CURVE2 (new Pose(11.55140186915888, 32)),
         GATHER_END(new Pose(10.627503337783713, 14.5, Math.toRadians(270))),
+        GATHER_END_SL(new Pose(10, 14, Math.toRadians(270))),
 
         SHOOT_FINAL (new Pose(53, 16, Math.toRadians(180))),
         PARK_FINAL (new Pose(46, 16, Math.toRadians(180))),
@@ -178,7 +182,8 @@ public final class AutoPaths {
         ALT_GATE_SWEEP_MID_TO_GATE_SWEEP_END,
         ALT_GATE_SWEEP_END_TO_SHOOT_BACK_2,
 
-        GATHER_PREP_TO_GATHER_END
+        GATHER_PREP_TO_GATHER_END,
+        GATHER_PREP_TO_GATHER_END_SL
     }
 
     // ====== INSTANCE STATE ======
@@ -365,8 +370,16 @@ public final class AutoPaths {
 
         paths.put(PathId.GATHER_PREP_TO_GATHER_END,
                 f.pathBuilder()
-                        .addPath(new BezierCurve(getPose(PoseId.SHOOT_BACK_GATHER_PREP), getPose(PoseId.GATHER_CONTROL), getPose(PoseId.GATHER_END)))
+                        .addPath(new BezierCurve(getPose(PoseId.SHOOT_BACK_GATHER_PREP), getPose(PoseId.GATHER_CONTROL_SL), getPose(PoseId.GATHER_END_SL)))
                         .setTangentHeadingInterpolation()
+                        .build()
+        );
+
+        paths.put(PathId.GATHER_PREP_TO_GATHER_END_SL,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.SHOOT_BACK_GATHER_PREP), getPose(PoseId.GATHER_CONTROL_SL_CURVE2)))
+                        .setTangentHeadingInterpolation()
+                        .setReversed()
                         .build()
         );
     }
