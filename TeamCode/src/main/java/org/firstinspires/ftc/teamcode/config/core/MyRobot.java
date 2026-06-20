@@ -460,13 +460,12 @@ public class MyRobot extends Robot {
     public static double alignPresetX = 18.415;
     public static double alignPresetY = 119.101;
     public static double alignPresetHeadingDeg = 141.21;
+    Pose goalAlignPose = new Pose(18.415, 119.101, Math.toRadians(141.21));
 
     /** Snap the robot pose to the fixed alignment preset above (bound to DPAD_UP in teleop).
      *  RED mirrors x across the field (144 - x); y and heading are left as-is. */
     public void alignPreset(){
-        boolean red = isRed != null && isRed;
-        double x = red ? 144.0 - alignPresetX : alignPresetX;
-        setPose(new Pose(x, alignPresetY, Math.toRadians(alignPresetHeadingDeg)));
+        setPose(isRed ? goalAlignPose.mirror() : goalAlignPose);
     }
 
     private SAT2D.ConvexPolygon chassisBox(){

@@ -27,7 +27,7 @@ public class Intake extends SubsysCore {
     public static double TRANSFER_T_POWER = 1;
     public static double ONE_TRANSFER_T_POWER = 1;
 
-    public static double TRANSFER_POWER_WHEN_INTAKE = 0.36;
+    public static double TRANSFER_POWER_WHEN_INTAKE = 0.45;
 
     Timer timer;
 

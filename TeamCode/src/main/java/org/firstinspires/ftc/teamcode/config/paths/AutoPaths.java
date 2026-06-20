@@ -73,8 +73,8 @@ public final class AutoPaths {
 
         // BACK AUTO POSES
         START_BACK  (new Pose(53.825, 7.984, Math.toRadians(180))), // TODO
-        HP_END (new Pose(11, 8.969, Math.toRadians(180))),
-        SHOOT_BACK_1 (new Pose(57.3185, 20.1238, Math.toRadians(155))),
+        HP_END (new Pose(10.5, 8.969, Math.toRadians(180))),
+        SHOOT_BACK_1 (new Pose(57.3185, 20.1238, Math.toRadians(165))),
         TRIPLE_FAR_SPIKE_CONTROL (new Pose(57, 37)),
         TRIPLE_FAR_SPIKE_END(new Pose(10, 35.8, Math.toRadians(180))),
         SHOOT_BACK_2 (new Pose(50, 8.969, Math.toRadians(180))),
@@ -85,7 +85,7 @@ public final class AutoPaths {
 
         SHOOT_BACK_GATHER_PREP (new Pose(54.1, 12.4, Math.toRadians(141))),
         GATHER_CONTROL (new Pose(11.55140186915888, 46.666221628838464)),
-        GATHER_END(new Pose(10.627503337783713, 16, Math.toRadians(270))),
+        GATHER_END(new Pose(10.627503337783713, 14.5, Math.toRadians(270))),
 
         SHOOT_FINAL (new Pose(53, 16, Math.toRadians(180))),
         PARK_FINAL (new Pose(46, 16, Math.toRadians(180))),
@@ -242,7 +242,7 @@ public final class AutoPaths {
                     .build()
         );
 
-        put(PathId.SHOOT_BACK_1_TO_FAR_SPIKE_END, PoseId.SHOOT_BACK_1, PoseId.TRIPLE_FAR_SPIKE_END);
+//        put(PathId.SHOOT_BACK_1_TO_FAR_SPIKE_END, PoseId.SHOOT_BACK_1, PoseId.TRIPLE_FAR_SPIKE_END);
         put(PathId.FAR_SPIKE_END_TO_SHOOT_BACK_2, PoseId.FAR_SPIKE_END, PoseId.SHOOT_BACK_2);
         put(PathId.SHOOT_BACK_2_TO_HP_END, PoseId.SHOOT_BACK_2, PoseId.HP_END);
         put(PathId.HP_END_TO_SHOOT_BACK_3, PoseId.HP_END, PoseId.SHOOT_BACK_3);
