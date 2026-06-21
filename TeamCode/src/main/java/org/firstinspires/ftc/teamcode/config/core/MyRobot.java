@@ -122,7 +122,7 @@ public class MyRobot extends Robot {
     public static double CLOSE_MAX_RPM = 1900;
     public static double FAR_MIN_RPM = 2000;
     public static double FAR_MAX_RPM = 2200;
-    private boolean farMode = false; // false = CLOSE (default), true = FAR
+    public static boolean farMode = false; // false = CLOSE (default), true = FAR; static so the selection carries across OpModes
     private boolean seeded  = false; // apply the selected baseline on the first teleop loop
     // =============================================================================================
 
