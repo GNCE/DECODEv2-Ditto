@@ -73,18 +73,18 @@ public final class AutoPaths {
 
         // BACK AUTO POSES
         START_BACK  (new Pose(53.825, 7.984, Math.toRadians(180))), // TODO
-        HP_END (new Pose(10.5, 8.969, Math.toRadians(180))),
+        HP_END (new Pose(11, 8.8, Math.toRadians(180))),
         SHOOT_BACK_1 (new Pose(57.3185, 20.1238, Math.toRadians(160))),
-        TRIPLE_FAR_SPIKE_CONTROL (new Pose(57, 37)),
+        TRIPLE_FAR_SPIKE_CONTROL (new Pose(56, 36)),
         TRIPLE_FAR_SPIKE_END(new Pose(10, 35.8, Math.toRadians(180))),
         SHOOT_BACK_2 (new Pose(50, 8.969, Math.toRadians(180))),
         SHOOT_BACK_3 (new Pose(50.386, 13.819, Math.toRadians(151.526))),
         SHOOT_BACK_SCAN (new Pose(50.386, 13.819, Math.toRadians(160))),
 
-        SHOOT_BACK_HP_PREP (new Pose(51.16, 10.6, Math.toRadians(180))),
+        SHOOT_BACK_HP_PREP (new Pose(51, 11, Math.toRadians(180))),
         DIAGONAL_FINAL(new Pose(17, 24, Math.toRadians(170))),
 
-        SHOOT_BACK_GATHER_PREP (new Pose(54.1, 12.4, Math.toRadians(141))),
+        SHOOT_BACK_GATHER_PREP (new Pose(54, 12.75, Math.toRadians(141))),
         GATHER_CONTROL (new Pose(11.55140186915888, 46.666221628838464)),
         GATHER_CONTROL_SL (new Pose(11.55140186915888, 50)),
 

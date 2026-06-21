@@ -102,16 +102,6 @@ public class AllianceAuto extends MyCommandOpMode {
 //                        new InstantCommand(() -> r.door.setOpen(false)),
 //                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
-
-//                        // CURVE CYCLE 1
-//                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
-//                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.GATHER_PREP_TO_GATHER_END)),
-//                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
-//                        new WaitCommand(100),
-//                        r.shootAll(),
-//                        new InstantCommand(() -> r.door.setOpen(false)),
-//                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-
                         // CURVE CYCLE 1
                         r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.GATHER_PREP_TO_GATHER_END)),
@@ -127,7 +117,7 @@ public class AllianceAuto extends MyCommandOpMode {
                                 new SequentialCommandGroup(
                                         new ParallelRaceGroup(
                                                 new SequentialCommandGroup(
-                                                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.HP_END)),
+                                                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.DIAGONAL_FINAL)),
                                                         new WaitCommand(300)
                                                 ),
                                                 new WaitUntilCommand(() -> r.storage.getSize() == 3)
