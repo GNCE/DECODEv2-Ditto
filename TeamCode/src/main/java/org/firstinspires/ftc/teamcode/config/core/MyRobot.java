@@ -53,6 +53,19 @@ import java.util.List;
 
 @Configurable
 public class MyRobot extends Robot {
+    /**
+     * Behavioral modes that used to be separate subclasses. Pick one during init (cycle with g1
+     * RIGHT_BUMPER) or set it up front with {@link #setRobotMode(RobotMode)} in your OpMode.
+     * <ul>
+     *   <li>{@link #BASE}        - plain teleop, no extra g1 DPAD_RIGHT binding.</li>
+     *   <li>{@link #AUTO_PARK}   - g1 DPAD_RIGHT drives to a fixed park pose (cancel by moving a
+     *       stick). Was {@code MyRobot_AutoPark}.</li>
+     *   <li>{@link #MANUAL_RPM}  - g1 DPAD_RIGHT toggles CLOSE/FAR flywheel RPM presets (selectable
+     *       during init too). Was {@code MyRobot_ManualRPM}.</li>
+     * </ul>
+     */
+    public enum RobotMode { MANUAL_RPM, BASE, AUTO_PARK }
+
     HardwareMap h;
     public JoinedTelemetry t;
     public Follower f;
@@ -91,6 +104,28 @@ public class MyRobot extends Robot {
 
     public static double fieldSize = 141.5;
 
+    // ===== Mode selection (replaces the old MyRobot_AutoPark / MyRobot_ManualRPM subclasses) =====
+    private RobotMode robotMode = RobotMode.BASE;
+
+    // ---- AUTO_PARK config + state (was MyRobot_AutoPark) ----
+    // Park pose. RED uses PARK_X_RED; BLUE uses (fieldSize - PARK_X_RED). y/heading are shared.
+    public static double PARK_X_RED = 40;
+    public static double PARK_Y = 34;
+    public static double PARK_HEADING_DEG = 270;
+    // If any drive stick exceeds this while parking, the driver is taking over: cancel the park.
+    public static double STICK_CANCEL_DEADBAND = 0.1;
+    private boolean autoParking = false;
+
+    // ---- MANUAL_RPM config + state (was MyRobot_ManualRPM) ----
+    // Two manual flywheel RPM presets. Toggled with g1 DPAD_RIGHT; defaults to CLOSE.
+    public static double CLOSE_MIN_RPM = 1400;
+    public static double CLOSE_MAX_RPM = 1900;
+    public static double FAR_MIN_RPM = 2000;
+    public static double FAR_MAX_RPM = 2200;
+    private boolean farMode = false; // false = CLOSE (default), true = FAR
+    private boolean seeded  = false; // apply the selected baseline on the first teleop loop
+    // =============================================================================================
+
     SAT2D.PolygonSet launchZones = new SAT2D.PolygonSet()
             .add("Close",
                     new SAT2D.Point2(0, fieldSize),
@@ -109,13 +144,6 @@ public class MyRobot extends Robot {
     public BallPathPlanner ballPathPlanner;
     boolean [] enabledSubsys = new boolean[SubsystemConfig.values().length];
     int slotSelect = 0;
-    // 69.48147 26.4483666 123.989353
-    // 73, 27.4, 125.3
-
-    // 64, 28,
-
-    // 81.6 `184 - 81.6
-    //
 
     public boolean hasSubsystem(SubsystemConfig subsystem){
         return enabledSubsys[subsystem.ordinal()];
@@ -207,6 +235,26 @@ public class MyRobot extends Robot {
         this(h, t, g1, g2, Arrays.asList(SubsystemConfig.values()), opModeType);
     }
 
+    // ===== Mode helpers =====
+
+    /** Set the behavioral mode directly (e.g. from your OpMode's initialize()). */
+    public void setRobotMode(RobotMode mode){ this.robotMode = mode; }
+
+    /** Current behavioral mode. */
+    public RobotMode getRobotMode(){ return robotMode; }
+
+    /** Advance to the next mode (BASE -> AUTO_PARK -> MANUAL_RPM -> BASE ...). */
+    private void cycleRobotMode(){
+        RobotMode[] modes = RobotMode.values();
+        robotMode = modes[(robotMode.ordinal() + 1) % modes.length];
+    }
+
+    private String manualRpmLabel(){
+        return farMode
+                ? ("FAR [" + FAR_MIN_RPM + "-" + FAR_MAX_RPM + "]")
+                : ("CLOSE [" + CLOSE_MIN_RPM + "-" + CLOSE_MAX_RPM + "]");
+    }
+
     public void allianceSelection(){
         if(g1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) isRed = !isRed;
         t.addData("Current Alliance", isRed?"RED": "BLUE");
@@ -219,6 +267,15 @@ public class MyRobot extends Robot {
     }
 
     public void driveControls(){
+        if(robotMode == RobotMode.AUTO_PARK){
+            autoParkDriveControls();
+        } else {
+            baseDriveControls();
+        }
+    }
+
+    /** The original (non-park) driver bindings. */
+    private void baseDriveControls(){
         if(hasSubsystem(SubsystemConfig.FOLLOWER)){
             f.setTeleOpDrive(g1.getLeftY(), -g1.getLeftX(), -g1.getRightX(), true);
         }
@@ -229,6 +286,71 @@ public class MyRobot extends Robot {
         if(g1.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) allianceWallSquare();
     }
 
+    /**
+     * baseDriveControls plus a DPAD_RIGHT auto-park (was MyRobot_AutoPark.driveControls). While
+     * parking the teleop drive call is suppressed so it doesn't fight the path; the park ends when
+     * the path finishes or the driver moves a stick. The other g1 bindings are skipped while
+     * parking so a stray press can't interrupt it.
+     */
+    private void autoParkDriveControls(){
+        boolean justStarted = false;
+
+        if(hasSubsystem(SubsystemConfig.FOLLOWER)){
+            // Start auto-park on DPAD_RIGHT.
+            if(g1.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)){
+                startAutoPark();
+                justStarted = true;
+            }
+
+            // While parking (and not on the very loop we started), end it if the driver grabs the
+            // sticks or the path completes, then hand control back to teleop drive.
+            if(autoParking && !justStarted){
+                boolean driverInput =
+                        Math.abs(g1.getLeftY())  > STICK_CANCEL_DEADBAND ||
+                                Math.abs(g1.getLeftX())  > STICK_CANCEL_DEADBAND ||
+                                Math.abs(g1.getRightX()) > STICK_CANCEL_DEADBAND;
+                if(driverInput || !f.isBusy()){
+                    autoParking = false;
+                    f.startTeleopDrive(); // resume normal driver control
+                }
+            }
+
+            // Only drive from the sticks when NOT parking, otherwise we'd override the path.
+            if(!autoParking){
+                f.setTeleOpDrive(g1.getLeftY(), -g1.getLeftX(), -g1.getRightX(), true);
+            }
+        }
+
+        // Existing g1 bindings, unchanged. Skipped while parking.
+        if(!autoParking){
+            if(g1.getTrigger(GamepadKeys.Trigger.LEFT_TRIGGER) > 0.8) cornerSquare();
+            if(g1.wasJustPressed(GamepadKeys.Button.DPAD_UP)) alignPreset();
+            if(g1.wasJustPressed(GamepadKeys.Button.DPAD_DOWN)) farWallSquare();
+            if(g1.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) allianceWallSquare();
+        }
+
+        t.addData("Auto Parking", autoParking);
+    }
+
+    /** Alliance-correct park pose. Only x flips between alliances; y and heading are shared. */
+    public Pose autoParkPose(){
+        double x = (isRed != null && isRed) ? PARK_X_RED : (fieldSize - PARK_X_RED);
+        return new Pose(x, PARK_Y, Math.toRadians(PARK_HEADING_DEG));
+    }
+
+    /** Build a straight line from the current pose to the park pose and start following it. */
+    private void startAutoPark(){
+        if(!hasSubsystem(SubsystemConfig.FOLLOWER)) return;
+        Pose target = autoParkPose();
+        f.followPath(
+                f.pathBuilder()
+                        .addPath(new BezierLine(f.getPose(), target))
+                        .setLinearHeadingInterpolation(f.getHeading(), target.getHeading())
+                        .build(),
+                true); // holdEnd: keep holding the park pose once arrived
+        autoParking = true;
+    }
+
 
     public static double blueGoalPoseX = 5;
     public static double blueGoalPoseY = 137;
@@ -237,6 +359,20 @@ public class MyRobot extends Robot {
         lt.start();
         resetCache();
         allianceSelection();
+
+        // Cycle the behavioral mode pre-match with g1 RIGHT_BUMPER (RIGHT_BUMPER only fires the
+        // shooter during the match, so there's no phase conflict).
+        if(g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) cycleRobotMode();
+        t.addData("Robot Mode (RIGHT_BUMPER to cycle)", robotMode);
+
+        // MANUAL_RPM: let the driver preselect CLOSE/FAR with DPAD_RIGHT (same button as in-match).
+        // No flywheel motion happens during init -- this only selects the mode the first teleop
+        // loop will apply.
+        if(robotMode == RobotMode.MANUAL_RPM){
+            if(g1.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)) farMode = !farMode;
+            t.addData("Manual RPM Mode (DPAD_RIGHT to toggle)", manualRpmLabel());
+        }
+
         g1.readButtons();
         g2.readButtons();
 
@@ -366,6 +502,22 @@ public class MyRobot extends Robot {
         double rt = g2.getTrigger(GamepadKeys.Trigger.RIGHT_TRIGGER);
 
         if(lt > 0.1 || rt > 0.1) Turret.MANUAL_OFFSET += (rt - lt)/2;
+
+        // MANUAL_RPM mode: g1 DPAD_RIGHT toggles CLOSE/FAR, applied as the shooter's spin-up hold
+        // (latching, so one call per change is enough). Carries over whatever was selected during
+        // init. Firing is still gated on shooter.readyToShoot() via OuttakeCommandTele.
+        if(robotMode == RobotMode.MANUAL_RPM && hasSubsystem(SubsystemConfig.SHOOTER)){
+            boolean toggled = g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER);
+            if(toggled) farMode = !farMode;
+
+            // Seed the selected preset on the first loop, then re-apply only when it flips.
+            if (toggled || !seeded) {
+                if (farMode) shooter.setRpmClamp(FAR_MIN_RPM, FAR_MAX_RPM);
+                else         shooter.setRpmClamp(CLOSE_MIN_RPM, CLOSE_MAX_RPM);
+                seeded = true;
+            }
+            t.addData("Manual RPM Mode", manualRpmLabel());
+        }
 
         if (g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) //  && storage.getSize() != 0
             schedule(OuttakeCommandTele);

@@ -82,6 +82,7 @@ public final class AutoPaths {
         SHOOT_BACK_SCAN (new Pose(50.386, 13.819, Math.toRadians(160))),
 
         SHOOT_BACK_HP_PREP (new Pose(51.16, 10.6, Math.toRadians(180))),
+        DIAGONAL_FINAL(new Pose(17, 24, Math.toRadians(170))),
 
         SHOOT_BACK_GATHER_PREP (new Pose(54.1, 12.4, Math.toRadians(141))),
         GATHER_CONTROL (new Pose(11.55140186915888, 46.666221628838464)),
@@ -183,7 +184,9 @@ public final class AutoPaths {
         ALT_GATE_SWEEP_END_TO_SHOOT_BACK_2,
 
         GATHER_PREP_TO_GATHER_END,
-        GATHER_PREP_TO_GATHER_END_SL
+        GATHER_PREP_TO_GATHER_END_SL,
+
+        DIAGONAL_CYCLE
     }
 
     // ====== INSTANCE STATE ======
@@ -380,6 +383,13 @@ public final class AutoPaths {
                         .addPath(new BezierLine(getPose(PoseId.SHOOT_BACK_GATHER_PREP), getPose(PoseId.GATHER_CONTROL_SL_CURVE2)))
                         .setTangentHeadingInterpolation()
                         .setReversed()
+                        .build()
+        );
+
+        paths.put(PathId.DIAGONAL_CYCLE,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.SHOOT_BACK_HP_PREP), getPose(PoseId.DIAGONAL_FINAL)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.SHOOT_BACK_HP_PREP).getHeading(), getPose(PoseId.DIAGONAL_FINAL).getHeading())
                         .build()
         );
     }
