@@ -60,7 +60,7 @@ public class MyRobot extends Robot {
      *   <li>{@link #BASE}        - plain teleop, no extra g1 DPAD_RIGHT binding.</li>
      *   <li>{@link #AUTO_PARK}   - g1 DPAD_RIGHT drives to a fixed park pose (cancel by moving a
      *       stick). Was {@code MyRobot_AutoPark}.</li>
-     *   <li>{@link #MANUAL_RPM}  - g1 DPAD_RIGHT toggles CLOSE/FAR flywheel RPM presets (selectable
+     *   <li>{@link #MANUAL_RPM}  - g1 LEFT_BUMPER toggles CLOSE/FAR flywheel RPM presets (selectable
      *       during init too). Was {@code MyRobot_ManualRPM}.</li>
      * </ul>
      */
@@ -105,7 +105,8 @@ public class MyRobot extends Robot {
     public static double fieldSize = 141.5;
 
     // ===== Mode selection (replaces the old MyRobot_AutoPark / MyRobot_ManualRPM subclasses) =====
-    private RobotMode robotMode = RobotMode.BASE;
+    // static so the selection (set in auto / pre-match) carries straight into teleop unchanged.
+    private static RobotMode robotMode = RobotMode.BASE;
 
     // ---- AUTO_PARK config + state (was MyRobot_AutoPark) ----
     // Park pose. RED uses PARK_X_RED; BLUE uses (fieldSize - PARK_X_RED). y/heading are shared.
@@ -117,7 +118,7 @@ public class MyRobot extends Robot {
     private boolean autoParking = false;
 
     // ---- MANUAL_RPM config + state (was MyRobot_ManualRPM) ----
-    // Two manual flywheel RPM presets. Toggled with g1 DPAD_RIGHT; defaults to CLOSE.
+    // Two manual flywheel RPM presets. Toggled with g1 LEFT_BUMPER; defaults to CLOSE.
     public static double CLOSE_MIN_RPM = 1400;
     public static double CLOSE_MAX_RPM = 1900;
     public static double FAR_MIN_RPM = 2000;
@@ -238,7 +239,7 @@ public class MyRobot extends Robot {
     // ===== Mode helpers =====
 
     /** Set the behavioral mode directly (e.g. from your OpMode's initialize()). */
-    public void setRobotMode(RobotMode mode){ this.robotMode = mode; }
+    public void setRobotMode(RobotMode mode){ robotMode = mode; }
 
     /** Current behavioral mode. */
     public RobotMode getRobotMode(){ return robotMode; }
@@ -253,6 +254,16 @@ public class MyRobot extends Robot {
         return farMode
                 ? ("FAR [" + FAR_MIN_RPM + "-" + FAR_MAX_RPM + "]")
                 : ("CLOSE [" + CLOSE_MIN_RPM + "-" + CLOSE_MAX_RPM + "]");
+    }
+
+    /** Alliance, robot mode, and CLOSE/FAR RPM preset -- pinned to the top of match telemetry
+     *  (called first thing in {@link #startPeriodic()}, before anything else is added, so it shows
+     *  above everything in both auto and teleop). */
+    private void addStatusTelemetry(){
+        t.addData("Alliance", (isRed != null && isRed) ? "RED" : "BLUE");
+        t.addData("Robot Mode", robotMode);
+        t.addData("Manual RPM Mode", manualRpmLabel());
+//        t.addData("RPM Preset", manualRpmLabel());
     }
 
     public void allianceSelection(){
@@ -365,12 +376,12 @@ public class MyRobot extends Robot {
         if(g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) cycleRobotMode();
         t.addData("Robot Mode (RIGHT_BUMPER to cycle)", robotMode);
 
-        // MANUAL_RPM: let the driver preselect CLOSE/FAR with DPAD_RIGHT (same button as in-match).
+        // MANUAL_RPM: let the driver preselect CLOSE/FAR with LEFT_BUMPER (same button as in-match).
         // No flywheel motion happens during init -- this only selects the mode the first teleop
         // loop will apply.
         if(robotMode == RobotMode.MANUAL_RPM){
-            if(g1.wasJustPressed(GamepadKeys.Button.DPAD_RIGHT)) farMode = !farMode;
-            t.addData("Manual RPM Mode (DPAD_RIGHT to toggle)", manualRpmLabel());
+            if(g1.wasJustPressed(GamepadKeys.Button.LEFT_BUMPER)) farMode = !farMode;
+            t.addData("Manual RPM Mode (LEFT_BUMPER to toggle)", manualRpmLabel());
         }
 
         g1.readButtons();
@@ -402,6 +413,8 @@ public class MyRobot extends Robot {
     String prevZone = null;
 
     public void startPeriodic(){
+        addStatusTelemetry(); // pin Alliance / Robot Mode / RPM preset to the very top of telemetry
+
         blueGoalPose = new Pose(blueGoalPoseX, blueGoalPoseY);
         if(!isRed) goalPose = blueGoalPose;
         else goalPose = blueGoalPose.mirror(fieldSize);
@@ -489,6 +502,9 @@ public class MyRobot extends Robot {
         }
     }
     public void runIntakeTeleop(){
+        // LEFT_BUMPER is the CLOSE/FAR toggle in MANUAL_RPM, so don't also bind intake-reverse to
+        // it there -- the toggle overrides it. In every other mode LEFT_BUMPER still reverses intake.
+        if(robotMode == RobotMode.MANUAL_RPM) return;
         g1.getGamepadButton(GamepadKeys.Button.LEFT_BUMPER).whenHeld(new InstantCommand(() -> intake.setMode(Intake.Mode.REVERSE), intake));
     }
 
@@ -503,7 +519,7 @@ public class MyRobot extends Robot {
 
         if(lt > 0.1 || rt > 0.1) Turret.MANUAL_OFFSET += (rt - lt)/2;
 
-        // MANUAL_RPM mode: g1 DPAD_RIGHT toggles CLOSE/FAR, applied as the shooter's spin-up hold
+        // MANUAL_RPM mode: g1 LEFT_BUMPER toggles CLOSE/FAR, applied as the shooter's spin-up hold
         // (latching, so one call per change is enough). Carries over whatever was selected during
         // init. Firing is still gated on shooter.readyToShoot() via OuttakeCommandTele.
         if(robotMode == RobotMode.MANUAL_RPM && hasSubsystem(SubsystemConfig.SHOOTER)){
@@ -516,7 +532,7 @@ public class MyRobot extends Robot {
                 else         shooter.setRpmClamp(CLOSE_MIN_RPM, CLOSE_MAX_RPM);
                 seeded = true;
             }
-            t.addData("Manual RPM Mode", manualRpmLabel());
+//            t.addData("Manual RPM Mode", manualRpmLabel());
         }
 
         if (g1.wasJustPressed(GamepadKeys.Button.RIGHT_BUMPER)) //  && storage.getSize() != 0
@@ -599,7 +615,7 @@ public class MyRobot extends Robot {
         setPose(new Pose(f.getPose().getX(), f.getPose().getY(), Math.toRadians(90)));
     }
 
-    public void allianceWallSquare(){
+    public void allianceWallSquare() {
         if(isRed) setPose(new Pose(f.getPose().getX(), f.getPose().getY(), Math.toRadians(0)));
         else setPose(new Pose(f.getPose().getX(), f.getPose().getY(), Math.toRadians(180)));
     }
