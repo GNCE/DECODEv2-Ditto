@@ -111,7 +111,7 @@ public class AllianceAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
-                        // STRAIGHT CYCLE 1 + 2
+                        // STRAIGHT CYCLE 1
                         r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
                         new RepeatCommand(
                                 new SequentialCommandGroup(
@@ -128,8 +128,19 @@ public class AllianceAuto extends MyCommandOpMode {
                                         new InstantCommand(() -> r.door.setOpen(false)),
                                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                                 ),
-                                2
-                        )
+                                1
+                        ),
+
+
+
+                        // DIAGONAL CYCLE 1
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.DIAGONAL_CYCLE)),
+                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
+                        new WaitCommand(100),
+                        r.shootAll(),
+                        new InstantCommand(() -> r.door.setOpen(false)),
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
                 )
                         .raceWith(new WaitCommand(29500))
                         .andThen(r.clearShooterSpinUp())

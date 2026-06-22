@@ -605,9 +605,14 @@ public class MyRobot extends Robot {
         f.update();
     }
 
+//    public void cornerSquare(){
+//        if(isRed) setPose(new Pose(chassisLeftOut, chassisBack, Math.toRadians(90)));
+//        else setPose(new Pose(fieldSize - chassisRightOut, chassisBack, Math.toRadians(90)));
+//    }
+
     public void cornerSquare(){
-        if(isRed) setPose(new Pose(chassisLeftOut, chassisBack, Math.toRadians(90)));
-        else setPose(new Pose(fieldSize - chassisRightOut, chassisBack, Math.toRadians(90)));
+        if(isRed) setPose(new Pose(10.346, 7.145, Math.toRadians(180)));
+        else setPose(new Pose(fieldSize - 10.346, 7.145, Math.toRadians(0)));
     }
 
 
