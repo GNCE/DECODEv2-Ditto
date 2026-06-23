@@ -1,11 +1,9 @@
 package org.firstinspires.ftc.teamcode.opmodes.auto;
 
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.seattlesolvers.solverslib.command.ConditionalCommand;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.ParallelRaceGroup;
-import com.seattlesolvers.solverslib.command.RepeatCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
@@ -23,7 +21,7 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 import java.util.List;
 
 @Autonomous(group="Far Auto", name="Alliance auto")
-public class AllianceAuto extends MyCommandOpMode {
+public class MainFarAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
     @Override
@@ -53,7 +51,7 @@ public class AllianceAuto extends MyCommandOpMode {
                         new ParallelRaceGroup(
                                 new SequentialCommandGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.START_BACK_TO_HUMAN_PLAYER_END)),
-                                        new WaitCommand(500)
+                                        new WaitCommand(450)
                                 ),
                                 new WaitUntilCommand(() -> r.storage.getSize() == 3)
                         ),
@@ -68,7 +66,7 @@ public class AllianceAuto extends MyCommandOpMode {
                         new ParallelRaceGroup(
                                 new SequentialCommandGroup(
                                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.SHOOT_BACK_1_TO_FAR_SPIKE_END)),
-                                        new WaitCommand(300)
+                                        new WaitCommand(250)
                                 ),
                                 new WaitUntilCommand(() -> r.storage.getSize() == 3)
                         ),
@@ -78,17 +76,11 @@ public class AllianceAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
-                        // STRAIGHT CYCLE 1
-                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_GATHER_PREP)),
-                        new ParallelRaceGroup(
-                                new SequentialCommandGroup(
-                                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.HP_END)),
-                                        new WaitCommand(300)
-                                ),
-                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
-                        ),
-                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_GATHER_PREP)),
-                        new WaitCommand(200),
+                        // DIAGONAL CYCLE 1
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
+                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.DIAGONAL_CYCLE)),
+                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
+                        new WaitCommand(100),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
@@ -112,28 +104,22 @@ public class AllianceAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
                         // STRAIGHT CYCLE 1
-                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
-                        new RepeatCommand(
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_GATHER_PREP)),
+                        new ParallelRaceGroup(
                                 new SequentialCommandGroup(
-                                        new ParallelRaceGroup(
-                                                new SequentialCommandGroup(
-                                                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.DIAGONAL_FINAL)),
-                                                        new WaitCommand(300)
-                                                ),
-                                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
-                                        ),
-                                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
-                                        new WaitCommand(100),
-                                        r.shootAll(),
-                                        new InstantCommand(() -> r.door.setOpen(false)),
-                                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
+                                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.HP_END)),
+                                        new WaitCommand(300)
                                 ),
-                                1
+                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
                         ),
+                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_GATHER_PREP)),
+                        new WaitCommand(200),
+                        r.shootAll(),
+                        new InstantCommand(() -> r.door.setOpen(false)),
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
 
-
-                        // DIAGONAL CYCLE 1
+                        // DIAGONAL CYCLE 2
                         r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.DIAGONAL_CYCLE)),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),

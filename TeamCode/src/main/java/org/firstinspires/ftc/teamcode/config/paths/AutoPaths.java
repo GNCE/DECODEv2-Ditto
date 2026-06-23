@@ -82,11 +82,13 @@ public final class AutoPaths {
         SHOOT_BACK_SCAN (new Pose(50.386, 13.819, Math.toRadians(160))),
 
         SHOOT_BACK_HP_PREP (new Pose(51, 11, Math.toRadians(180))),
-        DIAGONAL_FINAL(new Pose(17, 24, Math.toRadians(170))),
+
+        DIAGONAL_FINAL_OA(new Pose(8, 34, Math.toRadians(175))),
+        DIAGONAL_FINAL(new Pose(10, 28, Math.toRadians(170))),
 
         SHOOT_BACK_GATHER_PREP (new Pose(54, 12.75, Math.toRadians(141))),
         GATHER_CONTROL (new Pose(11.55140186915888, 46.666221628838464)),
-        GATHER_CONTROL_SL (new Pose(11.55140186915888, 50)),
+        GATHER_CONTROL_SL (new Pose(11, 51)),
 
         GATHER_CONTROL_SL_CURVE2 (new Pose(11.55140186915888, 32, Math.toRadians(45))),
         GATHER_END(new Pose(10.627503337783713, 14.5, Math.toRadians(270))),
@@ -136,6 +138,7 @@ public final class AutoPaths {
     }
     public enum PathId {
         START_FRONT_TO_MID_SPIKE_END,
+        DIAGONAL_CYCLE_OA_1,
         MID_SPIKE_END_TO_SHOOT_FRONT,
         SHOOT_FRONT_TO_GATE_INTAKE,
         GATE_INTAKE_TO_SHOOT_FRONT,
@@ -390,6 +393,13 @@ public final class AutoPaths {
                 f.pathBuilder()
                         .addPath(new BezierLine(getPose(PoseId.SHOOT_BACK_HP_PREP), getPose(PoseId.DIAGONAL_FINAL)))
                         .setLinearHeadingInterpolation(getPose(PoseId.SHOOT_BACK_HP_PREP).getHeading(), getPose(PoseId.DIAGONAL_FINAL).getHeading())
+                        .build()
+        );
+
+        paths.put(PathId.DIAGONAL_CYCLE_OA_1,
+                f.pathBuilder()
+                        .addPath(new BezierLine(getPose(PoseId.SHOOT_BACK_HP_PREP), getPose(PoseId.DIAGONAL_FINAL_OA)))
+                        .setLinearHeadingInterpolation(getPose(PoseId.SHOOT_BACK_HP_PREP).getHeading(), getPose(PoseId.DIAGONAL_FINAL_OA).getHeading())
                         .build()
         );
     }

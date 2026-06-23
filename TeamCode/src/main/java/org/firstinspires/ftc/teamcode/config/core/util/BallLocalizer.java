@@ -77,7 +77,7 @@ public class BallLocalizer {
     public static double MAX_BALL_SPEED_IN_S = 120.0;
     /** Reject detections projected outside the field (with this margin), inches. */
     public static double FIELD_SIZE_IN = 141.5;
-    public static double FIELD_MARGIN_IN = 6.0;
+    public static double FIELD_MARGIN_IN = 2.0;
 
     private final List<Ball> tracks = new ArrayList<>();
     private int nextId = 0;

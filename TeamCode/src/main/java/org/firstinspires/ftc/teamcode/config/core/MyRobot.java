@@ -492,6 +492,7 @@ public class MyRobot extends Robot {
         if(hasSubsystem(SubsystemConfig.INTAKE)){
             storage.input(intake.getCurrent(), intake.getIntakeVelocity());
             intake.inputStorageSize(storage.getSize());
+            if(hasSubsystem(SubsystemConfig.DOOR)) door.inputSize(storage.getSize());
 
             if(storage.getSize() == 3) g1.gamepad.rumble(Gamepad.RUMBLE_DURATION_CONTINUOUS);
             else g1.gamepad.stopRumble();
