@@ -20,6 +20,7 @@ import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
 public class Lift extends SubsysCore {
     MotorGroup front, back;
     ServoEx pto;
+    private double lastPto = Double.NaN;
     public static int tar = 0;
     public static double kp = 0.9, ki = 0, kd = 0, kf = 0.3;
     public static int positionTolerance = 30;
@@ -95,21 +96,27 @@ public class Lift extends SubsysCore {
                 pwr = MathUtils.clamp(pidf.calculate(getCurrentPosition()) + kf, -1, 1);
                 if(!pidf.atSetPoint()) back.set(pwr);
                 else back.set(0);
-                t.addData("Lift Target Position", tar);
+                if(telemetryEnabled) t.addData("Lift Target Position", tar);
                 break;
             case RAW:
                 front.set(-pwr);
                 back.set(pwr);
                 break;
         }
-        if(mode == Mode.INACTIVE) pto.set(CLUTCH_PULLED);
-        else pto.set(CLUTCH_MESHED);
+        // Cache the clutch write: it only flips between two values, so don't re-send it every loop.
+        double ptoTarget = (mode == Mode.INACTIVE) ? CLUTCH_PULLED : CLUTCH_MESHED;
+        if(Double.isNaN(lastPto) || ptoTarget != lastPto){
+            pto.set(ptoTarget);
+            lastPto = ptoTarget;
+        }
 
-        t.addData("Lift Current Position", getCurrentPosition());
-        t.addData("Lift Power", pwr);
-        t.addData("Lift Position Error", tar - getCurrentPosition());
-        t.addData("Lift Reached Target?", reachedTarget());
-        t.addData("Lift Mode", getMode().name());
+        if(telemetryEnabled){
+            t.addData("Lift Current Position", getCurrentPosition());
+            t.addData("Lift Power", pwr);
+            t.addData("Lift Position Error", tar - getCurrentPosition());
+            t.addData("Lift Reached Target?", reachedTarget());
+            t.addData("Lift Mode", getMode().name());
+        }
     }
 
     public boolean reachedTarget(){

@@ -13,6 +13,7 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 
 import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
+import org.firstinspires.ftc.teamcode.config.hardware.CachedServo;
 import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
 import org.firstinspires.ftc.teamcode.config.core.util.hardware.VoltageCompensatedMotorGroup;
 
@@ -20,7 +21,7 @@ import org.firstinspires.ftc.teamcode.config.core.util.hardware.VoltageCompensat
 public class Shooter extends SubsysCore {
     private final VoltageCompensatedMotorGroup flywheel;
     private final Motor.Encoder encoder;
-    private final Servo hood;
+    private final CachedServo hood;
 
     public static double INACTIVE_VELOCITY = 0.0;
     public static double VELOCITY_READY_THRESHOLD = 60.0;
@@ -117,7 +118,7 @@ public class Shooter extends SubsysCore {
         encoder = m1.encoder;
         encoder.setDirection(Motor.Direction.FORWARD);
 
-        hood = h.get(Servo.class, "hood");
+        hood = new CachedServo(h.get(Servo.class, "hood"));
 
         pidfController = new PIDFController(kp, ki, kd, kV);
 
@@ -199,21 +200,25 @@ public class Shooter extends SubsysCore {
         double servoPos = hoodAngleToServoPos(hoodCmdDeg);
         hood.setPosition(shotPossible ? servoPos : hoodAngleToServoPos(IDLE_HOOD_ANGLE_DEG));
 
-        t.addData("Shooter Cached Voltage", flywheel.getCachedVoltage());
-        t.addData("Flywheel 1 Current", m1.getCurrent(CurrentUnit.AMPS));
-        t.addData("Flywheel 2 Current", m2.getCurrent(CurrentUnit.AMPS));
-        t.addData("Shooter Velocity Error", getTargetVelocity() - getVelocity());
-        t.addData("Shooter Target Power", targetPower);
-        t.addData("Shooter Accel FF", accelFF);
-        t.addData("Shooter Target Rate (rpm/s)", filteredTargetRate);
-        t.addData("Shooter Velocity", getVelocity());
-        t.addData("Shooter Target Velocity", getTargetVelocity());
-        t.addData("Shooter Spin-Up Target", isSpinUpHeld() ? spinUpTargetRpm : -1);
-        t.addData("Shooter Ready", readyToShoot());
-        t.addData("Shooter testModeOnly", testModeOnly);
-        t.addData("Shooter Planned Dist (in)", plannedDistPoseUnits);
-        t.addData("Shooter Hood Baseline (deg)", currentTargetHoodAngle);
-        t.addData("Shooter Hood Cmd (deg)", hoodCmdDeg);
-        t.addData("Shooter Commanded Servo Pos", servoPos);
+        // m1/m2.getCurrent() are non-bulk hub round-trips (the most expensive reads in this loop) and
+        // feed telemetry only -- skip the whole block, and them, when telemetry is off.
+        if(telemetryEnabled){
+            t.addData("Shooter Cached Voltage", flywheel.getCachedVoltage());
+            t.addData("Flywheel 1 Current", m1.getCurrent(CurrentUnit.AMPS));
+            t.addData("Flywheel 2 Current", m2.getCurrent(CurrentUnit.AMPS));
+            t.addData("Shooter Velocity Error", getTargetVelocity() - getVelocity());
+            t.addData("Shooter Target Power", targetPower);
+            t.addData("Shooter Accel FF", accelFF);
+            t.addData("Shooter Target Rate (rpm/s)", filteredTargetRate);
+            t.addData("Shooter Velocity", getVelocity());
+            t.addData("Shooter Target Velocity", getTargetVelocity());
+            t.addData("Shooter Spin-Up Target", isSpinUpHeld() ? spinUpTargetRpm : -1);
+            t.addData("Shooter Ready", readyToShoot());
+            t.addData("Shooter testModeOnly", testModeOnly);
+            t.addData("Shooter Planned Dist (in)", plannedDistPoseUnits);
+            t.addData("Shooter Hood Baseline (deg)", currentTargetHoodAngle);
+            t.addData("Shooter Hood Cmd (deg)", hoodCmdDeg);
+            t.addData("Shooter Commanded Servo Pos", servoPos);
+        }
     }
 }

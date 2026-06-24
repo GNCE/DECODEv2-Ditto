@@ -38,6 +38,7 @@ import org.firstinspires.ftc.teamcode.config.core.util.robothelper.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.SAT2D;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.SubsystemConfig;
 import org.firstinspires.ftc.teamcode.config.core.util.hardware.ToggleButton;
+import org.firstinspires.ftc.teamcode.config.core.util.hardware.RumbleManager;
 import org.firstinspires.ftc.teamcode.config.core.util.VisionMeasurement;
 import org.firstinspires.ftc.teamcode.config.subsystems.Door;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
@@ -127,6 +128,14 @@ public class MyRobot extends Robot {
     private boolean seeded  = false; // apply the selected baseline on the first teleop loop
     // =============================================================================================
 
+    // ---- Telemetry mode ----
+    // When OFF, the bulk telemetry is neither polled nor formatted (saving loop time); only a
+    // one-line indicator plus loop time/frequency are shown so you can confirm the loop sped up.
+    // Toggle with g2 OPTIONS during init OR the match; also live-editable in Panels (@Configurable).
+    // static so the choice carries from auto into teleop, like the other mode flags above.
+    public static boolean telemetryEnabled = true;
+    private final ToggleButton telemetryButton = new ToggleButton(telemetryEnabled);
+
     SAT2D.PolygonSet launchZones = new SAT2D.PolygonSet()
             .add("Close",
                     new SAT2D.Point2(0, fieldSize),
@@ -138,6 +147,7 @@ public class MyRobot extends Robot {
                     new SAT2D.Point2(fieldSize/2 + 24, 0));
 
     ToggleButton autoFireButton, turretAlwaysReadyButton;
+    public RumbleManager rumbleManager;
     OuttakeCommandTele OuttakeCommandTele;
     List<SubsystemConfig> subsysList;
     ShotPlanner planner;
@@ -175,6 +185,7 @@ public class MyRobot extends Robot {
         }
         this.g1 = new GamepadEx(g1);
         this.g2 = new GamepadEx(g2);
+        this.rumbleManager = new RumbleManager(this.g1.gamepad);
 
         SubsysCore.setGlobalParameters(this.h, this.t);
 
@@ -204,7 +215,7 @@ public class MyRobot extends Robot {
         }
 
         if(hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.DOOR, SubsystemConfig.SHOOTER, SubsystemConfig.TURRET))){
-            OuttakeCommandTele = new OuttakeCommandTele(intake, turret, shooter, door, storage);
+            OuttakeCommandTele = new OuttakeCommandTele(intake, turret, shooter, door, storage, this::cueShotRumble);
         }
 
         if(isRed == null) isRed = false;
@@ -263,7 +274,17 @@ public class MyRobot extends Robot {
         t.addData("Alliance", (isRed != null && isRed) ? "RED" : "BLUE");
         t.addData("Robot Mode", robotMode);
         t.addData("Manual RPM Mode", manualRpmLabel());
+        t.addData("Telemetry Mode", telemetryEnabled ? "ON" : "OFF");
 //        t.addData("RPM Preset", manualRpmLabel());
+    }
+
+    /** Read the telemetry-mode toggle (g2 OPTIONS) once per loop. Honors live Panels edits to
+     *  {@link #telemetryEnabled} and flips it on a button press. Safe to call in init and the match. */
+    private void updateTelemetryToggle(){
+        telemetryButton.setVal(telemetryEnabled);                          // honor live Panels edits
+        telemetryButton.input(g1.getButton(GamepadKeys.Button.OPTIONS));   // flips on press
+        telemetryEnabled = telemetryButton.getVal();
+        SubsysCore.telemetryEnabled = telemetryEnabled; // let subsystems skip telemetry-only hw reads
     }
 
     public void allianceSelection(){
@@ -340,7 +361,7 @@ public class MyRobot extends Robot {
             if(g1.wasJustPressed(GamepadKeys.Button.DPAD_LEFT)) allianceWallSquare();
         }
 
-        t.addData("Auto Parking", autoParking);
+        if(telemetryEnabled) t.addData("Auto Parking", autoParking);
     }
 
     /** Alliance-correct park pose. Only x flips between alliances; y and heading are shared. */
@@ -384,6 +405,10 @@ public class MyRobot extends Robot {
             t.addData("Manual RPM Mode (LEFT_BUMPER to toggle)", manualRpmLabel());
         }
 
+        // Let the driver pre-select telemetry mode during init; carries into the match via the static.
+        updateTelemetryToggle();
+        t.addData("Telemetry (g1 OPTIONS to toggle)", telemetryEnabled ? "ON" : "OFF");
+
         g1.readButtons();
         g2.readButtons();
 
@@ -413,7 +438,8 @@ public class MyRobot extends Robot {
     String prevZone = null;
 
     public void startPeriodic(){
-        addStatusTelemetry(); // pin Alliance / Robot Mode / RPM preset to the very top of telemetry
+        updateTelemetryToggle(); // g2 OPTIONS toggles telemetry mode (also editable in Panels)
+        addStatusTelemetry(); // pin Alliance / Robot Mode / RPM preset / Telemetry Mode to the very top (always shown)
 
         blueGoalPose = new Pose(blueGoalPoseX, blueGoalPoseY);
         if(!isRed) goalPose = blueGoalPose;
@@ -441,17 +467,31 @@ public class MyRobot extends Robot {
                 ShotPlanner.ShotCommand cmd = planner.plan(turretPose, f.getVelocity().getXComponent(), f.getVelocity().getYComponent(), f.getAngularVelocity(), goalPose, shooter.getVelocity());
 
                 // ---- SOTM DEBUG TELEMETRY (remove when done tuning) ----
-                t.addData("SOTM Virtual Goal X", cmd.virtualGoal.getX());
-                t.addData("SOTM Virtual Goal Y", cmd.virtualGoal.getY());
-                t.addData("SOTM Real Goal X", goalPose.getX());
-                t.addData("SOTM Real Goal Y", goalPose.getY());
-                t.addData("SOTM Flight Time (s)", String.format("%.3f", cmd.flightTimeSec));
-                t.addData("SOTM Lead X (in)", String.format("%.2f", cmd.virtualGoal.getX() - goalPose.getX()));
-                t.addData("SOTM Lead Y (in)", String.format("%.2f", cmd.virtualGoal.getY() - goalPose.getY()));
+                if(telemetryEnabled){
+                    t.addData("SOTM Virtual Goal X", cmd.virtualGoal.getX());
+                    t.addData("SOTM Virtual Goal Y", cmd.virtualGoal.getY());
+                    t.addData("SOTM Real Goal X", goalPose.getX());
+                    t.addData("SOTM Real Goal Y", goalPose.getY());
+                    t.addData("SOTM Flight Time (s)", String.format("%.3f", cmd.flightTimeSec));
+                    t.addData("SOTM Lead X (in)", String.format("%.2f", cmd.virtualGoal.getX() - goalPose.getX()));
+                    t.addData("SOTM Lead Y (in)", String.format("%.2f", cmd.virtualGoal.getY() - goalPose.getY()));
+                    // Tuning: compare the lag-compensated launch velocity (what the lead is built from)
+                    // against the raw measured velocity. Near a braked stop the launch value should fall
+                    // to ~0 while the raw reading still lags backward -- if it doesn't, raise VELOCITY_LATENCY_SEC.
+                    t.addData("SOTM Launch Vel (in/s)", String.format("%.1f, %.1f", cmd.launchVxFieldPosePerSec, cmd.launchVyFieldPosePerSec));
+                    t.addData("SOTM Raw Vel (in/s)", String.format("%.1f, %.1f", f.getVelocity().getXComponent(), f.getVelocity().getYComponent()));
+                    // Estimated accel feeding the prediction. During a decel this MUST read strongly
+                    // opposite to velocity; if it reads ~0 or same-sign-as-velocity, the estimate is too
+                    // laggy and the lead/turret over-extrapolate (shoots to the side). Compare vs Pedro's
+                    // fresh one-step accel.
+                    t.addData("SOTM Est Accel (in/s2)", String.format("%.0f, %.0f", cmd.robotAxFieldPosePerSec2, cmd.robotAyFieldPosePerSec2));
+                    t.addData("SOTM Pedro Accel (in/s2)", String.format("%.0f, %.0f", f.getAcceleration().getXComponent(), f.getAcceleration().getYComponent()));
+                }
 // ---- END SOTM DEBUG TELEMETRY ----
 
                 if (hasSubsystem(SubsystemConfig.TURRET))
-                    turret.input(cmd.predictedRobotPose, cmd.virtualGoal);
+                    // Aim from the turret-latency-led pose so the slow servo is settled by release.
+                    turret.input(cmd.predictedTurretPose, cmd.virtualGoal);
                 if (hasSubsystem(SubsystemConfig.SHOOTER))
                     shooter.setPlannedShot(cmd.distancePoseUnits, cmd.targetRpm, cmd.hoodBaselineDegFromVertical, cmd.possible);
             }
@@ -464,7 +504,7 @@ public class MyRobot extends Robot {
                 } else if(ll.getMode() == Limelight.Mode.BALL_DETECTION && ballLocalizer != null) {
                     // Project this frame's detections to the field and update each ball's velocity.
                     ballLocalizer.update(ll.getDetections(), f.getPose(), runtimeNow);
-                    t.addData("Tracked Balls", ballLocalizer.getBalls().size());
+                    if(telemetryEnabled) t.addData("Tracked Balls", ballLocalizer.getBalls().size());
                 }
             }
 
@@ -479,7 +519,7 @@ public class MyRobot extends Robot {
                         if (zone == null && OuttakeCommandTele.isScheduled())
                             CommandScheduler.getInstance().cancel(OuttakeCommandTele);
                     }
-                    t.addData("Current Zone", zone);
+                    if(telemetryEnabled) t.addData("Current Zone", zone);
                     prevZone = zone;
                 }
 
@@ -490,12 +530,15 @@ public class MyRobot extends Robot {
             }
         }
         if(hasSubsystem(SubsystemConfig.INTAKE)){
-            storage.input(intake.getCurrent(), intake.getIntakeVelocity());
+            // Storage ignores current/velocity (both fields are dead), so don't pay for the motor
+            // current read here -- getCurrent() is a separate hub round-trip, not a bulk read.
+            storage.input(0, 0);
             intake.inputStorageSize(storage.getSize());
             if(hasSubsystem(SubsystemConfig.DOOR)) door.inputSize(storage.getSize());
 
-            if(storage.getSize() == 3) g1.gamepad.rumble(Gamepad.RUMBLE_DURATION_CONTINUOUS);
-            else g1.gamepad.stopRumble();
+            // Rumble: sustained while the magazine is full, preempted by a timed shot cue. The manager
+            // edge-triggers the actual DS command, so this stays one cheap call per loop.
+            rumbleManager.update(storage.getSize() == 3);
         }
 
         if(hasSubsystems(List.of(SubsystemConfig.INTAKE, SubsystemConfig.TURRET, SubsystemConfig.SHOOTER, SubsystemConfig.LIFT))){
@@ -555,33 +598,35 @@ public class MyRobot extends Robot {
     public void endPeriodic() {
         if(hasSubsystem(SubsystemConfig.FOLLOWER)) f.update();
         this.run();
-        if (hasSubsystem(SubsystemConfig.FOLLOWER)) {
-            t.addData("Current Pose", f.getPose());
-            t.addData("Current Pinpoint Pose", Constants.fusionLocalizer.getDeadReckoningPose());
-            t.addData("Current Velocity", f.getVelocity());
-            t.addData("Follower Busy?" , f.isBusy());
+        if(telemetryEnabled){
+            if (hasSubsystem(SubsystemConfig.FOLLOWER)) {
+                t.addData("Current Pose", f.getPose());
+                t.addData("Current Pinpoint Pose", Constants.fusionLocalizer.getDeadReckoningPose());
+                t.addData("Current Velocity", f.getVelocity());
+                t.addData("Follower Busy?" , f.isBusy());
 
-            PanelsField.INSTANCE.getField().moveCursor(f.getPose().getX(), f.getPose().getY());
-            PanelsField.INSTANCE.getField().circle(1);
-            PanelsField.INSTANCE.getField().update();
-        }
-        if(hasSubsystems(List.of(SubsystemConfig.SHOOTER, SubsystemConfig.TURRET, SubsystemConfig.INTAKE, SubsystemConfig.DOOR))){
-            t.addLine();
-            t.addLine("SHOOTER DATA");
-            if(!shooter.readyToShoot()) t.addLine("Shooter Not Ready");
-            if(!turret.reachedTarget()) t.addLine("Turret Not Ready");
-            if(!door.isOpen()) t.addLine("Door Not Open");
-            t.addData("Shoot Ready?", shooter.readyToShoot() && turret.reachedTarget() && door.isOpen());
-            t.addLine();
-        }
-        if(OuttakeCommandTele != null){
-            t.addData("Outtake Command Scheduled", OuttakeCommandTele.isScheduled());
-            t.addData("Outtake Command Done", OuttakeCommandTele.isFinished());
+                PanelsField.INSTANCE.getField().moveCursor(f.getPose().getX(), f.getPose().getY());
+                PanelsField.INSTANCE.getField().circle(1);
+                PanelsField.INSTANCE.getField().update();
+            }
+            if(hasSubsystems(List.of(SubsystemConfig.SHOOTER, SubsystemConfig.TURRET, SubsystemConfig.INTAKE, SubsystemConfig.DOOR))){
+                t.addLine();
+                t.addLine("SHOOTER DATA");
+                if(!shooter.readyToShoot()) t.addLine("Shooter Not Ready");
+                if(!turret.reachedTarget()) t.addLine("Turret Not Ready");
+                if(!door.isOpen()) t.addLine("Door Not Open");
+                t.addData("Shoot Ready?", shooter.readyToShoot() && turret.reachedTarget() && door.isOpen());
+                t.addLine();
+            }
+            if(OuttakeCommandTele != null){
+                t.addData("Outtake Command Scheduled", OuttakeCommandTele.isScheduled());
+                t.addData("Outtake Command Done", OuttakeCommandTele.isFinished());
+            }
         }
         g1.readButtons();
         g2.readButtons();
         lt.end();
-        t.addData("Current Motif", currentMotif == null ? "Not Detected" : currentMotif.name());
+        if(telemetryEnabled) t.addData("Current Motif", currentMotif == null ? "Not Detected" : currentMotif.name());
         t.addData("Loop Time (ms)", lt.getMs());
         t.addData("Loop Frequency (Hz)", lt.getHz());
         t.update();
@@ -672,7 +717,13 @@ public class MyRobot extends Robot {
     /// Commands ///
 
     public Command shootAll(){
-        return new OuttakeCommandTele(intake, turret, shooter, door, storage);
+        return new OuttakeCommandTele(intake, turret, shooter, door, storage, this::cueShotRumble);
+    }
+
+    /** Shot-launch cue handed to the outtake command; fired when the transfer pushes the balls out.
+     *  Null-safe so partial-robot configs without a rumble manager are fine. */
+    private void cueShotRumble(){
+        if(rumbleManager != null) rumbleManager.triggerShot();
     }
 
     public Command shootAll2(){

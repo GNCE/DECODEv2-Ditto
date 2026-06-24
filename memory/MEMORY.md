@@ -1,0 +1,4 @@
+- [Shooter/SOTM design intent](shooter-sotm-design-intent.md) — firing gates are intentional, don't "fix" them
+- [SOTM improvements](ditto-sotm-improvements.md) — latency model + decel-to-stop aim/lead work in ShotPlanner
+- [Loop-time optimization](ditto-loop-time-optimization.md) — telemetry-gated hardware reads; ~40ms loop cleanup
+- [Rumble cue](ditto-rumble-cue.md) — RumbleManager: full-magazine buzz + timed shot cue

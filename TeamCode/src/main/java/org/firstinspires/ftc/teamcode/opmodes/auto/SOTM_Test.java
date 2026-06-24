@@ -40,6 +40,12 @@ public class SOTM_Test extends MyCommandOpMode {
         schedule(
                 new SequentialCommandGroup(
 
+                        // Enable SOTM + latency-compensated pose prediction for this auto. In auto the
+                        // robot never toggles these itself (that's teleop-only), so the test would
+                        // otherwise run with no lead and no latency comp at all.
+                        new InstantCommand(org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner::enableSOTM),
+                        new InstantCommand(org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner::enableFPP),
+
                         // Aim turret at goal and spin up shooter before we move
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                         new InstantCommand(() -> r.shooter.setActive(true)),

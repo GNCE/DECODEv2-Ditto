@@ -113,15 +113,17 @@ public class Storage extends SubsysCore {
         updateStoredCount();
 //        updateS1Cutoff();
 
-        t.addData("Stored Count", storedCount);
-        t.addData("Break Beam 1", st1);
-        t.addData("Break Beam 2", st2);
-        t.addData("Break Beam 3", st3);
-        t.addData("Assume S3 Fault Loops", assumeS3FaultLoops);
-        t.addData("Assume S2 Fault Loops", assumeS2FaultLoops);
-        t.addData("S1 Full Loops", s1FullLoops);
-        t.addData("S1 Hard Full", s1HardFull);
-        t.addData("Intake Full?", isFull());
+        if(telemetryEnabled){
+            t.addData("Stored Count", storedCount);
+            t.addData("Break Beam 1", st1);
+            t.addData("Break Beam 2", st2);
+            t.addData("Break Beam 3", st3);
+            t.addData("Assume S3 Fault Loops", assumeS3FaultLoops);
+            t.addData("Assume S2 Fault Loops", assumeS2FaultLoops);
+            t.addData("S1 Full Loops", s1FullLoops);
+            t.addData("S1 Hard Full", s1HardFull);
+            t.addData("Intake Full?", isFull());
+        }
     }
 
     private void readSmoothedBeams() {
@@ -165,7 +167,7 @@ public class Storage extends SubsysCore {
     }
 
     StorageState storageState;
-    public static double ST1_DELAY = 0.125, ST2_DELAY = 0.25, ST3_DELAY = 0; // 1, 0.8, 0.8 // TODO: KEEP TUNING
+    public static double ST1_DELAY = 0.18, ST2_DELAY = 0.32, ST3_DELAY = 0; // 0.125, 0.25, 0 // TODO: KEEP TUNING
 
     private void updateNormalTransitions() {
         switch(storageState) {

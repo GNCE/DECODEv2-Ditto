@@ -14,10 +14,22 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 public class OuttakeCommandTele extends SequentialCommandGroup {
     public OuttakeCommandTele(Intake intake, Turret turret, Shooter shooter, Door door, Storage storage){
+        this(intake, turret, shooter, door, storage, null);
+    }
+
+    /**
+     * @param onLaunch fired the instant the transfer starts pushing the balls out -- the reference
+     *                 point the rumble cue's timing is computed from. May be null.
+     */
+    public OuttakeCommandTele(Intake intake, Turret turret, Shooter shooter, Door door, Storage storage,
+                              Runnable onLaunch){
         addCommands(
                 new WaitUntilCommand(shooter::readyToShoot),
                 door.setOpenCommand(true),
-                new InstantCommand(() -> intake.setMode(Intake.Mode.TRANSFER)),
+                new InstantCommand(() -> {
+                    intake.setMode(Intake.Mode.TRANSFER);
+                    if (onLaunch != null) onLaunch.run(); // transfer push = balls about to clear: cue timing anchor
+                }),
                 new WaitCommand(200),
                 new ParallelCommandGroup(
                         new InstantCommand(() -> intake.setMode(Intake.Mode.INTAKE)),

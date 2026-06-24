@@ -79,6 +79,15 @@ public class Limelight extends SubsysCore {
         this.mode = mode;
     }
 
+    // pipelineSwitch sends a command every call; only send it when the pipeline actually changes.
+    private int currentPipeline = -1;
+    private void switchPipeline(int idx){
+        if(idx != currentPipeline){
+            ll.pipelineSwitch(idx);
+            currentPipeline = idx;
+        }
+    }
+
     public void update(double nowSec, double robotHeading){
         this.nowSec = nowSec;
         this.robotHeading = robotHeading;
@@ -90,22 +99,25 @@ public class Limelight extends SubsysCore {
 
     @Override
     public void periodic() {
-        LLStatus status = ll.getStatus();
-        t.addData("LL Name", "%s", status.getName());
-        t.addData("LL State", "Temp: %.1fC, CPU: %.1f%%, FPS: %d", status.getTemp(), status.getCpu(),(int)status.getFps());
-        t.addData("Pipeline", "Index: %d, Type: %s", status.getPipelineIndex(), status.getPipelineType());
-        t.addData("LL Mode", mode.name());
+        // ll.getStatus()/isConnected()/isRunning() are telemetry-only reads; skip them in match mode.
+        if(telemetryEnabled){
+            LLStatus status = ll.getStatus();
+            t.addData("LL Name", "%s", status.getName());
+            t.addData("LL State", "Temp: %.1fC, CPU: %.1f%%, FPS: %d", status.getTemp(), status.getCpu(),(int)status.getFps());
+            t.addData("Pipeline", "Index: %d, Type: %s", status.getPipelineIndex(), status.getPipelineType());
+            t.addData("LL Mode", mode.name());
+        }
 
         switch (mode){
             case LOCALIZATION:
-                ll.pipelineSwitch(1);
+                switchPipeline(1);
                 ll.updateRobotOrientation((robotHeading + 90)%360);
                 break;
             case MOTIF_DETECTION:
-                ll.pipelineSwitch(0);
+                switchPipeline(0);
                 break;
             case BALL_DETECTION:
-                ll.pipelineSwitch(BALL_PIPELINE_INDEX);
+                switchPipeline(BALL_PIPELINE_INDEX);
                 break;
         }
 
@@ -114,18 +126,14 @@ public class Limelight extends SubsysCore {
         if (llResult != null) {
             double captureLatency = llResult.getCaptureLatency();
             double targetingLatency = llResult.getTargetingLatency();
-            double parseLatency = llResult.getParseLatency();
 
-            t.addData("LL Latency", captureLatency + targetingLatency);
-            t.addData("LL Parse Latency", parseLatency);
-
-            tx = llResult.getTx();
-            ty = llResult.getTy();
-            ta = llResult.getTa();
-
-            t.addData("Target X", tx);
-            t.addData("Target Y", ty);
-            t.addData("Target Area", ta);
+            if(telemetryEnabled){
+                t.addData("LL Latency", captureLatency + targetingLatency);
+                t.addData("LL Parse Latency", llResult.getParseLatency());
+                t.addData("Target X", llResult.getTx());
+                t.addData("Target Y", llResult.getTy());
+                t.addData("Target Area", llResult.getTa());
+            }
 
             latestMeasurement = null;
 
@@ -133,20 +141,9 @@ public class Limelight extends SubsysCore {
                 case LOCALIZATION:
                     if (llResult.isValid()) {
                         double in = 39.37007874;
-                        Pose3D mt1Pose = llResult.getBotpose();
                         Pose3D mt2Pose = llResult.getBotpose_MT2();
 
-                        if (mt1Pose != null && mt2Pose != null) {
-                            t.addData("MT1 BotPose", mt1Pose.toString());
-                            t.addData("MT2 BotPose", mt2Pose.toString());
-
-                            Pose pedro1 = FTCCoordinates.INSTANCE.convertToPedro(new Pose(
-                                    mt1Pose.getPosition().x * in,
-                                    mt1Pose.getPosition().y * in,
-                                    mt1Pose.getOrientation().getYaw(AngleUnit.RADIANS)
-                            ));
-                            pedro1 = new Pose(pedro1.getX() - 3.5, pedro1.getY()-1, pedro1.getHeading());
-
+                        if (mt2Pose != null) {
                             Pose pedro2 = FTCCoordinates.INSTANCE.convertToPedro(new Pose(
                                     mt2Pose.getPosition().x * in,
                                     mt2Pose.getPosition().y * in,
@@ -154,9 +151,10 @@ public class Limelight extends SubsysCore {
                             ));
                             pedro2 = new Pose(pedro2.getX(), pedro2.getY()+1.5, Double.NaN);
 
-
-                            t.addData("MT1 PedroConv", pedro1);
-                            t.addData("MT2 PedroConv", pedro2);
+                            if(telemetryEnabled){
+                                t.addData("MT2 BotPose", mt2Pose.toString());
+                                t.addData("MT2 PedroConv", pedro2);
+                            }
 
                             long captureTime = System.nanoTime() - (long)((captureLatency + targetingLatency)*(1e6));
                             Constants.fusionLocalizer.addMeasurement(pedro2, captureTime);
@@ -174,14 +172,16 @@ public class Limelight extends SubsysCore {
                     break;
                 case BALL_DETECTION:
                     latestDetections = llResult.getDetectorResults();
-                    t.addData("Balls Detected", latestDetections != null ? latestDetections.size() : 0);
+                    if(telemetryEnabled) t.addData("Balls Detected", latestDetections != null ? latestDetections.size() : 0);
                     break;
             }
         } else {
-            t.addLine("AprilTag Not Detected");
+            if(telemetryEnabled) t.addLine("AprilTag Not Detected");
         }
 
-        t.addData("Limelight Connected?", ll.isConnected());
-        t.addData("Limelight Running?", ll.isRunning());
+        if(telemetryEnabled){
+            t.addData("Limelight Connected?", ll.isConnected());
+            t.addData("Limelight Running?", ll.isRunning());
+        }
     }
 }

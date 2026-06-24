@@ -14,7 +14,13 @@ import java.util.ArrayDeque;
 public class ShotPlanner {
 
     public static class ShotCommand {
+        /** Robot pose predicted to the release instant (now + release latency). The shot geometry
+         *  -- distance, RPM, hood, flight time -- is solved from this pose. */
         public final Pose predictedRobotPose;
+        /** Robot pose predicted ahead by the turret servo delay (now + turret latency), so the lagging
+         *  servo tracks the target in real time and is on-target at the ball's release. Aim the turret
+         *  FROM this pose; everything else uses {@link #predictedRobotPose}. */
+        public final Pose predictedTurretPose;
         public final Pose virtualGoal;
         public final double distancePoseUnits;
         public final double targetRpm;
@@ -25,7 +31,13 @@ public class ShotPlanner {
         public final double robotAxFieldPosePerSec2;
         public final double robotAyFieldPosePerSec2;
         public final double robotAlphaRadPerSec2;
+        /** Lag- and stop-compensated velocity the lead was actually built from (field in/s). Compare
+         *  to the raw measured velocity: near a braked stop this should fall to ~0 while the raw
+         *  reading still lags. Use it to tune {@code VELOCITY_LATENCY_SEC}. */
+        public final double launchVxFieldPosePerSec;
+        public final double launchVyFieldPosePerSec;
         public ShotCommand(Pose predictedRobotPose,
+                           Pose predictedTurretPose,
                            Pose virtualGoal,
                            double distancePoseUnits,
                            double targetRpm,
@@ -34,8 +46,11 @@ public class ShotPlanner {
                            boolean possible,
                            double robotAxFieldPosePerSec2,
                            double robotAyFieldPosePerSec2,
-                           double robotAlphaRadPerSec2) {
+                           double robotAlphaRadPerSec2,
+                           double launchVxFieldPosePerSec,
+                           double launchVyFieldPosePerSec) {
             this.predictedRobotPose = predictedRobotPose;
+            this.predictedTurretPose = predictedTurretPose;
             this.virtualGoal = virtualGoal;
             this.distancePoseUnits = distancePoseUnits;
             this.targetRpm = targetRpm;
@@ -45,20 +60,17 @@ public class ShotPlanner {
             this.robotAxFieldPosePerSec2 = robotAxFieldPosePerSec2;
             this.robotAyFieldPosePerSec2 = robotAyFieldPosePerSec2;
             this.robotAlphaRadPerSec2 = robotAlphaRadPerSec2;
+            this.launchVxFieldPosePerSec = launchVxFieldPosePerSec;
+            this.launchVyFieldPosePerSec = launchVyFieldPosePerSec;
         }
     }
 
-    private static class MotionSample {
-        public final double timeSec;
-        public final double vx;
-        public final double vy;
-        public final double omega;
-
-        public MotionSample(double timeSec, double vx, double vy, double omega) {
-            this.timeSec = timeSec;
-            this.vx = vx;
-            this.vy = vy;
-            this.omega = omega;
+    /** Result of integrating the motion model over a latency horizon: the predicted pose components
+     *  plus the predicted field velocity AT that horizon (used as the launch-instant velocity). */
+    private static final class Predicted {
+        final double x, y, heading, vx, vy;
+        Predicted(double x, double y, double heading, double vx, double vy) {
+            this.x = x; this.y = y; this.heading = heading; this.vx = vx; this.vy = vy;
         }
     }
 
@@ -79,20 +91,50 @@ public class ShotPlanner {
     public static double EXIT_VEL_M_PER_RPM_FAR = 0.00342;   // FAR coefficient (tune this)
     public static double EXIT_VEL_SPLIT_THRESHOLD_M = 2.97;   // distance (m) at/above which FAR is used
 
-    // Predict the robot pose ahead so each actuator is already tracking where the robot WILL be.
-    // This is an actuator-responsiveness lead, not the shot-accuracy horizon: the SOTM virtual-goal
-    // lead still derives from velocity * flight time regardless of this toggle.
+    // Master gate for the whole latency-compensation / pose-prediction path. When off, the solve
+    // describes the robot exactly where it is now (legacy behavior). When on, the latency model below
+    // predicts the robot forward so each actuator tracks where the robot WILL be at release.
     public static boolean ENABLE_FUTURE_POSE_PREDICTION = false;
-    // Predict the robot pose to the instant the ball leaves the shooter (release latency). ALL
-    // auto-targeting below — turret aim, SOTM virtual goal, and shooter range -> RPM/hood — derives
-    // from this single predicted pose, so the whole solve describes the robot at one consistent
-    // instant. Flywheel responsiveness is handled separately by a dRPM/dt feedforward in Shooter,
-    // not by predicting the pose further ahead (which would bias the shot distance).
-    public static double SHOT_PREDICTION_SEC = 0.15;
 
-    public static int ACCEL_REGRESSION_WINDOW_SAMPLES = 6;
+    // ===== Explicit latency model (replaces the old single lumped SHOT_PREDICTION_SEC) =====
+    // These two horizons are INDEPENDENT, not additive: each actuator is led by its own delay.
+    //
+    // RELEASE_LATENCY_SEC: time from the "run transfer" hardware call to the ball actually leaving the
+    // shooter. The ball is already sitting against the flywheel, so this is physically SMALL. It sets
+    // the horizon for the shot geometry (distance -> RPM/hood) and for the SOTM lead's launch velocity
+    // -- the ball inherits the robot velocity at this (near-current) instant.
+    public static double RELEASE_LATENCY_SEC = 0.03;
+    // TURRET_LATENCY_SEC: the turret servo's response delay (transport + slew). The turret aim is led
+    // by exactly this, so the lagging servo TRACKS THE TARGET IN REAL TIME: the angle commanded now is
+    // the one the servo will physically reach TURRET_LATENCY_SEC later, so its actual angle at any
+    // instant equals the angle wanted at that instant (and is therefore correct at the ball's release).
+    // Normally MUCH larger than RELEASE_LATENCY_SEC. Tune to the measured servo delay; only affects the
+    // pose the turret aims FROM -- never distance/RPM/hood/lead.
+    public static double TURRET_LATENCY_SEC = 0.14;
+    // VELOCITY_LATENCY_SEC: lag of the VELOCITY estimate itself (Pedro's filtered velocity is a delayed
+    // derivative; odometry POSITION is fresh, velocity is not). The SOTM lead is launch_velocity *
+    // flight_time, so a stale velocity is what breaks decel/reverse shots: when you brake to a near-stop
+    // and fire, the lagging reading still says "moving backward" and SOTM applies a phantom backward
+    // lead. We undo that by projecting the measured velocity forward by this lag (using the estimated
+    // acceleration) BEFORE forming the lead, with the same stop-clamp -- so near a stop the lead
+    // correctly collapses to ~0. At constant speed this is a no-op (velocity isn't changing). Tune to
+    // the measured velocity-estimate delay; only affects the lead's launch velocity.
+    public static double VELOCITY_LATENCY_SEC = 0.06;
+
+    // Acceleration IS used for the forward prediction -- over the ~0.15s turret servo delay (≈4 loops)
+    // the target moves enough that ignoring accel leaves the turret mis-led during a decel. The catch
+    // is the SOURCE: at this robot's ~40ms (25Hz) loop a multi-sample regression spans ~0.2s and reports
+    // STALE, pre-brake acceleration, which is what made the turret over-lead ("faster velocity, shoots
+    // to the side"). Instead we use a fresh ONE-STEP finite difference (this loop's velocity minus last
+    // loop's) with a light EMA: ~1 loop of lag instead of ~5, and the slow turret servo filters the
+    // residual noise. Set false for a pure constant-velocity fallback.
+    public static boolean USE_ACCEL_PREDICTION = true;
+    // EMA weight on the freshest one-step accel (0..1). Higher = fresher but noisier; lower = smoother
+    // but laggier. Raised toward fresher so the accel (and thus the velocity-lag correction + turret
+    // lead) reacts quickly to a hard brake; the slow turret servo filters the extra noise. 1.0 = raw
+    // one-step diff (no smoothing).
+    public static double ACCEL_SMOOTHING_ALPHA = 0.3;
     public static double MIN_SAMPLE_SPACING_SEC = 0.008;
-    public static double MAX_REGRESSION_HISTORY_SEC = 0.20;
     public static double MAX_LINEAR_ACCEL_POSE_PER_SEC2 = 200.0;
     public static double MAX_ANGULAR_ACCEL_RAD_PER_SEC2 = 20.0;
 
@@ -141,8 +183,12 @@ public class ShotPlanner {
     private final InterpLUT velocityLut = new InterpLUT();
 
     private final ElapsedTime motionTimer = new ElapsedTime();
-    private final ArrayDeque<MotionSample> motionHistory = new ArrayDeque<>();
     private final ArrayDeque<Double> rpmHistory = new ArrayDeque<>();
+    // One-step accel estimator state: last loop's velocity + time, and the EMA-smoothed accel.
+    private boolean haveAccelPrev = false;
+    private double prevAccelTimeSec = 0.0;
+    private double prevVxForAccel = 0.0, prevVyForAccel = 0.0, prevOmegaForAccel = 0.0;
+    private double axEma = 0.0, ayEma = 0.0, alphaEma = 0.0;
     public static JoinedTelemetry tel;
 
     public ShotPlanner() {
@@ -208,96 +254,58 @@ public class ShotPlanner {
         return sum / rpmHistory.size();
     }
 
-    private void addMotionSample(double vx, double vy, double omega) {
+    /**
+     * Update and return the EMA-smoothed acceleration from a fresh ONE-STEP finite difference of the
+     * field velocity (this loop minus last). Chosen over a multi-sample regression because at ~40ms
+     * loops the regression lags ~0.2s and reports stale pre-brake accel; a one-step diff lags ~1 loop,
+     * which is what the turret's 0.15s prediction needs to track a quick decel. The EMA (and the slow
+     * servo) tame the inherent noise. Always maintained so the estimate is warm and shown in telemetry.
+     */
+    private AccelSample updateAcceleration(double vx, double vy, double omega) {
         vx = finiteOrZero(vx);
         vy = finiteOrZero(vy);
         omega = finiteOrZero(omega);
 
         double nowSec = motionTimer.seconds();
-        if (!Double.isFinite(nowSec)) return;
+        if (!Double.isFinite(nowSec)) return new AccelSample(axEma, ayEma, alphaEma);
 
-        MotionSample last = motionHistory.peekLast();
-        if (last != null && (nowSec - last.timeSec) < MIN_SAMPLE_SPACING_SEC) {
-            motionHistory.pollLast();
+        if (!haveAccelPrev) {
+            haveAccelPrev = true;
+            prevAccelTimeSec = nowSec;
+            prevVxForAccel = vx; prevVyForAccel = vy; prevOmegaForAccel = omega;
+            return new AccelSample(0.0, 0.0, 0.0);
         }
 
-        motionHistory.addLast(new MotionSample(nowSec, vx, vy, omega));
-
-        int maxSamples = Math.max(2, ACCEL_REGRESSION_WINDOW_SAMPLES);
-        while (motionHistory.size() > maxSamples) {
-            motionHistory.pollFirst();
+        double dt = nowSec - prevAccelTimeSec;
+        if (dt < MIN_SAMPLE_SPACING_SEC) {
+            // Too soon to differentiate reliably; hold the current estimate without advancing prev.
+            return new AccelSample(axEma, ayEma, alphaEma);
         }
 
-        while (motionHistory.size() >= 2) {
-            MotionSample first = motionHistory.peekFirst();
-            MotionSample newest = motionHistory.peekLast();
-            if (first == null || newest == null) break;
-            if ((newest.timeSec - first.timeSec) <= MAX_REGRESSION_HISTORY_SEC) break;
-            motionHistory.pollFirst();
-        }
-    }
+        double rawAx = (vx - prevVxForAccel) / dt;
+        double rawAy = (vy - prevVyForAccel) / dt;
+        double rawAlpha = (omega - prevOmegaForAccel) / dt;
 
-    private double regressionSlope(double[] t, double[] y, int n) {
-        if (n < 2) return 0.0;
+        double linClamp = Math.abs(MAX_LINEAR_ACCEL_POSE_PER_SEC2);
+        double angClamp = Math.abs(MAX_ANGULAR_ACCEL_RAD_PER_SEC2);
+        rawAx = MathUtils.clamp(finiteOrZero(rawAx), -linClamp, linClamp);
+        rawAy = MathUtils.clamp(finiteOrZero(rawAy), -linClamp, linClamp);
+        rawAlpha = MathUtils.clamp(finiteOrZero(rawAlpha), -angClamp, angClamp);
 
-        double sumT = 0.0;
-        double sumY = 0.0;
-        for (int i = 0; i < n; i++) {
-            if (!Double.isFinite(t[i]) || !Double.isFinite(y[i])) return 0.0;
-            sumT += t[i];
-            sumY += y[i];
-        }
+        double a = MathUtils.clamp(ACCEL_SMOOTHING_ALPHA, 0.0, 1.0);
+        axEma += a * (rawAx - axEma);
+        ayEma += a * (rawAy - ayEma);
+        alphaEma += a * (rawAlpha - alphaEma);
 
-        double meanT = sumT / n;
-        double meanY = sumY / n;
+        prevAccelTimeSec = nowSec;
+        prevVxForAccel = vx; prevVyForAccel = vy; prevOmegaForAccel = omega;
 
-        double sxx = 0.0;
-        double sxy = 0.0;
-        for (int i = 0; i < n; i++) {
-            double dt = t[i] - meanT;
-            double dy = y[i] - meanY;
-            sxx += dt * dt;
-            sxy += dt * dy;
-        }
-
-        if (!Double.isFinite(sxx) || !Double.isFinite(sxy) || Math.abs(sxx) < 1e-9) return 0.0;
-        return sxy / sxx;
-    }
-
-    private AccelSample computeAccelerationFromHistory() {
-        int n = motionHistory.size();
-        if (n < 2) return new AccelSample(0.0, 0.0, 0.0);
-
-        MotionSample first = motionHistory.peekFirst();
-        if (first == null) return new AccelSample(0.0, 0.0, 0.0);
-
-        double[] t = new double[n];
-        double[] vx = new double[n];
-        double[] vy = new double[n];
-        double[] omega = new double[n];
-
-        int i = 0;
-        for (MotionSample sample : motionHistory) {
-            t[i] = sample.timeSec - first.timeSec;
-            vx[i] = sample.vx;
-            vy[i] = sample.vy;
-            omega[i] = sample.omega;
-            i++;
-        }
-
-        double ax = regressionSlope(t, vx, n);
-        double ay = regressionSlope(t, vy, n);
-        double alpha = regressionSlope(t, omega, n);
-
-        ax = MathUtils.clamp(finiteOrZero(ax), -Math.abs(MAX_LINEAR_ACCEL_POSE_PER_SEC2), Math.abs(MAX_LINEAR_ACCEL_POSE_PER_SEC2));
-        ay = MathUtils.clamp(finiteOrZero(ay), -Math.abs(MAX_LINEAR_ACCEL_POSE_PER_SEC2), Math.abs(MAX_LINEAR_ACCEL_POSE_PER_SEC2));
-        alpha = MathUtils.clamp(finiteOrZero(alpha), -Math.abs(MAX_ANGULAR_ACCEL_RAD_PER_SEC2), Math.abs(MAX_ANGULAR_ACCEL_RAD_PER_SEC2));
-
-        return new AccelSample(ax, ay, alpha);
+        return new AccelSample(axEma, ayEma, alphaEma);
     }
 
     public void resetMotionHistory() {
-        motionHistory.clear();
+        haveAccelPrev = false;
+        axEma = ayEma = alphaEma = 0.0;
         motionTimer.reset();
     }
 
@@ -306,32 +314,52 @@ public class ShotPlanner {
         return Math.max(0.0, finiteOrZero(configuredSec));
     }
 
-    private Pose predictFutureRobotPose(Pose robotPose,
-                                        double robotVxFieldPosePerSec,
-                                        double robotVyFieldPosePerSec,
-                                        double robotOmegaRadPerSec,
-                                        double robotAxFieldPosePerSec2,
-                                        double robotAyFieldPosePerSec2,
-                                        double robotAlphaRadPerSec2,
-                                        double horizonSec) {
+    /**
+     * Integrate one axis over [0, t] under constant accel {@code a}, but never let braking pull the
+     * velocity through zero into a fake reversal: a decelerating robot coasts to a stop and STAYS
+     * there, it does not spring backward. This is the key fix for the decel-to-stop shot -- a plain
+     * x + v*t + 1/2*a*t^2 extrapolation (with a lagging, over-estimated braking accel) would predict
+     * the robot overshooting the stop point or even reversing exactly at the instant we fire.
+     *
+     * @return {@code [predictedPosition, predictedVelocityAtT]}; velocity is 0 once stopped.
+     */
+    private static double[] integrateAxisStopClamped(double pos0, double v, double a, double t) {
+        if (t <= 0.0) return new double[]{pos0, v};
+
+        double te = t;                 // effective integration time
+        boolean braking = v != 0.0 && Math.signum(a) == -Math.signum(v);
+        if (braking) {
+            double tStop = -v / a;     // > 0: when this axis reaches zero velocity
+            if (tStop < t) te = tStop; // stop early, then hold
+        }
+
+        double pos = pos0 + v * te + 0.5 * a * te * te;
+        double vEnd = (te < t) ? 0.0 : v + a * t; // after a within-horizon stop, velocity stays 0
+        return new double[]{pos, vEnd};
+    }
+
+    /** Shift a laggy measured velocity to its true current value: {@code v + a * lag}. Won't flip the
+     *  sign -- a brake decelerates toward rest, it doesn't spontaneously reverse -- so if the correction
+     *  would cross zero it clamps to 0 (the robot has effectively stopped). */
+    private double compensateVel(double vMeasured, double a, double lagSec) {
+        double vc = vMeasured + a * lagSec;
+        if (vMeasured != 0.0 && Math.signum(vc) != Math.signum(vMeasured)) return 0.0;
+        return vc;
+    }
+
+    /** Predict the robot pose AND launch-instant velocity over {@code horizonSec}, with each axis
+     *  stop-clamped (see {@link #integrateAxisStopClamped}) so braking can't fabricate a reversal. */
+    private Predicted predictWithStop(Pose robotPose,
+                                      double vx, double vy, double omega,
+                                      double ax, double ay, double alpha,
+                                      double horizonSec) {
         double t = Math.max(0.0, finiteOrZero(horizonSec));
-        double t2 = t * t;
 
-        double predictedX = robotPose.getX()
-                + robotVxFieldPosePerSec * t
-                + 0.5 * robotAxFieldPosePerSec2 * t2;
+        double[] sx = integrateAxisStopClamped(robotPose.getX(), vx, ax, t);
+        double[] sy = integrateAxisStopClamped(robotPose.getY(), vy, ay, t);
+        double[] sh = integrateAxisStopClamped(robotPose.getHeading(), omega, alpha, t);
 
-        double predictedY = robotPose.getY()
-                + robotVyFieldPosePerSec * t
-                + 0.5 * robotAyFieldPosePerSec2 * t2;
-
-        double predictedHeading = wrapAngleRad(
-                robotPose.getHeading()
-                        + robotOmegaRadPerSec * t
-                        + 0.5 * robotAlphaRadPerSec2 * t2
-        );
-
-        return new Pose(predictedX, predictedY, predictedHeading);
+        return new Predicted(sx[0], sy[0], wrapAngleRad(sh[0]), sx[1], sy[1]);
     }
 
     /** Trajectory height above the launcher at horizontal distance {@code d}, for launch angle theta. */
@@ -471,6 +499,9 @@ public class ShotPlanner {
             double distPose = Math.hypot(dx, dy);
             double distClamped = clampDist(distPose);
 
+            // Solve at the flywheel's CURRENT (smoothed measured) RPM: the wheel changes speed slowly
+            // and we fire immediately, so the ball leaves at whatever speed the wheel has now -- that
+            // is the speed the lead's flight time must be based on.
             double hood = solveHoodDeg(distClamped, rpm);
             if (!Double.isFinite(hood)) return virtualGoal;
 
@@ -505,22 +536,43 @@ public class ShotPlanner {
 
         double smoothedRpm = addRpmSample(rpm);
 
-        addMotionSample(robotVxFieldPosePerSec, robotVyFieldPosePerSec, robotOmegaRadPerSec);
-        AccelSample accel = computeAccelerationFromHistory();
-
         double vx = finiteOrZero(robotVxFieldPosePerSec);
         double vy = finiteOrZero(robotVyFieldPosePerSec);
         double omega = finiteOrZero(robotOmegaRadPerSec);
 
-        double shotHorizon = effectiveHorizon(SHOT_PREDICTION_SEC);
+        // Fresh one-step EMA accel (always maintained; also surfaced in telemetry). Gate whether the
+        // prediction actually uses it -- off => clean constant-velocity fallback.
+        AccelSample accelEst = updateAcceleration(vx, vy, omega);
+        AccelSample accel = USE_ACCEL_PREDICTION ? accelEst : new AccelSample(0.0, 0.0, 0.0);
 
-        // One predicted pose at the release instant; every targeting function below reads it.
-        Pose predictedPose = predictFutureRobotPose(
-                robotPose, vx, vy, omega, accel.ax, accel.ay, accel.alpha, shotHorizon);
+        // Compensate the velocity-estimate lag BEFORE any prediction. The measured velocity is a delayed,
+        // filtered derivative, so during a hard brake it reads too fast -- "the robot thinks it's going
+        // faster than it is" -- and the turret, projecting that over its 0.15s servo horizon, over-leads.
+        // Shift the measured velocity to its true current value using the fresh accel, and feed THAT into
+        // every prediction (turret pose, shot pose, and lead). This is the fix for braking-shot misses.
+        double velLag = ENABLE_FUTURE_POSE_PREDICTION ? Math.max(0.0, VELOCITY_LATENCY_SEC) : 0.0;
+        double vxc = compensateVel(vx, accel.ax, velLag);
+        double vyc = compensateVel(vy, accel.ay, velLag);
+        double omegac = compensateVel(omega, accel.alpha, velLag);
 
-        // SOTM lead is about where the ball lands, so use the velocity at the same release instant.
-        double predictedLaunchVx = vx + accel.ax * shotHorizon;
-        double predictedLaunchVy = vy + accel.ay * shotHorizon;
+        // Independent actuator horizons. Shot geometry: small release latency. Turret: its servo delay,
+        // so the slow servo tracks the (now lag-corrected) target in real time and is right at release.
+        double shotHorizon = effectiveHorizon(RELEASE_LATENCY_SEC);
+        double turretHorizon = effectiveHorizon(TURRET_LATENCY_SEC);
+
+        Predicted shotPred = predictWithStop(
+                robotPose, vxc, vyc, omegac, accel.ax, accel.ay, accel.alpha, shotHorizon);
+        Predicted turretPred = predictWithStop(
+                robotPose, vxc, vyc, omegac, accel.ax, accel.ay, accel.alpha, turretHorizon);
+
+        Pose predictedPose = new Pose(shotPred.x, shotPred.y, shotPred.heading);
+        Pose predictedTurretPose = new Pose(turretPred.x, turretPred.y, turretPred.heading);
+
+        // The ball inherits the robot's true velocity at release: the lag-corrected velocity projected
+        // to the release instant (what shotPred already carries), stop-clamped so the lead collapses to
+        // ~0 at a stop instead of leaving a phantom backward lead.
+        double predictedLaunchVx = shotPred.vx;
+        double predictedLaunchVy = shotPred.vy;
 
         Pose virtualGoal = computeVirtualGoalIter(
                 predictedPose,
@@ -535,6 +587,9 @@ public class ShotPlanner {
         double distPose = Math.hypot(dx, dy);
         double distClamped = clampDist(distPose);
 
+        // targetRPM is the LUT setpoint the (slow) flywheel is driven toward, but the hood and flight
+        // time are solved at the CURRENT measured RPM so the shot is valid at whatever speed the wheel
+        // actually has right now -- letting it fire mid-spin-up instead of waiting for the setpoint.
         double targetRPM = Range.clip(velocityLut.get(distClamped), 0.0, MAX_RPM);
         double hood = solveHoodDeg(distClamped, smoothedRpm);
         boolean possible = Double.isFinite(hood);
@@ -543,6 +598,7 @@ public class ShotPlanner {
 
         return new ShotCommand(
                 predictedPose,
+                predictedTurretPose,
                 virtualGoal,
                 distClamped,
                 targetRPM,
@@ -551,7 +607,9 @@ public class ShotPlanner {
                 possible,
                 accel.ax,
                 accel.ay,
-                accel.alpha
+                accel.alpha,
+                predictedLaunchVx,
+                predictedLaunchVy
         );
     }
 

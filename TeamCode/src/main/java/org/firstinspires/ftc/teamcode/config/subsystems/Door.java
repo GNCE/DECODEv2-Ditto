@@ -14,10 +14,11 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.qualcomm.robotcore.hardware.Servo;
 
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
+import org.firstinspires.ftc.teamcode.config.hardware.CachedServo;
 
 @Configurable
 public class Door extends SubsysCore {
-    Servo door;
+    CachedServo door;
     public static double OFFSET_POS = 0;
     public static double OPEN_POS = 0.22;
     public static double CLOSED_POS = 0.39;
@@ -26,7 +27,7 @@ public class Door extends SubsysCore {
     boolean open;
 
     public Door() {
-        door = h.get(Servo.class, "door");
+        door = new CachedServo(h.get(Servo.class, "door"));
         open = false;
         setDefaultCommand(new RunCommand(() -> setOpen(size == 3), this));
     }
@@ -57,6 +58,6 @@ public class Door extends SubsysCore {
     @Override
     public void periodic() {
         door.setPosition(OFFSET_POS + (open ? OPEN_POS : CLOSED_POS));
-        t.addData("Door State", open ? "Open" : "Closed");
+        if(telemetryEnabled) t.addData("Door State", open ? "Open" : "Closed");
     }
 }

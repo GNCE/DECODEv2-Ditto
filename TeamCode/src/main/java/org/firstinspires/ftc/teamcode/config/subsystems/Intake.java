@@ -46,8 +46,13 @@ public class Intake extends SubsysCore {
         timer.resetTimer();
     }
 
+    private double lastPitch = Double.NaN;
     public void setIntakePitch(double sp){
-        servo.set(sp);
+        // Cache the write: the pitch servo holds position, so skip re-sending the same value each loop.
+        if(Double.isNaN(lastPitch) || sp != lastPitch){
+            servo.set(sp);
+            lastPitch = sp;
+        }
     }
 
     public double getCurrent(){
@@ -105,10 +110,13 @@ public class Intake extends SubsysCore {
                 break;
         }
         if(mode != Mode.INTAKE && mode != Mode.DISABLE) setIntakePitch(INTAKE_UP);
-        t.addData("Intake Mode", mode.name());
-        t.addData("Intake Current", im.getCurrent());
-        t.addData("Intake Velocity", im.getVelocity());
-        t.addData("Transfer Current", tr.getCurrent());
+        // getCurrent() is a non-bulk hub round-trip; only pay for it when telemetry is being shown.
+        if(telemetryEnabled){
+            t.addData("Intake Mode", mode.name());
+            t.addData("Intake Current", im.getCurrent());
+            t.addData("Intake Velocity", im.getVelocity());
+            t.addData("Transfer Current", tr.getCurrent());
+        }
         prevsize = size;
     }
 }

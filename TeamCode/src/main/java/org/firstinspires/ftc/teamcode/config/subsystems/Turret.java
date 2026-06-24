@@ -11,10 +11,11 @@ import com.seattlesolvers.solverslib.hardware.AbsoluteAnalogEncoder;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 import org.firstinspires.ftc.teamcode.config.core.SubsysCore;
+import org.firstinspires.ftc.teamcode.config.hardware.CachedServo;
 
 @Configurable
 public class Turret extends SubsysCore {
-    ServoImplEx s1, s2;
+    CachedServo s1, s2;
     AbsoluteAnalogEncoder e1, e2;
     Pose motifPose = new Pose(72, 150);
     public static double MANUAL_OFFSET = 0;
@@ -58,12 +59,15 @@ public class Turret extends SubsysCore {
 
     public Turret(int initialWrap){ // %TODO: isRed should not be here. It should be able to change during initialization
         e1 = new AbsoluteAnalogEncoder(h, "te1", 3.3, AngleUnit.DEGREES);
-        s1 = h.get(ServoImplEx.class, "ts1");
-        s2 = h.get(ServoImplEx.class, "ts2");
-        s1.setDirection(Servo.Direction.REVERSE);
-        s2.setDirection(Servo.Direction.REVERSE);
-        s1.setPwmRange(new PwmControl.PwmRange(500, 2500));
-        s2.setPwmRange(new PwmControl.PwmRange(500, 2500));
+        ServoImplEx rawS1 = h.get(ServoImplEx.class, "ts1");
+        ServoImplEx rawS2 = h.get(ServoImplEx.class, "ts2");
+        rawS1.setDirection(Servo.Direction.REVERSE);
+        rawS2.setDirection(Servo.Direction.REVERSE);
+        rawS1.setPwmRange(new PwmControl.PwmRange(500, 2500));
+        rawS2.setPwmRange(new PwmControl.PwmRange(500, 2500));
+        // Cache writes: the turret holds its PWM, so only push a new position when it actually moves.
+        s1 = new CachedServo(rawS1);
+        s2 = new CachedServo(rawS2);
 
         wrapCount = initialWrap;
         previousServoAngle = e1.getCurrentPosition();
@@ -125,12 +129,14 @@ public class Turret extends SubsysCore {
         s1.setPosition(sp);
         s2.setPosition(sp+SECOND_SERVO_OFFSET);
 
-        t.addData("Turret Wrap Count", wrapCount);
-        t.addData("Turret Servo Target Position", sp);
-        t.addData("Turret Target Angle", actualTargetTurret);
-        t.addData("Turret Current Angle", getCurrentTurretAngle());
-        t.addData("Turret Servo Angle", currentServoAngle);
-        t.addData("Turret At Target?", reachedTarget());
+        if(telemetryEnabled){
+            t.addData("Turret Wrap Count", wrapCount);
+            t.addData("Turret Servo Target Position", sp);
+            t.addData("Turret Target Angle", actualTargetTurret);
+            t.addData("Turret Current Angle", getCurrentTurretAngle());
+            t.addData("Turret Servo Angle", currentServoAngle);
+            t.addData("Turret At Target?", reachedTarget());
+        }
         previousServoAngle = currentServoAngle;
     }
 
