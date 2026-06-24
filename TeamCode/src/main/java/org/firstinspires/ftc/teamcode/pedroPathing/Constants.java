@@ -22,7 +22,7 @@ import org.firstinspires.ftc.teamcode.config.hardware.PinpointVisionLocalizer;
 public class Constants {
 
     public static FollowerConstants followerConstants = new FollowerConstants()
-            .mass(13.363)
+            .mass(13.52)
             .forwardZeroPowerAcceleration(-47.814236929448604)
             .lateralZeroPowerAcceleration(-98.514583160192)
 
