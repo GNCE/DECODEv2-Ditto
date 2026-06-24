@@ -3,27 +3,23 @@ package org.firstinspires.ftc.teamcode.opmodes.auto;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
-import com.seattlesolvers.solverslib.command.ParallelRaceGroup;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
 import com.seattlesolvers.solverslib.command.WaitCommand;
-import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.config.commands.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
-import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Alliance;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.SubsystemConfig;
 import org.firstinspires.ftc.teamcode.config.paths.AutoPaths2;
 import org.firstinspires.ftc.teamcode.config.subsystems.Intake;
-import org.firstinspires.ftc.teamcode.config.subsystems.Storage;
 import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 
 import java.util.List;
 
-@Autonomous(group="Close Auto", name="Donut 21? partner")
-public class Van_K_K extends MyCommandOpMode {
+@Autonomous(group="Close Auto", name="Donut cycle da mf gate")
+public class partnerlittle extends MyCommandOpMode {
     AutoPaths2 autoPaths2;
 
     @Override
@@ -43,7 +39,9 @@ public class Van_K_K extends MyCommandOpMode {
                         new ParallelCommandGroup(
                                 new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                                new InstantCommand(() -> r.shooter.setActive(true))
+                                new InstantCommand(() -> r.shooter.setActive(true)),
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                                new InstantCommand(() -> r.door.setOpen(true))
                         ),
 
                         r.shootAll2(),
@@ -54,6 +52,8 @@ public class Van_K_K extends MyCommandOpMode {
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
                         new WaitCommand(25),
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                        new InstantCommand(() -> r.door.setOpen(true)),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE)),
                         r.shootAll2(),
@@ -64,10 +64,10 @@ public class Van_K_K extends MyCommandOpMode {
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_1)),
-                        new ParallelRaceGroup(
-                                new WaitCommand(800),
-                                new WaitUntilCommand(r.storage::isFull)
-                        ),
+                        new WaitCommand(1350),
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                        new InstantCommand(() -> r.door.setOpen(true)),
+
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_1)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
@@ -78,10 +78,10 @@ public class Van_K_K extends MyCommandOpMode {
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_2)),
-                        new ParallelRaceGroup(
-                                new WaitCommand(810),
-                                new WaitUntilCommand(r.storage::isFull)
-                        ),
+                        new WaitCommand(1450),
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                        new InstantCommand(() -> r.door.setOpen(true)),
+
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_2)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
@@ -92,25 +92,11 @@ public class Van_K_K extends MyCommandOpMode {
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_3)),
-                        new ParallelRaceGroup(
-                                new WaitCommand(820),
-                                new WaitUntilCommand(r.storage::isFull)
-                        ),
+                        new WaitCommand(1450),
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                        new InstantCommand(() -> r.door.setOpen(true)),
+
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_3)),
-                        r.shootAll2(),
-                        new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-
-                        // GATE CYCLE 4
-
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_4)),
-                        new ParallelRaceGroup(
-                                new WaitCommand(830),
-                                new WaitUntilCommand(r.storage::isFull)
-                        ),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_4)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
@@ -122,16 +108,12 @@ public class Van_K_K extends MyCommandOpMode {
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FINAL_SHOOT)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END)),
                         new WaitCommand(25),
+                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                        new InstantCommand(() -> r.door.setOpen(true)),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT_BRUNSON)),
+                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT)),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
-
-
-                        // PARK
-                        new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.BRUNSON_FINAL_PARK)),
-
-
                         r.clearShooterSpinUp(),
                         new InstantCommand(() -> r.shooter.setActive(false))
                 )
