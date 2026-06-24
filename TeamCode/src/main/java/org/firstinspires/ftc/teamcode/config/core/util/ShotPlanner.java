@@ -88,7 +88,7 @@ public class ShotPlanner {
 
     public static double POSE_UNITS_TO_METERS = 0.0254;
     public static double EXIT_VEL_M_PER_RPM_CLOSE = 0.00365;       // NEAR coefficient (your tuned value)
-    public static double EXIT_VEL_M_PER_RPM_FAR = 0.00342;   // FAR coefficient (tune this)
+    public static double EXIT_VEL_M_PER_RPM_FAR = 0.00357;   // FAR coefficient (tune this)
     public static double EXIT_VEL_SPLIT_THRESHOLD_M = 2.97;   // distance (m) at/above which FAR is used
 
     // Master gate for the whole latency-compensation / pose-prediction path. When off, the solve
@@ -172,7 +172,7 @@ public class ShotPlanner {
     };
 
     private final double[] velocities = {
-            1240, 1300, 1440, 1540, 1560, 1580, 1680, 1785, 1960, 2010, 2050, 2100
+            1240, 1300, 1440, 1540, 1560, 1580, 1680, 1725, 1900, 1950, 1975, 2025 // -75 for far far - last 2, -60 for far
     };
 
     /** Exit-velocity-per-RPM coefficient, switched by horizontal shot distance (meters). */
