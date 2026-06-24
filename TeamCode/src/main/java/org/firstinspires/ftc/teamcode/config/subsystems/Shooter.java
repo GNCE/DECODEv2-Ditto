@@ -26,10 +26,11 @@ public class Shooter extends SubsysCore {
     public static double INACTIVE_VELOCITY = 0.0;
     public static double VELOCITY_READY_THRESHOLD = 60.0;
 
-    public static double kp = 0.01;
+    public static double kp = 0.015; // 0.01
     public static double ki = 0.0;
     public static double kd = 0;
-    public static double kV = 0.000455;
+    public static double kV = 0.000388; // 0.000455
+    public static long VOLTAGE_CACHE_MS = 300;
 
     // Flywheel anticipation: feedforward proportional to how fast the *target* RPM is changing
     // (because the robot is moving toward/away from the goal), so the slow wheel tracks the moving
@@ -106,13 +107,13 @@ public class Shooter extends SubsysCore {
         shotPossible = plannedPossible;
     }
 
-    public static double NOMINAL_VOLTAGE = 12.0;
+    public static double NOMINAL_VOLTAGE = 11.8;
 
     public Shooter() {
         m1 = new MotorEx(h, "shooter1", Motor.GoBILDA.BARE);
         m2 = new MotorEx(h, "shooter2", Motor.GoBILDA.BARE);
         m2.setInverted(true);
-        flywheel = new VoltageCompensatedMotorGroup(h, 500L, NOMINAL_VOLTAGE, m1, m2);
+        flywheel = new VoltageCompensatedMotorGroup(h, VOLTAGE_CACHE_MS, NOMINAL_VOLTAGE, m1, m2);
         flywheel.setRunMode(Motor.RunMode.RawPower);
         flywheel.setZeroPowerBehavior(Motor.ZeroPowerBehavior.FLOAT);
         encoder = m1.encoder;

@@ -59,13 +59,11 @@ public class MyRobot extends Robot {
      * RIGHT_BUMPER) or set it up front with {@link #setRobotMode(RobotMode)} in your OpMode.
      * <ul>
      *   <li>{@link #BASE}        - plain teleop, no extra g1 DPAD_RIGHT binding.</li>
-     *   <li>{@link #AUTO_PARK}   - g1 DPAD_RIGHT drives to a fixed park pose (cancel by moving a
-     *       stick). Was {@code MyRobot_AutoPark}.</li>
      *   <li>{@link #MANUAL_RPM}  - g1 LEFT_BUMPER toggles CLOSE/FAR flywheel RPM presets (selectable
-     *       during init too). Was {@code MyRobot_ManualRPM}.</li>
+     *       during init too) + g1 DPAD_RIGHT auto-park.</li>
      * </ul>
      */
-    public enum RobotMode { MANUAL_RPM, BASE, AUTO_PARK }
+    public enum RobotMode { MANUAL_RPM, BASE }
 
     HardwareMap h;
     public JoinedTelemetry t;
@@ -107,11 +105,11 @@ public class MyRobot extends Robot {
 
     // ===== Mode selection (replaces the old MyRobot_AutoPark / MyRobot_ManualRPM subclasses) =====
     // static so the selection (set in auto / pre-match) carries straight into teleop unchanged.
-    private static RobotMode robotMode = RobotMode.BASE;
+    private static RobotMode robotMode = RobotMode.MANUAL_RPM;
 
-    // ---- AUTO_PARK config + state (was MyRobot_AutoPark) ----
+    // ---- Auto-park config + state (part of MANUAL_RPM, triggered by g1 DPAD_RIGHT) ----
     // Park pose. RED uses PARK_X_RED; BLUE uses (fieldSize - PARK_X_RED). y/heading are shared.
-    public static double PARK_X_RED = 40;
+    public static double PARK_X_RED = 42;
     public static double PARK_Y = 34;
     public static double PARK_HEADING_DEG = 270;
     // If any drive stick exceeds this while parking, the driver is taking over: cancel the park.
@@ -119,12 +117,12 @@ public class MyRobot extends Robot {
     private boolean autoParking = false;
 
     // ---- MANUAL_RPM config + state (was MyRobot_ManualRPM) ----
-    // Two manual flywheel RPM presets. Toggled with g1 LEFT_BUMPER; defaults to CLOSE.
+    // Two manual flywheel RPM presets. Toggled with g1 LEFT_BUMPER; defaults to FAR.
     public static double CLOSE_MIN_RPM = 1400;
     public static double CLOSE_MAX_RPM = 1900;
-    public static double FAR_MIN_RPM = 2000;
-    public static double FAR_MAX_RPM = 2200;
-    public static boolean farMode = false; // false = CLOSE (default), true = FAR; static so the selection carries across OpModes
+    public static double FAR_MIN_RPM = 1850;
+    public static double FAR_MAX_RPM = 2150;
+    public static boolean farMode = true; // false = CLOSE, true = FAR (default); static so the selection carries across OpModes
     private boolean seeded  = false; // apply the selected baseline on the first teleop loop
     // =============================================================================================
 
@@ -255,7 +253,7 @@ public class MyRobot extends Robot {
     /** Current behavioral mode. */
     public RobotMode getRobotMode(){ return robotMode; }
 
-    /** Advance to the next mode (BASE -> AUTO_PARK -> MANUAL_RPM -> BASE ...). */
+    /** Advance to the next mode (MANUAL_RPM -> BASE -> MANUAL_RPM ...). */
     private void cycleRobotMode(){
         RobotMode[] modes = RobotMode.values();
         robotMode = modes[(robotMode.ordinal() + 1) % modes.length];
@@ -299,7 +297,7 @@ public class MyRobot extends Robot {
     }
 
     public void driveControls(){
-        if(robotMode == RobotMode.AUTO_PARK){
+        if(robotMode == RobotMode.MANUAL_RPM){
             autoParkDriveControls();
         } else {
             baseDriveControls();
@@ -319,10 +317,10 @@ public class MyRobot extends Robot {
     }
 
     /**
-     * baseDriveControls plus a DPAD_RIGHT auto-park (was MyRobot_AutoPark.driveControls). While
-     * parking the teleop drive call is suppressed so it doesn't fight the path; the park ends when
-     * the path finishes or the driver moves a stick. The other g1 bindings are skipped while
-     * parking so a stray press can't interrupt it.
+     * baseDriveControls plus a DPAD_RIGHT auto-park (used in MANUAL_RPM mode). While parking the
+     * teleop drive call is suppressed so it doesn't fight the path; the park ends when the path
+     * finishes or the driver moves a stick. The other g1 bindings are skipped while parking so a
+     * stray press can't interrupt it.
      */
     private void autoParkDriveControls(){
         boolean justStarted = false;
