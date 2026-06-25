@@ -10,7 +10,7 @@ public class FastFollowPathCommand extends SequentialCommandGroup {
     public FastFollowPathCommand(Follower f, PathChain path){
         super(
                 new InstantCommand(() -> f.followPath(path, true)),
-                new WaitUntilCommand(f::atParametricEnd)
+                new WaitUntilCommand(() -> f.getCurrentTValue() > 0.94)
         );
     }
 }

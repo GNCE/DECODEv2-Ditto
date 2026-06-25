@@ -35,7 +35,7 @@ public class Constants {
             ;
 
 
-    public static PathConstraints pathConstraints = new PathConstraints(0.975, 5, 1, 1);
+    public static PathConstraints pathConstraints = new PathConstraints(0.97, 5, 1, 0.98);
 
     public static MecanumConstants driveConstants = new MecanumConstants()
             .rightFrontMotorName("fr")

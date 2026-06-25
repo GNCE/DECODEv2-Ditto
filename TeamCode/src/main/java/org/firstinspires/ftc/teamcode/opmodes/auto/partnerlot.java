@@ -9,6 +9,7 @@ import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.command.WaitUntilCommand;
 
 import org.firstinspires.ftc.teamcode.config.commands.FastFollowPathCommand;
+import org.firstinspires.ftc.teamcode.config.commands.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
 import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
@@ -40,7 +41,7 @@ public class partnerlot extends MyCommandOpMode {
                         // STARTING
                         // Hold the flywheel at each upcoming shot pose's RPM while driving/collecting.
                         new ParallelCommandGroup(
-                                new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
+                                new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                                 new InstantCommand(() -> r.shooter.setActive(true)),
                                 new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
@@ -49,37 +50,44 @@ public class partnerlot extends MyCommandOpMode {
                         ),
 
                         new WaitUntilCommand(r.shooter::readyToShoot),
-                        new WaitCommand(200), // These two lines make the hood go to the proper position before actually shooting
+                        new WaitCommand(180), // These two lines make the hood go to the proper position before actually shooting
                         r.shootAll2(),
-                        new InstantCommand(() -> r.door.setOpen(false)),
+                        new ParallelCommandGroup(
+                                new InstantCommand(() -> r.door.setOpen(false)),
 
-                        // MID SPIKE CYCLE
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE)),
-                        new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
-                        new WaitCommand(15), // TODO: is this necessary?
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
-                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)), // TODO: definitely unnecessary
-                        new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE)),
+                                // MID SPIKE CYCLE
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                                r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE)),
+                                new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END))
+                        ),
+                        new ParallelCommandGroup(
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                                new InstantCommand(() -> r.door.setOpen(true)),
+                                new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE))
+                        ),
+                        new WaitCommand(50),
                         r.shootAll2(),
-                        new InstantCommand(() -> r.door.setOpen(false)),
 
                         // GATE CYCLE 1
 
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)), // TODO: put the initial things in a parallel command
-                        new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_1)),
+                        new ParallelCommandGroup(
+                                new InstantCommand(() -> r.door.setOpen(false)),
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                                r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)), // TODO: put the initial things in a parallel command
+                                new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_1))
+                        ),
                         new ParallelRaceGroup(
                                 new WaitCommand(WAIT_TIME),
                                 new WaitUntilCommand(r.storage::isFull)
                         ),
                         new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SAFE_1)),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
-                        new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SAFE_TO_SHOOT_1)),
-                        new InstantCommand(() -> ShotPlanner.enableSOTM()),
-                        new InstantCommand(() -> ShotPlanner.enableFPP()),
+                        new ParallelCommandGroup(
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                                new InstantCommand(() -> r.door.setOpen(true)),
+                                new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SAFE_TO_SHOOT_1)),
+                                new InstantCommand(ShotPlanner::enableSOTM),
+                                new InstantCommand(ShotPlanner::enableFPP)
+                        ),
                         new ParallelCommandGroup(
                                 r.shootAll2(),
                                 new SequentialCommandGroup(
@@ -87,24 +95,27 @@ public class partnerlot extends MyCommandOpMode {
                                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW))
                                 )
                         ),
-                        new InstantCommand(() -> ShotPlanner.disableSOTM()),
-                        new InstantCommand(() -> ShotPlanner.disableFPP()),
-                        new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
+                        new ParallelCommandGroup(
+                                new InstantCommand(ShotPlanner::disableSOTM),
+                                new InstantCommand(ShotPlanner::disableFPP),
+                                new InstantCommand(() -> r.door.setOpen(false)),
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
+                        ),
 
                         // GATE CYCLE 2 (SOTM: shoot while driving to gate 3)
 
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new ParallelRaceGroup(
                                 new WaitCommand(WAIT_TIME),
                                 new WaitUntilCommand(r.storage::isFull)
                         ),
                         new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SAFE_2)),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
-                        new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SAFE_TO_SHOOT_2)),
-                        new InstantCommand(() -> ShotPlanner.enableSOTM()),
-                        new InstantCommand(() -> ShotPlanner.enableFPP()),
+                        new ParallelCommandGroup(
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                                new InstantCommand(() -> r.door.setOpen(true)),
+                                new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SAFE_TO_SHOOT_2)),
+                                new InstantCommand(ShotPlanner::enableSOTM),
+                                new InstantCommand(ShotPlanner::enableFPP)
+                        ),
                         new ParallelCommandGroup(
                                 r.shootAll2(),
                                 new SequentialCommandGroup(
@@ -112,24 +123,27 @@ public class partnerlot extends MyCommandOpMode {
                                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW))
                                 )
                         ),
-                        new InstantCommand(() -> ShotPlanner.disableSOTM()),
-                        new InstantCommand(() -> ShotPlanner.disableFPP()),
-                        new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
+                        new ParallelCommandGroup(
+                                new InstantCommand(ShotPlanner::disableSOTM),
+                                new InstantCommand(ShotPlanner::disableFPP),
+                                new InstantCommand(() -> r.door.setOpen(false)),
+                                new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
+                        ),
 
                         // GATE CYCLE 3 (continues from gate 3 position)
-
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new ParallelRaceGroup(
                                 new WaitCommand(WAIT_TIME),
                                 new WaitUntilCommand(r.storage::isFull)
                         ),
                         new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SAFE_3)),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
-                        new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SAFE_TO_SHOOT_3)),
-                        new InstantCommand(() -> ShotPlanner.enableSOTM()),
-                        new InstantCommand(() -> ShotPlanner.enableFPP()),
+                        new ParallelCommandGroup(
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                                new InstantCommand(() -> r.door.setOpen(true)),
+                                new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SAFE_TO_SHOOT_3)),
+                                new InstantCommand(ShotPlanner::enableSOTM),
+                                new InstantCommand(ShotPlanner::enableFPP)
+                        ),
                         new ParallelCommandGroup(
                                 r.shootAll2(),
                                 new SequentialCommandGroup(
@@ -137,45 +151,43 @@ public class partnerlot extends MyCommandOpMode {
                                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW))
                                 )
                         ),
-                        new InstantCommand(() -> ShotPlanner.disableSOTM()),
-                        new InstantCommand(() -> ShotPlanner.disableFPP()),
-                        new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
+                        new ParallelCommandGroup(
+                                new InstantCommand(ShotPlanner::disableSOTM),
+                                new InstantCommand(ShotPlanner::disableFPP),
+                                new InstantCommand(() -> r.door.setOpen(false)),
+                                new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE))
+                        ),
 
                         // GATE CYCLE 4 (continues from gate 4 position)
 
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         new ParallelRaceGroup(
                                 new WaitCommand(WAIT_TIME),
                                 new WaitUntilCommand(r.storage::isFull)
                         ),
                         new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SAFE_4)),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
-                        new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SAFE_TO_SHOOT_4)),
-                        new InstantCommand(() -> ShotPlanner.enableSOTM()),
-                        new InstantCommand(() -> ShotPlanner.enableFPP()),
                         new ParallelCommandGroup(
-                                r.shootAll2(),
-                                new SequentialCommandGroup(
-                                        new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END)),
-                                        r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FINAL_SHOOT))
-                                )
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                                new InstantCommand(() -> r.door.setOpen(true)),
+                                new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SAFE_TO_SHOOT_4))
                         ),
-                        new InstantCommand(() -> ShotPlanner.disableSOTM()),
-                        new InstantCommand(() -> ShotPlanner.disableFPP()),
-                        new InstantCommand(() -> r.door.setOpen(false)),
-                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-
+                        r.shootAll2(),
+                        new ParallelCommandGroup(
+                                new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END)),
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
+                                r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FINAL_SHOOT)),
+                                new InstantCommand(ShotPlanner::disableSOTM),
+                                new InstantCommand(ShotPlanner::disableFPP),
+                                new InstantCommand(() -> r.door.setOpen(false)),
+                                new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL))
+                        ),
 
                         // CLOSE CYCLE (continues from close spike position)
-
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
-                        new WaitCommand(25),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
-                        new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                        new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT_BRUNSON)),
+                        new ParallelCommandGroup(
+                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
+                                new InstantCommand(() -> r.door.setOpen(true)),
+                                new FastFollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT_BRUNSON))
+                        ),
                         r.shootAll2(),
                         new InstantCommand(() -> r.door.setOpen(false)),
 

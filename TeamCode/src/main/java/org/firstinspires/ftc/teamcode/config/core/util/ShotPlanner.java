@@ -110,7 +110,7 @@ public class ShotPlanner {
     // instant equals the angle wanted at that instant (and is therefore correct at the ball's release).
     // Normally MUCH larger than RELEASE_LATENCY_SEC. Tune to the measured servo delay; only affects the
     // pose the turret aims FROM -- never distance/RPM/hood/lead.
-    public static double TURRET_LATENCY_SEC = 0.14;
+    public static double TURRET_LATENCY_SEC = 0.135;
     // VELOCITY_LATENCY_SEC: lag of the VELOCITY estimate itself (Pedro's filtered velocity is a delayed
     // derivative; odometry POSITION is fresh, velocity is not). The SOTM lead is launch_velocity *
     // flight_time, so a stale velocity is what breaks decel/reverse shots: when you brake to a near-stop
