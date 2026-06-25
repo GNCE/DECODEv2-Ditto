@@ -31,7 +31,7 @@ public class Lift extends SubsysCore {
     PIDFController pidf;
 
     public enum LiftPositions {
-        RETRACTED(0), EXTENDED(3730);
+        RETRACTED(0), EXTENDED(3600);
 
         private final int ticks;
         LiftPositions(int ticks){
