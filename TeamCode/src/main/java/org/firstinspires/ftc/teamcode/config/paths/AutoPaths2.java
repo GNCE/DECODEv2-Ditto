@@ -21,7 +21,7 @@ public final class AutoPaths2 {
     static final double X_OFFSET_FRONT = -7.414;
     static final double Y_OFFSET_FRONT = -1.617463638;
 
-    static final double GATE_INTAKE_Y_OFFSET = 0.75; // 0.1725 for pf
+    static final double GATE_INTAKE_Y_OFFSET = 0.6; // 0.1725 for pf
     // 5.78, 9.23
     // 5.45, 9.485
     // 133.95 6.866

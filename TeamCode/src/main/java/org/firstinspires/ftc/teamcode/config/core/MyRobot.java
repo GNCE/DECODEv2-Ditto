@@ -109,9 +109,9 @@ public class MyRobot extends Robot {
 
     // ---- Auto-park config + state (part of MANUAL_RPM, triggered by g1 DPAD_RIGHT) ----
     // Park pose. RED uses PARK_X_RED; BLUE uses (fieldSize - PARK_X_RED). y/heading are shared.
-    public static double PARK_X_RED = 42;
-    public static double PARK_Y = 34;
-    public static double PARK_HEADING_DEG = 270;
+    public static double PARK_X_RED = 38;
+    public static double PARK_Y = 30;
+    public static double PARK_HEADING_DEG = 315;
     // If any drive stick exceeds this while parking, the driver is taking over: cancel the park.
     public static double STICK_CANCEL_DEADBAND = 0.1;
     private boolean autoParking = false;
