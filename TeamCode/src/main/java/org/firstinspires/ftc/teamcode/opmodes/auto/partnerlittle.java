@@ -9,6 +9,7 @@ import com.seattlesolvers.solverslib.command.WaitCommand;
 import org.firstinspires.ftc.teamcode.config.commands.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.config.core.MyCommandOpMode;
 import org.firstinspires.ftc.teamcode.config.core.MyRobot;
+import org.firstinspires.ftc.teamcode.config.core.util.ShotPlanner;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.Alliance;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.OpModeType;
 import org.firstinspires.ftc.teamcode.config.core.util.robothelper.SubsystemConfig;
@@ -39,9 +40,7 @@ public class partnerlittle extends MyCommandOpMode {
                         new ParallelCommandGroup(
                                 new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_START_TO_MID_SPIKE_START)),
                                 new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
-                                new InstantCommand(() -> r.shooter.setActive(true)),
-                                new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                                new InstantCommand(() -> r.door.setOpen(true))
+                                new InstantCommand(() -> r.shooter.setActive(true))
                         ),
 
                         r.shootAll2(),
@@ -52,8 +51,6 @@ public class partnerlittle extends MyCommandOpMode {
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_START_TO_MID_SPIKE_END)),
                         new WaitCommand(25),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_MID_SPIKE_END_TO_FRONT_SHOOT_AFTER_GATE)),
                         r.shootAll2(),
@@ -64,9 +61,7 @@ public class partnerlittle extends MyCommandOpMode {
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_1)),
-                        new WaitCommand(1350),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
+                        new WaitCommand(1000),
 
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_1)),
                         r.shootAll2(),
@@ -79,8 +74,6 @@ public class partnerlittle extends MyCommandOpMode {
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_2)),
                         new WaitCommand(1450),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
 
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_2)),
                         r.shootAll2(),
@@ -92,9 +85,7 @@ public class partnerlittle extends MyCommandOpMode {
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FRONT_SHOOT_AFTER_GATE_NEW)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SHOOT_TO_GATE_INTAKE_ONLY_ONE_3)),
-                        new WaitCommand(1450),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
+                        new WaitCommand(1500),
 
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.GATE_INTAKE_ONLY_ONE_TO_SHOOT_3)),
                         r.shootAll2(),
@@ -108,8 +99,6 @@ public class partnerlittle extends MyCommandOpMode {
                         r.spinUpShooterFor(autoPaths2.getPose(AutoPaths2.PoseId.FINAL_SHOOT)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_SHOOT_AFTER_GATE_TO_CLOSE_SPIKE_END)),
                         new WaitCommand(25),
-                        new InstantCommand(() -> r.intake.setMode(Intake.Mode.DISABLE)),
-                        new InstantCommand(() -> r.door.setOpen(true)),
                         new InstantCommand(() -> r.turret.setTarget(Turret.Target.GOAL)),
                         new FollowPathCommand(r.f, autoPaths2.getPath(AutoPaths2.PathId.SINGLE_CLOSE_SPIKE_END_TO_CLOSE_FINAL_SHOOT)),
                         r.shootAll2(),
