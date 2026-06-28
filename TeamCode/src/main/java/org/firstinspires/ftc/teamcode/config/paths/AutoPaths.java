@@ -83,7 +83,7 @@ public final class AutoPaths {
 
         SHOOT_BACK_HP_PREP (new Pose(51, 11, Math.toRadians(180))),
 
-        DIAGONAL_FINAL_OA(new Pose(8, 34, Math.toRadians(175))),
+        DIAGONAL_FINAL_OA(new Pose(8, 37, Math.toRadians(175))),
         DIAGONAL_FINAL(new Pose(10, 28, Math.toRadians(170))),
 
         SHOOT_BACK_GATHER_PREP (new Pose(54, 12.75, Math.toRadians(141))),

@@ -21,7 +21,7 @@ import org.firstinspires.ftc.teamcode.config.subsystems.Turret;
 import java.util.List;
 
 @Autonomous(group="Far Auto", name="Alliance auto")
-public class MainFarAuto extends MyCommandOpMode {
+public class AllianceAuto extends MyCommandOpMode {
     AutoPaths autoPaths;
 
     @Override
@@ -76,11 +76,17 @@ public class MainFarAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
-                        // DIAGONAL CYCLE 1
-                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
-                        new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.DIAGONAL_CYCLE)),
-                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
-                        new WaitCommand(100),
+                        // STRAIGHT CYCLE 1
+                        r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_GATHER_PREP)),
+                        new ParallelRaceGroup(
+                                new SequentialCommandGroup(
+                                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.HP_END)),
+                                        new WaitCommand(300)
+                                ),
+                                new WaitUntilCommand(() -> r.storage.getSize() == 3)
+                        ),
+                        r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_GATHER_PREP)),
+                        new WaitCommand(200),
                         r.shootAll(),
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
@@ -103,7 +109,7 @@ public class MainFarAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.door.setOpen(false)),
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
-                        // STRAIGHT CYCLE 1
+                        // STRAIGHT CYCLE 2
                         r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_GATHER_PREP)),
                         new ParallelRaceGroup(
                                 new SequentialCommandGroup(
@@ -119,7 +125,7 @@ public class MainFarAuto extends MyCommandOpMode {
                         new InstantCommand(() -> r.intake.setMode(Intake.Mode.INTAKE)),
 
 
-                        // DIAGONAL CYCLE 2
+                        // DIAGONAL CYCLE 1
                         r.spinUpShooterFor(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),
                         new FollowPathCommand(r.f, autoPaths.getPath(AutoPaths.PathId.DIAGONAL_CYCLE)),
                         r.goToLinear(autoPaths.getPose(AutoPaths.PoseId.SHOOT_BACK_HP_PREP)),

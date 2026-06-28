@@ -21,6 +21,7 @@ public class Storage extends SubsysCore {
 
     private int assumeS3FaultLoops = 0;
     private int assumeS2FaultLoops = 0;
+    boolean S2FallbackTriggered = false;
 
     // Hard "full" cutoff: counts consecutive loops s1 (the last/full slot) reads broken.
     private int s1FullLoops = 0;
@@ -87,6 +88,7 @@ public class Storage extends SubsysCore {
         assumeS2FaultLoops = 0;
         s1FullLoops = 0;
         s1HardFull = false;
+        S2FallbackTriggered = false;
     }
 
     public int getSize() {
@@ -122,6 +124,7 @@ public class Storage extends SubsysCore {
             t.addData("Assume S2 Fault Loops", assumeS2FaultLoops);
             t.addData("S1 Full Loops", s1FullLoops);
             t.addData("S1 Hard Full", s1HardFull);
+            t.addData("S2FallbackReached?", S2FallbackTriggered);
             t.addData("Intake Full?", isFull());
         }
     }
@@ -167,7 +170,7 @@ public class Storage extends SubsysCore {
     }
 
     StorageState storageState;
-    public static double ST1_DELAY = 0.18, ST2_DELAY = 0.32, ST3_DELAY = 0; // 0.18, 0.32, 0 // TODO: KEEP TUNING
+    public static double ST1_DELAY = 0.25, ST2_DELAY = 1.1, ST3_DELAY = 0.25; // 0.18, 0.32, 0 // TODO: KEEP TUNING
 
     private void updateNormalTransitions() {
         switch(storageState) {
@@ -237,6 +240,7 @@ public class Storage extends SubsysCore {
                 storedCount = 3;
                 storageState = StorageState.FULL;
                 assumeS2FaultLoops = 0;
+                S2FallbackTriggered = true;
             }
         } else {
             assumeS2FaultLoops = 0;

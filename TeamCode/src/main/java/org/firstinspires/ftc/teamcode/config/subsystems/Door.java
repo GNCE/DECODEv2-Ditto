@@ -24,12 +24,23 @@ public class Door extends SubsysCore {
     public static double CLOSED_POS = 0.39;
     public static long ACTUATION_TIME_MS = 180;
 
+    public static long OPEN_DELAY_MS = 150;   // delay between detecting 3 balls and opening
+    private long fullStartMs = -1;             // when size first became 3 (-1 = not full)
+
     boolean open;
 
     public Door() {
         door = new CachedServo(h.get(Servo.class, "door"));
         open = false;
-        setDefaultCommand(new RunCommand(() -> setOpen(size == 3), this));
+        setDefaultCommand(new RunCommand(() -> {
+            if (size == 3) {
+                if (fullStartMs < 0) fullStartMs = System.currentTimeMillis();
+                setOpen(System.currentTimeMillis() - fullStartMs >= OPEN_DELAY_MS);
+            } else {
+                fullStartMs = -1;
+                setOpen(false);
+            }
+        }, this));
     }
 
     int size;
