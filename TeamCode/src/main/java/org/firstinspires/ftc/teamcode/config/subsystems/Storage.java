@@ -19,23 +19,18 @@ public class Storage extends SubsysCore {
     private boolean st1, st2, st3;
     private int storedCount = 0;
 
-    private int assumeS3FaultLoops = 0;
-    private int assumeS2FaultLoops = 0;
-    boolean S2FallbackTriggered = false;
-
     // Hard "full" cutoff: counts consecutive loops s1 (the last/full slot) reads broken.
     private int s1FullLoops = 0;
     private boolean s1HardFull = false;
 
     public static int beamSmoothWindow = 3;
-    public static int faultyBeamHoldLoops = 40; // 200
 
     // If s1 (the LAST/full-slot beam) reads broken for this many consecutive loops, force a hard
     // "full" and cut the intake -- independent of the s2/s3 sequence count, which can stall when a
-    // beam (e.g. a flaky s2) misses a ball. s1 being broken means the last slot is occupied, so the
-    // magazine is physically full regardless of what the count thinks. Tune live; lower = faster
-    // cutoff but more vulnerable to a transient, higher = safer but slower to react.
-   //  public static int S1_FULL_HOLD_LOOPS = 40;
+    // beam misses a ball. s1 being broken means the last slot is occupied, so the magazine is
+    // physically full regardless of what the count thinks. Tune live; lower = faster cutoff but more
+    // vulnerable to a transient, higher = safer but slower to react.
+    public static int s1FullHoldLoops = 40;
 
     public static double currentLimit = 4;
     public static double veloLimit = 40;
@@ -84,11 +79,8 @@ public class Storage extends SubsysCore {
     public void clear() {
         storedCount = 0;
         storageState = StorageState.WAIT_FOR_ST3;
-        assumeS3FaultLoops = 0;
-        assumeS2FaultLoops = 0;
         s1FullLoops = 0;
         s1HardFull = false;
-        S2FallbackTriggered = false;
     }
 
     public int getSize() {
@@ -113,18 +105,14 @@ public class Storage extends SubsysCore {
     public void periodic() {
         readSmoothedBeams();
         updateStoredCount();
-//        updateS1Cutoff();
 
         if(telemetryEnabled){
             t.addData("Stored Count", storedCount);
             t.addData("Break Beam 1", st1);
             t.addData("Break Beam 2", st2);
             t.addData("Break Beam 3", st3);
-            t.addData("Assume S3 Fault Loops", assumeS3FaultLoops);
-            t.addData("Assume S2 Fault Loops", assumeS2FaultLoops);
             t.addData("S1 Full Loops", s1FullLoops);
-            t.addData("S1 Hard Full", s1HardFull);
-            t.addData("S2FallbackReached?", S2FallbackTriggered);
+            t.addData("S1 Force Full", s1HardFull);
             t.addData("Intake Full?", isFull());
         }
     }
@@ -141,23 +129,8 @@ public class Storage extends SubsysCore {
 
     private void updateStoredCount() {
         updateNormalTransitions();
-        updateFaultFallbacks();
+        updateS1Fallback();
     }
-
-    /**
-     * Hard intake cutoff driven only by s1 (the last/full slot beam), independent of the s2/s3
-     * sequence count. st1 is already the 5-sample smoothed beam state, so this hold is a second,
-     * deliberate confirmation that the last slot has been continuously occupied for
-     * {@link #S1_FULL_HOLD_LOOPS} loops before we declare a hard full. Resets the instant s1 clears.
-     */
-//    private void updateS1Cutoff() {
-//        if (st1) {
-//            if (s1FullLoops < S1_FULL_HOLD_LOOPS) s1FullLoops++;
-//        } else {
-//            s1FullLoops = 0;
-//        }
-//        s1HardFull = s1FullLoops >= S1_FULL_HOLD_LOOPS;
-//    }
 
     enum StorageState {
         WAIT_FOR_ST3,
@@ -170,7 +143,7 @@ public class Storage extends SubsysCore {
     }
 
     StorageState storageState;
-    public static double ST1_DELAY = 0.25, ST2_DELAY = 1.1, ST3_DELAY = 0.25; // 0.18, 0.32, 0 // TODO: KEEP TUNING
+    public static double ST1_DELAY = 0.15, ST2_DELAY = 0.25, ST3_DELAY = 0.25; // 0.18, 0.32, 0 // TODO: KEEP TUNING
 
     private void updateNormalTransitions() {
         switch(storageState) {
@@ -187,7 +160,7 @@ public class Storage extends SubsysCore {
                 }
                 break;
             case WAIT_FOR_ST2:
-                if (st2) {
+                if (st2 && !st1) {
                     timer.resetTimer();
                     storageState = StorageState.DELAY_AFTER_ST2;
                 }
@@ -215,35 +188,18 @@ public class Storage extends SubsysCore {
         }
     }
 
-    private void updateFaultFallbacks() {
-        updateS3Fallback();
-        updateS2Fallback();
-    }
-
-    private void updateS3Fallback() {
-        if (storedCount == 0 && !st3 && (st2 || st1)) {
-            assumeS3FaultLoops++;
-            if (assumeS3FaultLoops >= faultyBeamHoldLoops) {
-                storedCount = 2;
-                storageState = StorageState.WAIT_FOR_ST1;
-                assumeS3FaultLoops = 0;
-            }
-        } else {
-            assumeS3FaultLoops = 0;
-        }
-    }
-
-    private void updateS2Fallback() {
-        if (st3 && !st2 && st1) {
-            assumeS2FaultLoops++;
-            if (assumeS2FaultLoops >= faultyBeamHoldLoops) {
+    // Fallback: if s1 (the last/full slot) stays active for a long time, assume the whole magazine
+    // is full regardless of what the normal sequence count thinks.
+    private void updateS1Fallback() {
+        if (st1) {
+            s1FullLoops++;
+            if (s1FullLoops >= s1FullHoldLoops) {
                 storedCount = 3;
                 storageState = StorageState.FULL;
-                assumeS2FaultLoops = 0;
-                S2FallbackTriggered = true;
+                s1HardFull = true;
             }
         } else {
-            assumeS2FaultLoops = 0;
+            s1FullLoops = 0;
         }
     }
 }
