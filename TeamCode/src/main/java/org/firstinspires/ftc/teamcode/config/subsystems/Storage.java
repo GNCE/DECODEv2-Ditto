@@ -30,7 +30,7 @@ public class Storage extends SubsysCore {
     // beam misses a ball. s1 being broken means the last slot is occupied, so the magazine is
     // physically full regardless of what the count thinks. Tune live; lower = faster cutoff but more
     // vulnerable to a transient, higher = safer but slower to react.
-    public static int s1FullHoldLoops = 40;
+    public static int s1FullHoldLoops = 14;
 
     public static double currentLimit = 4;
     public static double veloLimit = 40;
@@ -143,7 +143,7 @@ public class Storage extends SubsysCore {
     }
 
     StorageState storageState;
-    public static double ST1_DELAY = 0.15, ST2_DELAY = 0.25, ST3_DELAY = 0.25; // 0.18, 0.32, 0 // TODO: KEEP TUNING
+    public static double ST1_DELAY = 0.15, ST2_DELAY = 0.38, ST3_DELAY = 0.25; // 0.18, 0.32, 0 // TODO: KEEP TUNING
 
     private void updateNormalTransitions() {
         switch(storageState) {
@@ -179,8 +179,8 @@ public class Storage extends SubsysCore {
                 break;
             case DELAY_AFTER_ST1:
                 if(timer.getElapsedTimeSeconds() > ST1_DELAY){
-                    storedCount = 3;
-                    storageState = StorageState.FULL;
+                    // storedCount = 3;
+                    //  storageState = StorageState.FULL;
                 }
                 break;
             case FULL:
